@@ -39,6 +39,7 @@ public struct BrowserAutofillSuggestionOverlay: View {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.subheadline)
                                 .foregroundStyle(spaceAccent)
+                                .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 1) {
                                 HStack(spacing: 4) {
@@ -71,6 +72,9 @@ public struct BrowserAutofillSuggestionOverlay: View {
                             : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(identity.displayName), \(identity.addressSummary)")
+                    .accessibilityHint("Fills this address into the form")
                     .onHover { isHovered in
                         hoveredID = isHovered ? identity.id : nil
                         if isHovered { selectedIndex = index }
@@ -88,8 +92,34 @@ public struct BrowserAutofillSuggestionOverlay: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(CrestColor.separator, lineWidth: 0.5)
             )
-            .offset(x: fieldRect.minX, y: fieldRect.maxY + 4)
+            .offset(x: clampedOrigin.x, y: clampedOrigin.y)
             .onExitCommand(perform: onDismiss)
+            .onKeyPress(.downArrow) {
+                if selectedIndex < identities.count - 1 {
+                    selectedIndex += 1
+                    hoveredID = identities[selectedIndex].id
+                }
+                return .handled
+            }
+            .onKeyPress(.upArrow) {
+                if selectedIndex > 0 {
+                    selectedIndex -= 1
+                    hoveredID = identities[selectedIndex].id
+                }
+                return .handled
+            }
+            .onKeyPress(.return) {
+                if selectedIndex >= 0 && selectedIndex < identities.count {
+                    onSelect(identities[selectedIndex])
+                }
+                return .handled
+            }
         }
+    }
+
+    private var clampedOrigin: CGPoint {
+        let x = max(0, fieldRect.minX)
+        let y = fieldRect.maxY + 4
+        return CGPoint(x: x, y: y)
     }
 }

@@ -161,4 +161,20 @@ struct AutofillTests {
         #expect(session.activeField == nil)
         store.deleteIdentities(for: spaceID)
     }
+
+    @Test("BrowserAutofillSuggestionOverlay handles empty identities safely")
+    @MainActor
+    func testOverlayEmptyIdentities() {
+        var dismissed = false
+        let overlay = BrowserAutofillSuggestionOverlay(
+            fieldRect: .zero,
+            identities: [],
+            spaceAccent: .blue,
+            onSelect: { _ in },
+            onDismiss: { dismissed = true }
+        )
+        #expect(overlay.identities.isEmpty)
+        overlay.onDismiss()
+        #expect(dismissed)
+    }
 }
