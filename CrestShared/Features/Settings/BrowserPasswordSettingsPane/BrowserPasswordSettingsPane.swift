@@ -60,6 +60,7 @@ struct BrowserPasswordSettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.passwords) {
             settingsSections
+            if let space, canRevealSelectedSpaceData { BrowserAutofillSection(browser: browser, space: space, spaceAccess: spaceAccess) }
             BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
         }
         .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
