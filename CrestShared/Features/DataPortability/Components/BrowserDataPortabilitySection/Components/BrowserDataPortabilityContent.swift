@@ -40,6 +40,13 @@ struct BrowserDataPortabilityContent: View {
                 spaceAccess: model.spaceAccess,
                 records: discoveredArcRecords,
                 onImport: { spaceID, identities in
+                    // Revalidate destination authority at commit time
+                    guard let destinationSpace = model.browser.spaceModel(spaceID),
+                          !model.spaceAccess.isLocked(destinationSpace),
+                          !model.browser.isPrivateBrowsing
+                    else {
+                        return
+                    }
                     autofillStore.importIdentities(identities, into: spaceID)
                 }
             )

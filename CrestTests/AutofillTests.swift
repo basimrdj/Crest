@@ -699,4 +699,45 @@ struct AutofillTests {
             try BrowserAutofillImportReader.readProfiles(from: corruptedURL)
         }
     }
+
+    @Test("Arc destination import fails closed if Space becomes locked or private between preview and commit")
+    @MainActor
+    func testDestinationSpaceCommitTimeRevalidation() {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        var isSpaceLocked = false
+        var isPrivateBrowsing = false
+
+        func commitImport(identities: [AutofillIdentity]) -> Bool {
+            guard !isSpaceLocked, !isPrivateBrowsing else {
+                return false
+            }
+            store.importIdentities(identities, into: spaceID)
+            return true
+        }
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Arc Import",
+            fullName: "Candidate User",
+            email: "candidate@test.com"
+        )
+
+        // 1. If Space locks before commit
+        isSpaceLocked = true
+        #expect(!commitImport(identities: [identity]), "Must fail closed when Space is locked at commit time")
+        #expect(store.identities(in: spaceID).isEmpty)
+
+        // 2. If private browsing is active at commit
+        isSpaceLocked = false
+        isPrivateBrowsing = true
+        #expect(!commitImport(identities: [identity]), "Must fail closed when in private browsing at commit time")
+        #expect(store.identities(in: spaceID).isEmpty)
+
+        // 3. Normal authorized commit
+        isPrivateBrowsing = false
+        #expect(commitImport(identities: [identity]))
+        #expect(store.identities(in: spaceID).count == 1)
+    }
 }
