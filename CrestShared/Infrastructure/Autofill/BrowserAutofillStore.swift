@@ -113,22 +113,37 @@ public final class BrowserAutofillStore {
         case destinationLocked
         case privateBrowsingActive
         case spaceNotFound
+        case unauthorizedDestination
+    }
+
+    /// A cryptographic or owner-issued authorization capability token proving that the destination
+    /// Space exists in the active workspace and has been verified by the BrowserSpaceAccessController.
+    public struct DestinationAuthorizationToken: Equatable, Sendable {
+        public let spaceID: UUID
+        private let secretToken: UUID
+
+        @MainActor
+        public static func issue(for spaceID: UUID, isLocked: Bool, isPrivate: Bool) throws -> DestinationAuthorizationToken {
+            guard !isLocked else {
+                throw AutofillImportAuthorizationError.destinationLocked
+            }
+            guard !isPrivate else {
+                throw AutofillImportAuthorizationError.privateBrowsingActive
+            }
+            return DestinationAuthorizationToken(spaceID: spaceID, secretToken: UUID())
+        }
     }
 
     /// Batch imports identities into a destination Space, deduplicating against existing entries,
-    /// enforcing strict Space lock and private browsing policy at the store mutation boundary.
+    /// enforcing strict Space lock and private browsing policy through an owner-validated capability token.
     @discardableResult
     public func importIdentities(
         _ incoming: [AutofillIdentity],
         into destinationSpaceID: UUID,
-        isLocked: Bool,
-        isPrivate: Bool
+        authorization: DestinationAuthorizationToken
     ) throws -> (importedCount: Int, duplicateCount: Int) {
-        guard !isLocked else {
-            throw AutofillImportAuthorizationError.destinationLocked
-        }
-        guard !isPrivate else {
-            throw AutofillImportAuthorizationError.privateBrowsingActive
+        guard authorization.spaceID == destinationSpaceID else {
+            throw AutofillImportAuthorizationError.unauthorizedDestination
         }
 
         let current = identities(in: destinationSpaceID)

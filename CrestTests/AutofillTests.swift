@@ -100,7 +100,8 @@ struct AutofillTests {
             streetAddress: "200 Lab Rd"
         )
 
-        let result = try store.importIdentities([duplicate, novel], into: destinationSpace, isLocked: false, isPrivate: false)
+        let auth103 = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: destinationSpace, isLocked: false, isPrivate: false)
+        let result = try store.importIdentities([duplicate, novel], into: destinationSpace, authorization: auth103)
         #expect(result.duplicateCount == 1)
         #expect(result.importedCount == 1)
 
@@ -713,20 +714,28 @@ struct AutofillTests {
             email: "candidate@test.com"
         )
 
-        // 1. If destination Space is locked at commit time, store throws destinationLocked
+        // 1. If destination Space is locked at commit time, token issuance fails with destinationLocked
         #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.destinationLocked) {
-            try store.importIdentities([identity], into: spaceID, isLocked: true, isPrivate: false)
+            _ = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: true, isPrivate: false)
         }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 2. If private browsing is active at commit time, store throws privateBrowsingActive
+        // 2. If private browsing is active at commit time, token issuance fails with privateBrowsingActive
         #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.privateBrowsingActive) {
-            try store.importIdentities([identity], into: spaceID, isLocked: false, isPrivate: true)
+            _ = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: true)
         }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 3. Normal authorized import succeeds
-        let result = try? store.importIdentities([identity], into: spaceID, isLocked: false, isPrivate: false)
+        // 3. If a token issued for Space A is used to import into Space B, store throws unauthorizedDestination
+        let otherSpaceID = UUID()
+        let tokenForSpace = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: false)
+        #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.unauthorizedDestination) {
+            try store.importIdentities([identity], into: otherSpaceID, authorization: tokenForSpace)
+        }
+
+        // 4. Normal authorized import succeeds
+        let validToken = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: false)
+        let result = try? store.importIdentities([identity], into: spaceID, authorization: validToken)
         #expect(result?.importedCount == 1)
         #expect(store.identities(in: spaceID).count == 1)
     }

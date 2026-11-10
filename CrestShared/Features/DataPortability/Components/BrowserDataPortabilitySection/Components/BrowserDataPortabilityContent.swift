@@ -54,11 +54,15 @@ struct BrowserDataPortabilityContent: View {
                     }
                     let isLocked = model.spaceAccess.isLocked(destinationSpace)
                     let isPrivate = model.browser.isPrivateBrowsing
+                    let token = try BrowserAutofillStore.DestinationAuthorizationToken.issue(
+                        for: spaceID,
+                        isLocked: isLocked,
+                        isPrivate: isPrivate
+                    )
                     try autofillStore.importIdentities(
                         identities,
                         into: spaceID,
-                        isLocked: isLocked,
-                        isPrivate: isPrivate
+                        authorization: token
                     )
                 }
             )
