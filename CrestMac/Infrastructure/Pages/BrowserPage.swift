@@ -597,6 +597,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether the page belongs to a private window, which its engine takes
     /// on, now and whenever the page moves to another engine.
     func setPrivateBrowsing(_ isPrivate: Bool) {
+        guard isPrivateBrowsing != isPrivate else { return }
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
         autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: isPrivate))
