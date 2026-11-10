@@ -4,6 +4,7 @@ struct BrowserDataPortabilityContent: View {
 #if os(macOS)
     @State private var discoveredArcRecords: [ArcAutofillProfileRecord] = []
     @State private var isShowingArcImport = false
+    @State private var arcDiscoveryErrorMessage: String?
 #endif
     @State private var autofillStore = BrowserAutofillStore.shared
     let model: BrowserDataPortabilityModel
@@ -17,11 +18,17 @@ struct BrowserDataPortabilityContent: View {
             BrowserDataPortabilityExportControls(model: model)
 #if os(macOS)
             Button("Import Arc Addresses…") {
-                if let url = BrowserArcAutofillDiscovery.defaultUserDataURL(),
-                   let records = try? BrowserAutofillImportReader.readProfiles(from: url) {
-                    discoveredArcRecords = records
-                } else {
+                guard let url = BrowserArcAutofillDiscovery.defaultUserDataURL() else {
+                    arcDiscoveryErrorMessage = "No Arc installation or profile was discovered on this Mac."
+                    isShowingArcImport = true
+                    return
+                }
+                do {
+                    discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: url)
+                    arcDiscoveryErrorMessage = nil
+                } catch {
                     discoveredArcRecords = []
+                    arcDiscoveryErrorMessage = "Failed to read Arc database: \(error.localizedDescription)"
                 }
                 isShowingArcImport = true
             }
@@ -39,6 +46,7 @@ struct BrowserDataPortabilityContent: View {
                 browser: model.browser,
                 spaceAccess: model.spaceAccess,
                 records: discoveredArcRecords,
+                discoveryErrorMessage: arcDiscoveryErrorMessage,
                 onImport: { spaceID, identities in
                     guard let destinationSpace = model.browser.spaceModel(spaceID) else {
                         throw BrowserAutofillStore.AutofillImportAuthorizationError.spaceNotFound

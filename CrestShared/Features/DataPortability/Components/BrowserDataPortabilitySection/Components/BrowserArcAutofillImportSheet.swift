@@ -7,6 +7,7 @@ public struct BrowserArcAutofillImportSheet: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let records: [ArcAutofillProfileRecord]
+    let discoveryErrorMessage: String?
     let onImport: (UUID, [AutofillIdentity]) throws -> Void
 
     @State private var selectedSpaceID: UUID?
@@ -23,11 +24,13 @@ public struct BrowserArcAutofillImportSheet: View {
         browser: BrowserStore,
         spaceAccess: BrowserSpaceAccessController,
         records: [ArcAutofillProfileRecord],
+        discoveryErrorMessage: String? = nil,
         onImport: @escaping (UUID, [AutofillIdentity]) throws -> Void
     ) {
         self.browser = browser
         self.spaceAccess = spaceAccess
         self.records = records
+        self.discoveryErrorMessage = discoveryErrorMessage
         self.onImport = onImport
         let defaultSpace = browser.shownSpace.flatMap { !spaceAccess.isLocked($0) ? $0.id : nil }
             ?? browser.spaceModels.first(where: { !spaceAccess.isLocked($0) })?.id
@@ -37,6 +40,13 @@ public struct BrowserArcAutofillImportSheet: View {
     public var body: some View {
         NavigationStack {
             Form {
+                if let discoveryErrorMessage {
+                    Section {
+                        Text(discoveryErrorMessage)
+                            .foregroundStyle(CrestColor.danger)
+                            .font(CrestTypography.controlTitle)
+                    }
+                }
                 if let importErrorMessage {
                     Section {
                         Text(importErrorMessage)

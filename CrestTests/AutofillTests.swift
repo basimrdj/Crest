@@ -730,4 +730,50 @@ struct AutofillTests {
         #expect(result?.importedCount == 1)
         #expect(store.identities(in: spaceID).count == 1)
     }
+
+    @Test("Arc reader reads SQLite databases configured with WAL mode without error")
+    @MainActor
+    func testArcReaderWALMode() throws {
+        let walDB = FileManager.default.temporaryDirectory.appendingPathComponent("WAL_Web_Data.sqlite")
+        defer {
+            try? FileManager.default.removeItem(at: walDB)
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: walDB.path + "-wal"))
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: walDB.path + "-shm"))
+        }
+
+        var db: OpaquePointer?
+        guard sqlite3_open(walDB.path, &db) == SQLITE_OK, let db else {
+            Issue.record("Failed to create SQLite database for WAL test")
+            return
+        }
+        sqlite3_exec(db, "PRAGMA journal_mode = WAL;", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE autofill_profiles (guid TEXT, company_name TEXT, street_address TEXT, city TEXT, state TEXT, zipcode TEXT, country_code TEXT);", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO autofill_profiles VALUES ('guid-wal', 'WAL Corp', '100 WAL St', 'San Jose', 'CA', '95110', 'US');", nil, nil, nil)
+        sqlite3_close(db)
+
+        let records = try BrowserAutofillImportReader.readProfiles(from: walDB)
+        #expect(records.count == 1)
+        #expect(records[0].guid == "guid-wal")
+        #expect(records[0].companyName == "WAL Corp")
+        #expect(records[0].streetAddress == "100 WAL St")
+        #expect(records[0].city == "San Jose")
+    }
+
+    @Test("Arc reader returns empty array for empty tables without throwing unreadableDatabase")
+    @MainActor
+    func testArcReaderEmptyTables() throws {
+        let emptyDB = FileManager.default.temporaryDirectory.appendingPathComponent("Empty_Web_Data.sqlite")
+        defer { try? FileManager.default.removeItem(at: emptyDB) }
+
+        var db: OpaquePointer?
+        guard sqlite3_open(emptyDB.path, &db) == SQLITE_OK, let db else {
+            Issue.record("Failed to create empty SQLite database")
+            return
+        }
+        sqlite3_exec(db, "CREATE TABLE autofill_profiles (guid TEXT);", nil, nil, nil)
+        sqlite3_close(db)
+
+        let records = try BrowserAutofillImportReader.readProfiles(from: emptyDB)
+        #expect(records.isEmpty)
+    }
 }
