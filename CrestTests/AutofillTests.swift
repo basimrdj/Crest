@@ -731,7 +731,7 @@ struct AutofillTests {
         #expect(store.identities(in: spaceID).count == 1)
     }
 
-    @Test("Arc reader reads SQLite databases configured with WAL mode without error")
+    @Test("Arc reader reads SQLite databases configured with WAL mode with open writer connection")
     @MainActor
     func testArcReaderWALMode() throws {
         let walDB = FileManager.default.temporaryDirectory.appendingPathComponent("WAL_Web_Data.sqlite")
@@ -741,25 +741,31 @@ struct AutofillTests {
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: walDB.path + "-shm"))
         }
 
-        var db: OpaquePointer?
-        guard sqlite3_open(walDB.path, &db) == SQLITE_OK, let db else {
+        var writerDB: OpaquePointer?
+        guard sqlite3_open(walDB.path, &writerDB) == SQLITE_OK, let writerDB else {
             Issue.record("Failed to create SQLite database for WAL test")
             return
         }
-        sqlite3_exec(db, "PRAGMA journal_mode = WAL;", nil, nil, nil)
-        sqlite3_exec(db, "CREATE TABLE autofill_profiles (guid TEXT, company_name TEXT, street_address TEXT, city TEXT, state TEXT, zipcode TEXT, country_code TEXT);", nil, nil, nil)
-        sqlite3_exec(db, "INSERT INTO autofill_profiles VALUES ('guid-wal', 'WAL Corp', '100 WAL St', 'San Jose', 'CA', '95110', 'US');", nil, nil, nil)
-        sqlite3_close(db)
+        defer { sqlite3_close(writerDB) }
 
+        sqlite3_exec(writerDB, "PRAGMA journal_mode = WAL;", nil, nil, nil)
+        sqlite3_exec(writerDB, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(writerDB, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+        sqlite3_exec(writerDB, "INSERT INTO addresses VALUES ('guid-wal');", nil, nil, nil)
+        sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 7, 'WAL Concurrent Tester');", nil, nil, nil)
+        sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 9, 'wal@test.org');", nil, nil, nil)
+        sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 30, '100 WAL Way');", nil, nil, nil)
+
+        // Read concurrently while writer connection remains open
         let records = try BrowserAutofillImportReader.readProfiles(from: walDB)
         #expect(records.count == 1)
         #expect(records[0].guid == "guid-wal")
-        #expect(records[0].companyName == "WAL Corp")
-        #expect(records[0].streetAddress == "100 WAL St")
-        #expect(records[0].city == "San Jose")
+        #expect(records[0].fullName == "WAL Concurrent Tester")
+        #expect(records[0].email == "wal@test.org")
+        #expect(records[0].streetAddress == "100 WAL Way")
     }
 
-    @Test("Arc reader returns empty array for empty tables without throwing unreadableDatabase")
+    @Test("Arc reader returns empty array for valid empty tables without throwing unreadableDatabase")
     @MainActor
     func testArcReaderEmptyTables() throws {
         let emptyDB = FileManager.default.temporaryDirectory.appendingPathComponent("Empty_Web_Data.sqlite")
@@ -770,10 +776,41 @@ struct AutofillTests {
             Issue.record("Failed to create empty SQLite database")
             return
         }
-        sqlite3_exec(db, "CREATE TABLE autofill_profiles (guid TEXT);", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
         sqlite3_close(db)
 
         let records = try BrowserAutofillImportReader.readProfiles(from: emptyDB)
         #expect(records.isEmpty)
+    }
+
+    @Test("Arc discovery clears stale discovered records on discovery failure")
+    @MainActor
+    func testArcDiscoveryStalePreviewClearing() {
+        var discoveredArcRecords: [ArcAutofillProfileRecord] = [
+            ArcAutofillProfileRecord(guid: "stale-1", fullName: "Stale Profile")
+        ]
+        var arcDiscoveryErrorMessage: String? = nil
+
+        func runDiscovery(foundURL: URL?) {
+            // Emulate production button logic in BrowserDataPortabilityContent
+            discoveredArcRecords = []
+            guard let url = foundURL else {
+                arcDiscoveryErrorMessage = "No Arc installation discovered"
+                return
+            }
+            do {
+                discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: url)
+                arcDiscoveryErrorMessage = nil
+            } catch {
+                discoveredArcRecords = []
+                arcDiscoveryErrorMessage = "Read failed: \(error)"
+            }
+        }
+
+        // On failure, discoveredArcRecords must be wiped, preventing stale preview import
+        runDiscovery(foundURL: nil)
+        #expect(discoveredArcRecords.isEmpty)
+        #expect(arcDiscoveryErrorMessage != nil)
     }
 }

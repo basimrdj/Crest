@@ -122,7 +122,7 @@ public struct BrowserArcAutofillImportSheet: View {
                             importErrorMessage = "Destination Space is locked or unavailable: \(error.localizedDescription)"
                         }
                     }
-                    .disabled(selectedSpaceID == nil || records.isEmpty)
+                    .disabled(selectedSpaceID == nil || records.isEmpty || discoveryErrorMessage != nil)
                 }
             }
         }

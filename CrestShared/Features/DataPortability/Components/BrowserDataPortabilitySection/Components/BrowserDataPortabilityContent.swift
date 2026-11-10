@@ -18,6 +18,7 @@ struct BrowserDataPortabilityContent: View {
             BrowserDataPortabilityExportControls(model: model)
 #if os(macOS)
             Button("Import Arc Addresses…") {
+                discoveredArcRecords = []
                 guard let url = BrowserArcAutofillDiscovery.defaultUserDataURL() else {
                     arcDiscoveryErrorMessage = "No Arc installation or profile was discovered on this Mac."
                     isShowingArcImport = true
