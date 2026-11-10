@@ -83,9 +83,20 @@ public final class BrowserAutofillStore {
     }
 
     /// Removes an identity from the store.
-    public func delete(id: UUID) {
-        identities.removeAll { $0.id == id }
+    public func delete(_ identityID: UUID) {
+        let deletedSpaceID = identities.first(where: { $0.id == identityID })?.spaceID
+        identities.removeAll { $0.id == identityID }
+        // If a default identity was deleted, promote another identity in that Space if available
+        if let spaceID = deletedSpaceID, !identities.contains(where: { $0.spaceID == spaceID && $0.isDefault }) {
+            if let firstIndex = identities.firstIndex(where: { $0.spaceID == spaceID }) {
+                identities[firstIndex].isDefault = true
+            }
+        }
         persist()
+    }
+
+    public func delete(id: UUID) {
+        delete(id)
     }
 
     /// Deletes all identities associated with a specific Space (e.g. on Space deletion).

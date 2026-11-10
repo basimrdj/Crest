@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 
 @testable import CrestShared
@@ -564,35 +565,44 @@ struct AutofillTests {
 
     @Test("Arc schema discovery handles address_type_tokens, contact_info, and standard tables")
     @MainActor
-    func testArcMultiSchemaSupport() {
-        // Verify ArcAutofillProfileRecord construction across modern, intermediate, and legacy schemas
-        let modern = ArcAutofillProfileRecord(
-            guid: "guid-1",
-            fullName: "Modern User",
-            companyName: "Modern Co",
-            streetAddress: "1 Market St",
-            city: "San Francisco",
-            state: "CA",
-            zipcode: "94105",
-            countryCode: "US",
-            email: "modern@example.com",
-            phoneNumber: "+14155552671"
-        )
-        #expect(modern.fullName == "Modern User")
-        #expect(modern.zipcode == "94105")
-        #expect(modern.email == "modern@example.com")
+    func testArcMultiSchemaSupport() throws {
+        let tempDB = FileManager.default.temporaryDirectory.appendingPathComponent("Web_Data_Test.sqlite")
+        defer { try? FileManager.default.removeItem(at: tempDB) }
 
-        let legacy = ArcAutofillProfileRecord(
-            guid: "guid-legacy",
-            companyName: "Legacy Inc",
-            streetAddress: "200 Old Rd",
-            city: "Boston",
-            state: "MA",
-            zipcode: "02108",
-            countryCode: "US"
-        )
-        #expect(legacy.companyName == "Legacy Inc")
-        #expect(legacy.streetAddress == "200 Old Rd")
+        var db: OpaquePointer?
+        guard sqlite3_open(tempDB.path, &db) == SQLITE_OK, let db else {
+            Issue.record("Failed to create temporary SQLite database")
+            return
+        }
+
+        sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+
+        sqlite3_exec(db, "INSERT INTO addresses VALUES ('guid-1');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 7, 'Modern Developer');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 9, 'modern@crest.dev');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 14, '+15551234');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 30, '100 Chromium Way');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 33, 'Mountain View');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 34, 'CA');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 35, '94043');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 36, 'US');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 60, 'OpenSource Corp');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-1', 55, '2028');", nil, nil, nil)
+        sqlite3_close(db)
+
+        let records = try BrowserAutofillImportReader.readProfiles(from: tempDB)
+        #expect(records.count == 1)
+        let record = records[0]
+        #expect(record.guid == "guid-1")
+        #expect(record.fullName == "Modern Developer")
+        #expect(record.email == "modern@crest.dev")
+        #expect(record.companyName == "OpenSource Corp", "Company name must map to type 60, not payment type 55")
+        #expect(record.streetAddress == "100 Chromium Way")
+        #expect(record.city == "Mountain View")
+        #expect(record.state == "CA")
+        #expect(record.zipcode == "94043")
+        #expect(record.countryCode == "US")
     }
 
     @Test("Space deletion purges all assigned identities and persists cleanly")

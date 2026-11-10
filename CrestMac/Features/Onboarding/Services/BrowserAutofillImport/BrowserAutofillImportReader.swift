@@ -45,12 +45,44 @@ public enum BrowserAutofillImportError: Error, Equatable {
 
 /// Reads structured autofill addresses and identities from Chromium and Arc Browser `Web Data` SQLite files.
 /// Opens read-only with safety PRAGMAs and discovers multiple schema generations:
-/// - Modern Chromium `addresses` + `address_type_tokens` (current upstream)
-/// - Intermediate `local_addresses` / `contact_info`
+/// - Modern Chromium `addresses` + `address_type_tokens` (and `local_addresses` + `local_addresses_type_tokens`)
+/// - Intermediate `contact_info` + `contact_info_type_tokens`
 /// - Classic `autofill_profiles` + auxiliary tables
 /// - Legacy single-table `autofill_profiles`
 public final class BrowserAutofillImportReader {
     public static let maximumDatabaseByteCount = 512 * 1_024 * 1_024
+
+    // Primary-source Chromium Autofill type IDs (from components/autofill/core/browser/field_types.h):
+    // 3: NAME_FIRST
+    // 4: NAME_MIDDLE
+    // 5: NAME_LAST
+    // 7: NAME_FULL
+    // 9: EMAIL_ADDRESS
+    // 14: PHONE_HOME_WHOLE_NUMBER
+    // 30: ADDRESS_HOME_LINE1
+    // 31: ADDRESS_HOME_LINE2
+    // 33: ADDRESS_HOME_CITY
+    // 34: ADDRESS_HOME_STATE
+    // 35: ADDRESS_HOME_ZIP
+    // 36: ADDRESS_HOME_COUNTRY
+    // 60: COMPANY_NAME
+    // 77: ADDRESS_HOME_STREET_ADDRESS
+    private enum ChromiumFieldType: Int32 {
+        case nameFirst = 3
+        case nameMiddle = 4
+        case nameLast = 5
+        case nameFull = 7
+        case emailAddress = 9
+        case phoneHomeWholeNumber = 14
+        case addressHomeLine1 = 30
+        case addressHomeLine2 = 31
+        case addressHomeCity = 33
+        case addressHomeState = 34
+        case addressHomeZip = 35
+        case addressHomeCountry = 36
+        case companyName = 60
+        case addressHomeStreetAddress = 77
+    }
 
     public static func readProfiles(from databaseURL: URL) throws -> [ArcAutofillProfileRecord] {
         guard FileManager.default.fileExists(atPath: databaseURL.path) else {
@@ -82,70 +114,35 @@ public final class BrowserAutofillImportReader {
         sqlite3_exec(database, "PRAGMA trusted_schema = OFF", nil, nil, nil)
 
         // 1. Try modern Chromium address_type_tokens schema
-        if let modernRecords = try? readModernAddressTokens(from: database), !modernRecords.isEmpty {
-            return modernRecords
+        if let records = try? readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database), !records.isEmpty {
+            return records
         }
 
-        // 2. Try intermediate contact_info schema
-        if let contactRecords = try? readContactInfoProfiles(from: database), !contactRecords.isEmpty {
-            return contactRecords
+        // 2. Try modern local_addresses + local_addresses_type_tokens schema
+        if let records = try? readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database), !records.isEmpty {
+            return records
         }
 
-        // 3. Try standard autofill_profiles with auxiliary tables
+        // 3. Try intermediate contact_info + contact_info_type_tokens schema
+        if let records = try? readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database), !records.isEmpty {
+            return records
+        }
+
+        // 4. Try standard autofill_profiles with auxiliary tables
         if let standardRecords = try? readStandardProfiles(from: database), !standardRecords.isEmpty {
             return standardRecords
         }
 
-        // 4. Try legacy single-table autofill_profiles
+        // 5. Try legacy single-table autofill_profiles
         return try readLegacyProfiles(from: database)
     }
 
-    private static func readModernAddressTokens(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
-        let sql = """
-            SELECT a.guid, t.type, t.value
-            FROM addresses a
-            JOIN address_type_tokens t ON a.guid = t.guid
-            """
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
-            return []
-        }
-        defer { sqlite3_finalize(statement) }
-
-        // Aggregate type tokens per guid:
-        // Chromium Autofill type IDs:
-        // 3: NAME_FULL, 5: NAME_FIRST, 7: NAME_LAST, 9: EMAIL_ADDRESS, 14: PHONE_HOME_WHOLE_NUMBER
-        // 30: ADDRESS_HOME_STREET_ADDRESS, 33: ADDRESS_HOME_CITY, 34: ADDRESS_HOME_STATE, 35: ADDRESS_HOME_ZIP, 36: ADDRESS_HOME_COUNTRY, 55: COMPANY_NAME
-        var dict: [String: [Int32: String]] = [:]
-        while sqlite3_step(statement) == SQLITE_ROW {
-            guard let guid = string(statement, column: 0) else { continue }
-            let type = sqlite3_column_int(statement, 1)
-            let value = string(statement, column: 2) ?? ""
-            if dict[guid] == nil { dict[guid] = [:] }
-            dict[guid]?[type] = value
-        }
-
-        return dict.map { guid, fields in
-            ArcAutofillProfileRecord(
-                guid: guid,
-                fullName: fields[3] ?? fields[5] ?? "",
-                companyName: fields[55] ?? "",
-                streetAddress: fields[30] ?? "",
-                city: fields[33] ?? "",
-                state: fields[34] ?? "",
-                zipcode: fields[35] ?? "",
-                countryCode: fields[36] ?? "",
-                email: fields[9] ?? "",
-                phoneNumber: fields[14] ?? ""
-            )
-        }
-    }
-
-    private static func readContactInfoProfiles(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
-        let sql = """
-            SELECT guid, type, value
-            FROM contact_info
-            """
+    private static func readAddressTokenTable(
+        mainTable: String,
+        tokenTable: String,
+        from database: OpaquePointer
+    ) throws -> [ArcAutofillProfileRecord] {
+        let sql = "SELECT a.guid, t.type, t.value FROM \(mainTable) a JOIN \(tokenTable) t ON a.guid = t.guid"
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
             return []
@@ -162,17 +159,36 @@ public final class BrowserAutofillImportReader {
         }
 
         return dict.map { guid, fields in
-            ArcAutofillProfileRecord(
+            // Authoritative Chromium Autofill mapping:
+            let fullName: String
+            if let explicitFull = fields[ChromiumFieldType.nameFull.rawValue], !explicitFull.isEmpty {
+                fullName = explicitFull
+            } else {
+                let first = fields[ChromiumFieldType.nameFirst.rawValue] ?? ""
+                let last = fields[ChromiumFieldType.nameLast.rawValue] ?? ""
+                fullName = [first, last].filter { !$0.isEmpty }.joined(separator: " ")
+            }
+
+            let streetAddress: String
+            if let fullStreet = fields[ChromiumFieldType.addressHomeStreetAddress.rawValue], !fullStreet.isEmpty {
+                streetAddress = fullStreet
+            } else {
+                let line1 = fields[ChromiumFieldType.addressHomeLine1.rawValue] ?? ""
+                let line2 = fields[ChromiumFieldType.addressHomeLine2.rawValue] ?? ""
+                streetAddress = [line1, line2].filter { !$0.isEmpty }.joined(separator: ", ")
+            }
+
+            return ArcAutofillProfileRecord(
                 guid: guid,
-                fullName: fields[3] ?? fields[5] ?? "",
-                companyName: fields[55] ?? "",
-                streetAddress: fields[30] ?? "",
-                city: fields[33] ?? "",
-                state: fields[34] ?? "",
-                zipcode: fields[35] ?? "",
-                countryCode: fields[36] ?? "",
-                email: fields[9] ?? "",
-                phoneNumber: fields[14] ?? ""
+                fullName: fullName,
+                companyName: fields[ChromiumFieldType.companyName.rawValue] ?? "",
+                streetAddress: streetAddress,
+                city: fields[ChromiumFieldType.addressHomeCity.rawValue] ?? "",
+                state: fields[ChromiumFieldType.addressHomeState.rawValue] ?? "",
+                zipcode: fields[ChromiumFieldType.addressHomeZip.rawValue] ?? "",
+                countryCode: fields[ChromiumFieldType.addressHomeCountry.rawValue] ?? "",
+                email: fields[ChromiumFieldType.emailAddress.rawValue] ?? "",
+                phoneNumber: fields[ChromiumFieldType.phoneHomeWholeNumber.rawValue] ?? ""
             )
         }
     }
