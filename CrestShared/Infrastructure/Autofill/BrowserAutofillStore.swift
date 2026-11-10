@@ -121,8 +121,8 @@ public final class BrowserAutofillStore {
     public func importIdentities(
         _ incoming: [AutofillIdentity],
         into destinationSpaceID: UUID,
-        isLocked: Bool = false,
-        isPrivate: Bool = false
+        isLocked: Bool,
+        isPrivate: Bool
     ) throws -> (importedCount: Int, duplicateCount: Int) {
         guard !isLocked else {
             throw AutofillImportAuthorizationError.destinationLocked

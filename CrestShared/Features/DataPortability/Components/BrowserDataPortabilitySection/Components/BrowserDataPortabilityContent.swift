@@ -40,9 +40,12 @@ struct BrowserDataPortabilityContent: View {
                 spaceAccess: model.spaceAccess,
                 records: discoveredArcRecords,
                 onImport: { spaceID, identities in
-                    let isLocked = model.browser.spaceModel(spaceID).map { model.spaceAccess.isLocked($0) } ?? true
+                    guard let destinationSpace = model.browser.spaceModel(spaceID) else {
+                        throw BrowserAutofillStore.AutofillImportAuthorizationError.spaceNotFound
+                    }
+                    let isLocked = model.spaceAccess.isLocked(destinationSpace)
                     let isPrivate = model.browser.isPrivateBrowsing
-                    try? autofillStore.importIdentities(
+                    try autofillStore.importIdentities(
                         identities,
                         into: spaceID,
                         isLocked: isLocked,

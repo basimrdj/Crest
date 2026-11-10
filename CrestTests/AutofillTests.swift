@@ -100,7 +100,7 @@ struct AutofillTests {
             streetAddress: "200 Lab Rd"
         )
 
-        let result = try store.importIdentities([duplicate, novel], into: destinationSpace)
+        let result = try store.importIdentities([duplicate, novel], into: destinationSpace, isLocked: false, isPrivate: false)
         #expect(result.duplicateCount == 1)
         #expect(result.importedCount == 1)
 

@@ -7,9 +7,10 @@ public struct BrowserArcAutofillImportSheet: View {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let records: [ArcAutofillProfileRecord]
-    let onImport: (UUID, [AutofillIdentity]) -> Void
+    let onImport: (UUID, [AutofillIdentity]) throws -> Void
 
     @State private var selectedSpaceID: UUID?
+    @State private var importErrorMessage: String?
 
     /// Filters available destination Spaces to only those that are unlocked and persistent.
     private var eligibleSpaces: [SpaceModel] {
@@ -22,7 +23,7 @@ public struct BrowserArcAutofillImportSheet: View {
         browser: BrowserStore,
         spaceAccess: BrowserSpaceAccessController,
         records: [ArcAutofillProfileRecord],
-        onImport: @escaping (UUID, [AutofillIdentity]) -> Void
+        onImport: @escaping (UUID, [AutofillIdentity]) throws -> Void
     ) {
         self.browser = browser
         self.spaceAccess = spaceAccess
@@ -36,6 +37,13 @@ public struct BrowserArcAutofillImportSheet: View {
     public var body: some View {
         NavigationStack {
             Form {
+                if let importErrorMessage {
+                    Section {
+                        Text(importErrorMessage)
+                            .foregroundStyle(CrestColor.danger)
+                            .font(CrestTypography.controlTitle)
+                    }
+                }
                 Section {
                     CrestSpaceMenuPicker(
                         "Destination Space",
@@ -97,8 +105,12 @@ public struct BrowserArcAutofillImportSheet: View {
                                 countryOrRegion: record.countryCode
                             )
                         }
-                        onImport(spaceID, identities)
-                        dismiss()
+                        do {
+                            try onImport(spaceID, identities)
+                            dismiss()
+                        } catch {
+                            importErrorMessage = "Destination Space is locked or unavailable: \(error.localizedDescription)"
+                        }
                     }
                     .disabled(selectedSpaceID == nil || records.isEmpty)
                 }
