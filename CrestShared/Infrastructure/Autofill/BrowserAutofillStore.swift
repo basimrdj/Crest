@@ -116,24 +116,23 @@ public final class BrowserAutofillStore {
         case unauthorizedDestination
     }
 
-    /// An unforgeable authorization capability token issued by an active Space owner or access controller.
+    /// An authoritative capability token certifying that the destination Space exists,
+    /// is unlocked, and is non-private.
     public struct DestinationAuthorizationToken: Equatable, Sendable {
         public let spaceID: UUID
-        fileprivate let validator: @Sendable () -> Bool
+        fileprivate let validator: @MainActor () -> Bool
 
         public static func == (lhs: DestinationAuthorizationToken, rhs: DestinationAuthorizationToken) -> Bool {
             lhs.spaceID == rhs.spaceID
         }
 
         @MainActor
-        public static func issue(
-            for spaceID: UUID,
-            validator: @escaping () -> Bool
-        ) throws -> DestinationAuthorizationToken {
-            guard validator() else {
-                throw AutofillImportAuthorizationError.destinationLocked
-            }
-            return DestinationAuthorizationToken(spaceID: spaceID, validator: validator)
+        internal init(
+            spaceID: UUID,
+            validator: @escaping @MainActor () -> Bool
+        ) {
+            self.spaceID = spaceID
+            self.validator = validator
         }
     }
 

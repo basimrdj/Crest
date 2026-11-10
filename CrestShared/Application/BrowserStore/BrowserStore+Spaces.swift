@@ -484,3 +484,34 @@ extension BrowserStore {
     }
 
 }
+
+// MARK: - Autofill Destination Authorization
+
+extension BrowserStore {
+    /// Issues an authoritative DestinationAuthorizationToken for importing personal identity records into `spaceID`.
+    /// Validates that the space exists, is not locked, and that private browsing is not active.
+    @MainActor
+    public func authorizeAutofillImport(
+        into spaceID: UUID,
+        accessController: BrowserSpaceAccessController
+    ) throws -> BrowserAutofillStore.DestinationAuthorizationToken {
+        guard let space = spaceModel(spaceID) else {
+            throw BrowserAutofillStore.AutofillImportAuthorizationError.spaceNotFound
+        }
+        guard !accessController.isLocked(space) else {
+            throw BrowserAutofillStore.AutofillImportAuthorizationError.destinationLocked
+        }
+        guard !isPrivateBrowsing else {
+            throw BrowserAutofillStore.AutofillImportAuthorizationError.privateBrowsingActive
+        }
+
+        return BrowserAutofillStore.DestinationAuthorizationToken(spaceID: spaceID) { [weak self, weak accessController] in
+            guard let self, let accessController,
+                  let currentSpace = self.spaceModel(spaceID)
+            else {
+                return false
+            }
+            return !accessController.isLocked(currentSpace) && !self.isPrivateBrowsing
+        }
+    }
+}

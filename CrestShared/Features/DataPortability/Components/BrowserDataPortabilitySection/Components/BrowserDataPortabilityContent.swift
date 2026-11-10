@@ -49,13 +49,10 @@ struct BrowserDataPortabilityContent: View {
                 records: discoveredArcRecords,
                 discoveryErrorMessage: arcDiscoveryErrorMessage,
                 onImport: { spaceID, identities in
-                    guard let destinationSpace = model.browser.spaceModel(spaceID) else {
-                        throw BrowserAutofillStore.AutofillImportAuthorizationError.spaceNotFound
-                    }
-                    let token = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID) {
-                        guard let space = model.browser.spaceModel(spaceID) else { return false }
-                        return !model.spaceAccess.isLocked(space) && !model.browser.isPrivateBrowsing
-                    }
+                    let token = try model.browser.authorizeAutofillImport(
+                        into: spaceID,
+                        accessController: model.spaceAccess
+                    )
                     try autofillStore.importIdentities(
                         identities,
                         into: spaceID,
