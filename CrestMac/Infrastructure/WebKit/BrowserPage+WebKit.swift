@@ -149,6 +149,7 @@ extension BrowserPage: WebKitPageHosting {
 // MARK: - Autofill
 
 private var activeAutofillTargetFrameKey: UInt8 = 0
+private var activeAutofillHandleIDKey: UInt8 = 0
 
 extension BrowserPage {
     var activeAutofillTargetFrame: WKFrameInfo? {
@@ -157,6 +158,15 @@ extension BrowserPage {
         }
         set {
             objc_setAssociatedObject(self, &activeAutofillTargetFrameKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    var activeAutofillHandleID: UUID? {
+        get {
+            objc_getAssociatedObject(self, &activeAutofillHandleIDKey) as? UUID
+        }
+        set {
+            objc_setAssociatedObject(self, &activeAutofillHandleIDKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
 
@@ -186,22 +196,43 @@ extension BrowserPage {
         // Enforce privacy configuration readiness
         guard let session = ensureAutofillSession() else { return }
 
-        if let dict = scriptMessage.body as? [String: Any] {
-            let origin = scriptMessage.frameInfo.securityOrigin
-            guard !origin.host.isEmpty else { return }
-            let originString = Self.canonicalOrigin(
-                protocol: origin.protocol,
-                host: origin.host,
-                port: origin.port
-            )
-            activeAutofillTargetFrame = scriptMessage.frameInfo
+        guard let dict = scriptMessage.body as? [String: Any],
+            let event = dict["event"] as? String else { return }
+
+        if event == "blur" {
+            // Revoke active frame target upon blur
+            activeAutofillTargetFrame = nil
+            activeAutofillHandleID = nil
             session.receiveMessage(
                 dict,
-                frameSecurityOrigin: originString,
-                isMainFrame: scriptMessage.frameInfo.isMainFrame,
+                frameSecurityOrigin: "revoke",
+                isMainFrame: true,
                 navigationGeneration: navigationGeneration
             )
+            return
         }
+
+        guard event == "focus" else { return }
+
+        let origin = scriptMessage.frameInfo.securityOrigin
+        guard !origin.host.isEmpty else { return }
+        let originString = Self.canonicalOrigin(
+            protocol: origin.protocol,
+            host: origin.host,
+            port: origin.port
+        )
+
+        let handleID = UUID()
+        activeAutofillTargetFrame = scriptMessage.frameInfo
+        activeAutofillHandleID = handleID
+
+        session.receiveMessage(
+            dict,
+            frameSecurityOrigin: originString,
+            isMainFrame: scriptMessage.frameInfo.isMainFrame,
+            navigationGeneration: navigationGeneration,
+            frameHandleID: handleID
+        )
     }
 
     func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
@@ -209,11 +240,15 @@ extension BrowserPage {
         guard let frame = targetFrame ?? activeAutofillTargetFrame else {
             // Reject fill closed if frame target is missing or invalidated
             session.dismiss()
+            activeAutofillTargetFrame = nil
+            activeAutofillHandleID = nil
             return
         }
         let origin = frame.securityOrigin
         guard !origin.host.isEmpty else {
             session.dismiss()
+            activeAutofillTargetFrame = nil
+            activeAutofillHandleID = nil
             return
         }
         let expectedOrigin = Self.canonicalOrigin(
@@ -225,7 +260,8 @@ extension BrowserPage {
         try await session.fill(
             identity,
             expectedNavigationGeneration: navigationGeneration,
-            expectedOrigin: expectedOrigin
+            expectedOrigin: expectedOrigin,
+            expectedFrameHandleID: activeAutofillHandleID
         ) { body, arguments in
             return try await webView.callAsyncJavaScript(
                 body,
@@ -234,5 +270,7 @@ extension BrowserPage {
                 contentWorld: BrowserAutofillContentBridge.contentWorld
             )
         }
+        activeAutofillTargetFrame = nil
+        activeAutofillHandleID = nil
     }
 }

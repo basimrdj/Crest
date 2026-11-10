@@ -205,7 +205,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// used it since, which the diagnostic log notes once they do.
     @ObservationIgnored var awaitsInputSincePresented = false
     @ObservationIgnored let credentialSession: BrowserCredentialSession
-    @ObservationIgnored var autofillSession: BrowserAutofillSession?
+    var autofillSession: BrowserAutofillSession?
     @ObservationIgnored private(set) var isPrivacyPolicyConfigured = false
     @ObservationIgnored private(set) var navigationGeneration: UInt64 = 0
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {

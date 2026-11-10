@@ -129,12 +129,17 @@ struct AutofillTests {
         #expect(!session.isSuggestionPresented)
 
         // Simulate focus message from in-page content bridge
-        session.receiveMessage([
-            "event": "focus",
-            "formID": "test-form-1",
-            "fieldType": "email",
-            "fieldRect": ["x": 100.0, "y": 200.0, "width": 150.0, "height": 30.0]
-        ])
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-1",
+                "fieldType": "email",
+                "fieldRect": ["x": 100.0, "y": 200.0, "width": 150.0, "height": 30.0]
+            ],
+            frameSecurityOrigin: "https://navy.mil:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
 
         #expect(session.isSuggestionPresented)
         #expect(session.activeField?.formID == "test-form-1")
@@ -143,7 +148,11 @@ struct AutofillTests {
         var evaluatedScript = ""
         var evaluatedParams: [String: Any] = [:]
 
-        try await session.fill(identity) { script, params in
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 0,
+            expectedOrigin: "https://navy.mil:443"
+        ) { script, params in
             evaluatedScript = script
             evaluatedParams = params
             return true
