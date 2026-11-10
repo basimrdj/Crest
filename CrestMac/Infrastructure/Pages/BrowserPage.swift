@@ -206,6 +206,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var awaitsInputSincePresented = false
     @ObservationIgnored let credentialSession: BrowserCredentialSession
     @ObservationIgnored var autofillSession: BrowserAutofillSession?
+    @ObservationIgnored private(set) var isPrivacyPolicyConfigured = false
+    @ObservationIgnored private(set) var navigationGeneration: UInt64 = 0
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
@@ -597,14 +599,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether the page belongs to a private window, which its engine takes
     /// on, now and whenever the page moves to another engine.
     func setPrivateBrowsing(_ isPrivate: Bool) {
+        isPrivacyPolicyConfigured = true
         guard isPrivateBrowsing != isPrivate else { return }
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
+        autofillSession?.dismiss()
         autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
     }
 
     /// Accesses or initializes the autofill session ensuring privacy mode is strictly adhered to.
-    func ensureAutofillSession() -> BrowserAutofillSession {
+    func ensureAutofillSession() -> BrowserAutofillSession? {
+        guard isPrivacyPolicyConfigured else { return nil }
         if let session = autofillSession { return session }
         let session = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
         autofillSession = session
@@ -1170,6 +1175,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isRegionCapturePresented = false
         // The picker belongs to the document the page leaves.
         elementPicker.cancel()
+        navigationGeneration &+= 1
         autofillSession?.dismiss()
         // The site it goes to may have content blocking turned off, or on.
         if let url, let webKit = webKitAdapter {

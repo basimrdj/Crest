@@ -155,8 +155,52 @@ extension BrowserPage {
             webKitEnginePage?.binding?.page(showing: source)?.host?.receiveAutofillMessage(scriptMessage)
             return
         }
+        // Enforce privacy configuration readiness
+        guard let session = ensureAutofillSession() else { return }
+
         if let dict = scriptMessage.body as? [String: Any] {
-            ensureAutofillSession().receiveMessage(dict)
+            let origin = scriptMessage.frameInfo.securityOrigin
+            let originString = "\(origin.protocol)://\(origin.host):\(origin.port)"
+            session.receiveMessage(
+                dict,
+                frameSecurityOrigin: originString,
+                isMainFrame: scriptMessage.frameInfo.isMainFrame,
+                navigationGeneration: navigationGeneration
+            )
+        }
+    }
+
+    func fillAutofillIdentity(_ identity: AutofillIdentity, in frameInfo: WKFrameInfo? = nil) async throws {
+        guard let session = autofillSession, let webView = webKitView else { return }
+        let currentOrigin: String?
+        if let origin = frameInfo?.securityOrigin {
+            currentOrigin = "\(origin.protocol)://\(origin.host):\(origin.port)"
+        } else if let url = webView.url {
+            currentOrigin = "\(url.scheme ?? "")://\(url.host ?? ""):\(url.port ?? 0)"
+        } else {
+            currentOrigin = nil
+        }
+
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: navigationGeneration,
+            expectedOrigin: currentOrigin
+        ) { body, arguments in
+            if let frameInfo {
+                return try await webView.callAsyncJavaScript(
+                    body,
+                    arguments: arguments,
+                    in: frameInfo,
+                    contentWorld: BrowserAutofillContentBridge.contentWorld
+                )
+            } else {
+                return try await webView.callAsyncJavaScript(
+                    body,
+                    arguments: arguments,
+                    in: nil,
+                    contentWorld: BrowserAutofillContentBridge.contentWorld
+                )
+            }
         }
     }
 }

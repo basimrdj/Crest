@@ -218,4 +218,109 @@ struct AutofillTests {
         #expect(storeB.identities(in: space1).count == 1)
         #expect(storeB.identities(in: space2).count == 1)
     }
+
+    @Test("BrowserAutofillSession rejects focus or fill across navigation generations or mismatched origins")
+    @MainActor
+    func testSessionOriginAndGenerationBinding() async throws {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Test",
+            fullName: "Ada Lovelace",
+            email: "ada@example.com"
+        )
+        store.save(identity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        // Receive focus for generation 1 and origin A
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "form-1",
+                "fieldType": "email"
+            ],
+            frameSecurityOrigin: "https://example.com:443",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+
+        #expect(session.isSuggestionPresented)
+
+        var filled = false
+        // Attempt fill with stale generation (e.g. page navigated to generation 2)
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 2,
+            expectedOrigin: "https://example.com:443"
+        ) { _, _ in
+            filled = true
+            return true
+        }
+
+        #expect(!filled, "Fill should be rejected when navigation generation is stale")
+        #expect(session.activeField == nil, "Active field must be revoked on stale generation")
+
+        // Receive focus again for generation 2
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "form-1",
+                "fieldType": "email"
+            ],
+            frameSecurityOrigin: "https://example.com:443",
+            isMainFrame: true,
+            navigationGeneration: 2
+        )
+
+        // Attempt fill from different origin (e.g. cross-origin iframe attempt)
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 2,
+            expectedOrigin: "https://evil.com:443"
+        ) { _, _ in
+            filled = true
+            return true
+        }
+
+        #expect(!filled, "Fill should be rejected when origin does not match focused frame")
+        #expect(session.activeField == nil, "Active field must be revoked on origin mismatch")
+    }
+
+    @Test("Synthetic focus delivered before privacy configuration is safely ignored")
+    @MainActor
+    func testPrePrivacyPolicyMessageRejection() {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Confidential",
+            fullName: "Secret Agent",
+            email: "agent@crest.test"
+        )
+        store.save(identity)
+
+        // Simulate a fresh session where privacy is unresolved
+        var sessionCreated = false
+        var isPolicyConfigured = false
+
+        func handleIncomingEvent() -> BrowserAutofillSession? {
+            guard isPolicyConfigured else { return nil }
+            sessionCreated = true
+            return BrowserAutofillSession(spaceID: spaceID, store: store)
+        }
+
+        // Before configuration is applied
+        #expect(handleIncomingEvent() == nil)
+        #expect(!sessionCreated)
+
+        // Once configured as private
+        isPolicyConfigured = true
+        let privateStore = BrowserAutofillStore(isPrivate: true)
+        let session = BrowserAutofillSession(spaceID: spaceID, store: privateStore)
+        #expect(session.matchingIdentities.isEmpty)
+    }
 }
