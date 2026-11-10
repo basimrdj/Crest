@@ -177,4 +177,26 @@ struct AutofillTests {
         overlay.onDismiss()
         #expect(dismissed)
     }
+
+    @Test("BrowserAutofillStore enforces zero disk footprint in private browsing")
+    @MainActor
+    func testPrivateStoreZeroDiskFootprint() {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let privateStore = BrowserAutofillStore(isPrivate: true, customDirectory: tempDir)
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Ephemeral",
+            fullName: "Private User",
+            email: "private@user.com"
+        )
+
+        privateStore.save(identity)
+        #expect(privateStore.identities(in: spaceID).count == 1)
+
+        // Verify no files written to disk
+        let fileURL = tempDir.appendingPathComponent("identities.json")
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+    }
 }

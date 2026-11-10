@@ -599,6 +599,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func setPrivateBrowsing(_ isPrivate: Bool) {
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: isPrivate))
     }
 
     /// Tries again to show a page its engine couldn't create.
