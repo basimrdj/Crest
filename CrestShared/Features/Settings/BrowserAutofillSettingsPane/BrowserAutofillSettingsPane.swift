@@ -6,7 +6,7 @@ struct BrowserAutofillSettingsPane: View {
     let spaceAccess: BrowserSpaceAccessController
     let fixedSpaceID: UUID?
 
-    @State private var autofillStore = BrowserAutofillStore()
+    @State private var autofillStore = BrowserAutofillStore.shared
     @State private var pickedSpaceID: UUID?
     @State private var editingIdentity: AutofillIdentity?
     @State private var isCreatingIdentity = false

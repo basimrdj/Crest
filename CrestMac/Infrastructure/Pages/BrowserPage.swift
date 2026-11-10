@@ -337,7 +337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: isPrivateBrowsing))
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,
@@ -600,7 +600,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         guard isPrivateBrowsing != isPrivate else { return }
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
-        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: isPrivate))
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
     }
 
     /// Tries again to show a page its engine couldn't create.

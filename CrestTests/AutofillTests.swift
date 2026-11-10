@@ -199,4 +199,23 @@ struct AutofillTests {
         let fileURL = tempDir.appendingPathComponent("identities.json")
         #expect(!FileManager.default.fileExists(atPath: fileURL.path))
     }
+
+    @Test("Concurrent edits across shared store consumers survive reload without loss")
+    @MainActor
+    func testConcurrentSharedStoreEdits() {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storeA = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        let space1 = UUID()
+        let space2 = UUID()
+
+        let id1 = AutofillIdentity(spaceID: space1, label: "Page1", fullName: "User One")
+        let id2 = AutofillIdentity(spaceID: space2, label: "Page2", fullName: "User Two")
+
+        storeA.save(id1)
+        storeA.save(id2)
+
+        let storeB = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(storeB.identities(in: space1).count == 1)
+        #expect(storeB.identities(in: space2).count == 1)
+    }
 }

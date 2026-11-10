@@ -5,7 +5,7 @@ struct BrowserDataPortabilityContent: View {
     @State private var discoveredArcRecords: [ArcAutofillProfileRecord] = []
     @State private var isShowingArcImport = false
 #endif
-    @State private var autofillStore = BrowserAutofillStore()
+    @State private var autofillStore = BrowserAutofillStore.shared
     let model: BrowserDataPortabilityModel
     let showsMacOSImportRequirement: Bool
 

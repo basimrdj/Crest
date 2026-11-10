@@ -6,7 +6,7 @@ struct BrowserAutofillSection: View {
     let space: SpaceModel
     let spaceAccess: BrowserSpaceAccessController
 
-    @State private var autofillStore = BrowserAutofillStore()
+    @State private var autofillStore = BrowserAutofillStore.shared
     @State private var editingIdentity: AutofillIdentity?
 
     var body: some View {
