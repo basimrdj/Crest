@@ -99,7 +99,14 @@ public final class BrowserAutofillSession {
             )
 
         case "blur":
-            activeField = nil
+            // Only dismiss active field if the blur event matches the focused form and frame
+            if let formID = body["formID"] as? String {
+                if activeField?.formID == formID && activeField?.frameHandleID == frameHandleID {
+                    activeField = nil
+                }
+            } else if activeField?.frameHandleID == frameHandleID {
+                activeField = nil
+            }
 
         default:
             break
@@ -110,7 +117,7 @@ public final class BrowserAutofillSession {
         _ identity: AutofillIdentity,
         expectedNavigationGeneration: UInt64,
         expectedOrigin: String,
-        expectedFrameHandleID: UUID? = nil,
+        expectedFrameHandleID: UUID,
         evaluate: Evaluate
     ) async throws {
         guard let field = activeField else { return }
@@ -133,8 +140,8 @@ public final class BrowserAutofillSession {
             return
         }
 
-        // Strict frame handle match if target frame was specified
-        if let expectedFrameHandleID, field.frameHandleID != expectedFrameHandleID {
+        // Strict frame handle match (fail closed)
+        guard field.frameHandleID == expectedFrameHandleID else {
             activeField = nil
             return
         }

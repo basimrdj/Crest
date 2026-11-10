@@ -603,7 +603,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         guard isPrivateBrowsing != isPrivate else { return }
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
+        #if os(macOS)
+        invalidateAutofillFocusTarget()
+        #else
         autofillSession?.dismiss()
+        #endif
         autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
     }
 
@@ -1176,7 +1180,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // The picker belongs to the document the page leaves.
         elementPicker.cancel()
         navigationGeneration &+= 1
+        #if os(macOS)
+        invalidateAutofillFocusTarget()
+        #else
         autofillSession?.dismiss()
+        #endif
         // The site it goes to may have content blocking turned off, or on.
         if let url, let webKit = webKitAdapter {
             webKit.contentRuleSession.navigating(to: url, in: webKit.webView)

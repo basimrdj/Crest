@@ -148,10 +148,12 @@ struct AutofillTests {
         var evaluatedScript = ""
         var evaluatedParams: [String: Any] = [:]
 
+        let activeHandleID = session.activeField?.frameHandleID ?? UUID()
         try await session.fill(
             identity,
             expectedNavigationGeneration: 0,
-            expectedOrigin: "https://navy.mil:443"
+            expectedOrigin: "https://navy.mil:443",
+            expectedFrameHandleID: activeHandleID
         ) { script, params in
             evaluatedScript = script
             evaluatedParams = params
@@ -260,10 +262,12 @@ struct AutofillTests {
 
         var filled = false
         // Attempt fill with stale generation (e.g. page navigated to generation 2)
+        let gen1HandleID = session.activeField?.frameHandleID ?? UUID()
         try await session.fill(
             identity,
             expectedNavigationGeneration: 2,
-            expectedOrigin: "https://example.com:443"
+            expectedOrigin: "https://example.com:443",
+            expectedFrameHandleID: gen1HandleID
         ) { _, _ in
             filled = true
             return true
@@ -285,10 +289,12 @@ struct AutofillTests {
         )
 
         // Attempt fill from different origin (e.g. cross-origin iframe attempt)
+        let gen2HandleID = session.activeField?.frameHandleID ?? UUID()
         try await session.fill(
             identity,
             expectedNavigationGeneration: 2,
-            expectedOrigin: "https://evil.com:443"
+            expectedOrigin: "https://evil.com:443",
+            expectedFrameHandleID: gen2HandleID
         ) { _, _ in
             filled = true
             return true
@@ -387,10 +393,12 @@ struct AutofillTests {
         var evaluatorRan = false
 
         // 4. Fill rejected when identity belongs to another Space
+        let handle4 = session.activeField?.frameHandleID ?? UUID()
         try await session.fill(
             otherSpaceIdentity,
             expectedNavigationGeneration: 1,
-            expectedOrigin: "https://example.com:443"
+            expectedOrigin: "https://example.com:443",
+            expectedFrameHandleID: handle4
         ) { _, _ in
             evaluatorRan = true
             return true
@@ -408,15 +416,72 @@ struct AutofillTests {
 
         // 6. Fill rejected when expected origin is empty or mismatched
         evaluatorRan = false
+        let handle5 = session.activeField?.frameHandleID ?? UUID()
         try await session.fill(
             identity,
             expectedNavigationGeneration: 1,
-            expectedOrigin: ""
+            expectedOrigin: "",
+            expectedFrameHandleID: handle5
         ) { _, _ in
             evaluatorRan = true
             return true
         }
         #expect(!evaluatorRan, "Fill must fail closed on empty expected origin")
+        #expect(session.activeField == nil)
+    }
+
+    @Test("BrowserAutofillSession and bridge reject cross-frame blur and mismatched frame handles")
+    @MainActor
+    func testFrameHandleAndScopedBlur() async throws {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "FrameTest",
+            fullName: "Frame Tester",
+            email: "frame@test.org"
+        )
+        store.save(identity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        let frameA = UUID()
+        let frameB = UUID()
+
+        // 1. Focus in Frame A
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-A", "fieldType": "email"],
+            frameSecurityOrigin: "https://test.org:443",
+            isMainFrame: false,
+            navigationGeneration: 1,
+            frameHandleID: frameA
+        )
+        #expect(session.isSuggestionPresented)
+        #expect(session.activeField?.frameHandleID == frameA)
+
+        // 2. Unrelated blur from Frame B or different formID must NOT clear Frame A active field
+        session.receiveMessage(
+            ["event": "blur", "formID": "form-B"],
+            frameSecurityOrigin: "https://test.org:443",
+            isMainFrame: false,
+            navigationGeneration: 1,
+            frameHandleID: frameB
+        )
+        #expect(session.isSuggestionPresented, "Blur from Frame B must not dismiss Frame A focus")
+
+        // 3. Attempt fill with wrong frame handle must fail closed
+        var didFill = false
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 1,
+            expectedOrigin: "https://test.org:443",
+            expectedFrameHandleID: frameB
+        ) { _, _ in
+            didFill = true
+            return true
+        }
+        #expect(!didFill, "Fill with mismatched frame handle must fail closed")
         #expect(session.activeField == nil)
     }
 }

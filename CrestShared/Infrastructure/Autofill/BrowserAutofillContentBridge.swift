@@ -158,7 +158,13 @@ public enum BrowserAutofillContentBridge {
           }, true);
 
           document.addEventListener("focusout", (event) => {
-            post({ event: "blur" });
+            if (!event.isTrusted) return;
+            const target = event.target;
+            if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
+              const root = formRootFor(target);
+              const formID = idForForm(root);
+              post({ event: "blur", formID });
+            }
           }, true);
         })();
         """#

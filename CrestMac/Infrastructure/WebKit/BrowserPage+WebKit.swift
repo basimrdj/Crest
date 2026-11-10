@@ -170,6 +170,12 @@ extension BrowserPage {
         }
     }
 
+    func invalidateAutofillFocusTarget() {
+        activeAutofillTargetFrame = nil
+        activeAutofillHandleID = nil
+        autofillSession?.dismiss()
+    }
+
     /// Normalizes scheme, host, and port into a canonical origin string.
     private static func canonicalOrigin(protocol proto: String, host: String, port: Int) -> String {
         let normalizedPort: Int
@@ -199,21 +205,6 @@ extension BrowserPage {
         guard let dict = scriptMessage.body as? [String: Any],
             let event = dict["event"] as? String else { return }
 
-        if event == "blur" {
-            // Revoke active frame target upon blur
-            activeAutofillTargetFrame = nil
-            activeAutofillHandleID = nil
-            session.receiveMessage(
-                dict,
-                frameSecurityOrigin: "revoke",
-                isMainFrame: true,
-                navigationGeneration: navigationGeneration
-            )
-            return
-        }
-
-        guard event == "focus" else { return }
-
         let origin = scriptMessage.frameInfo.securityOrigin
         guard !origin.host.isEmpty else { return }
         let originString = Self.canonicalOrigin(
@@ -221,6 +212,28 @@ extension BrowserPage {
             host: origin.host,
             port: origin.port
         )
+
+        if event == "blur" {
+            // Only dismiss if blur event is from the active frame
+            if let activeFrame = activeAutofillTargetFrame, activeFrame === scriptMessage.frameInfo {
+                if let handleID = activeAutofillHandleID {
+                    session.receiveMessage(
+                        dict,
+                        frameSecurityOrigin: originString,
+                        isMainFrame: scriptMessage.frameInfo.isMainFrame,
+                        navigationGeneration: navigationGeneration,
+                        frameHandleID: handleID
+                    )
+                }
+                if session.activeField == nil {
+                    activeAutofillTargetFrame = nil
+                    activeAutofillHandleID = nil
+                }
+            }
+            return
+        }
+
+        guard event == "focus" else { return }
 
         let handleID = UUID()
         activeAutofillTargetFrame = scriptMessage.frameInfo
@@ -237,18 +250,14 @@ extension BrowserPage {
 
     func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
         guard let session = autofillSession, let webView = webKitView else { return }
-        guard let frame = targetFrame ?? activeAutofillTargetFrame else {
-            // Reject fill closed if frame target is missing or invalidated
-            session.dismiss()
-            activeAutofillTargetFrame = nil
-            activeAutofillHandleID = nil
+        guard let frame = targetFrame ?? activeAutofillTargetFrame, let handleID = activeAutofillHandleID else {
+            // Reject fill closed if frame target or handle is missing or invalidated
+            invalidateAutofillFocusTarget()
             return
         }
         let origin = frame.securityOrigin
         guard !origin.host.isEmpty else {
-            session.dismiss()
-            activeAutofillTargetFrame = nil
-            activeAutofillHandleID = nil
+            invalidateAutofillFocusTarget()
             return
         }
         let expectedOrigin = Self.canonicalOrigin(
@@ -261,7 +270,7 @@ extension BrowserPage {
             identity,
             expectedNavigationGeneration: navigationGeneration,
             expectedOrigin: expectedOrigin,
-            expectedFrameHandleID: activeAutofillHandleID
+            expectedFrameHandleID: handleID
         ) { body, arguments in
             return try await webView.callAsyncJavaScript(
                 body,
@@ -270,7 +279,6 @@ extension BrowserPage {
                 contentWorld: BrowserAutofillContentBridge.contentWorld
             )
         }
-        activeAutofillTargetFrame = nil
-        activeAutofillHandleID = nil
+        invalidateAutofillFocusTarget()
     }
 }
