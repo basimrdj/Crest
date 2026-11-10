@@ -485,43 +485,45 @@ struct AutofillTests {
         #expect(session.activeField == nil)
     }
 
-    @Test("Blur matching requires corresponding frameToken and does not clear active target on distinct token")
+    @Test("BrowserAutofillFocusRouter correctly gates focus, blur tokens, and selection state")
     @MainActor
-    func testBlurFrameTokenMatching() {
-        // Test host token validation model
-        var activeTargetToken: String? = nil
-        var isSessionActive = false
+    func testBrowserAutofillFocusRouter() {
+        let router = BrowserAutofillFocusRouter()
 
-        func handleEvent(event: String, formID: String, frameToken: String?) {
-            if event == "focus" {
-                guard let token = frameToken, !token.isEmpty else { return }
-                activeTargetToken = token
-                isSessionActive = true
-            } else if event == "blur" {
-                if let activeToken = activeTargetToken, let token = frameToken, activeToken == token {
-                    activeTargetToken = nil
-                    isSessionActive = false
-                }
-            }
-        }
+        // 1. Reject tokenless or empty focus
+        #expect(router.acceptFocus(formID: "form-1", frameToken: nil, focusToken: "focus-1", securityOrigin: "https://example.com:443", navigationGeneration: 1) == nil)
+        #expect(router.acceptFocus(formID: "form-1", frameToken: "frame-1", focusToken: "", securityOrigin: "https://example.com:443", navigationGeneration: 1) == nil)
+        #expect(router.acceptFocus(formID: "form-1", frameToken: "frame-1", focusToken: "focus-1", securityOrigin: "null", navigationGeneration: 1) == nil)
+        #expect(router.activeFocus == nil)
 
-        // 1. Reject tokenless / empty focus
-        handleEvent(event: "focus", formID: "form-1", frameToken: nil)
-        #expect(!isSessionActive)
-        handleEvent(event: "focus", formID: "form-1", frameToken: "")
-        #expect(!isSessionActive)
+        // 2. Accept valid focus
+        let active = router.acceptFocus(
+            formID: "form-1",
+            frameToken: "frame-1",
+            focusToken: "focus-1",
+            securityOrigin: "https://example.com:443",
+            navigationGeneration: 1
+        )
+        #expect(active != nil)
+        #expect(router.activeFocus?.focusToken == "focus-1")
+        #expect(router.activeFocus?.frameToken == "frame-1")
 
-        // 2. Valid focus with token-A
-        handleEvent(event: "focus", formID: "form-1", frameToken: "token-A")
-        #expect(isSessionActive)
-        #expect(activeTargetToken == "token-A")
+        // 3. Stale blur from different focusToken (e.g. earlier field in same form) does NOT dismiss
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-1", focusToken: "focus-old"))
+        #expect(router.activeFocus != nil)
 
-        // 3. Unrelated blur with token-B (e.g. from another frame) must not dismiss
-        handleEvent(event: "blur", formID: "form-1", frameToken: "token-B")
-        #expect(isSessionActive, "Blur with different frameToken must not dismiss active focus")
+        // 4. Blur from different frameToken does NOT dismiss
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-2", focusToken: "focus-1"))
+        #expect(router.activeFocus != nil)
 
-        // 4. Blur with matching token-A must dismiss
-        handleEvent(event: "blur", formID: "form-1", frameToken: "token-A")
-        #expect(!isSessionActive, "Blur with matching frameToken must dismiss active focus")
+        // 5. Blur during native suggestion selection does NOT dismiss
+        router.beginSelection()
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-1", focusToken: "focus-1"))
+        #expect(router.activeFocus != nil)
+        router.endSelection()
+
+        // 6. Matching blur dismisses active focus
+        #expect(router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-1", focusToken: "focus-1"))
+        #expect(router.activeFocus == nil)
     }
 }

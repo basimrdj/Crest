@@ -149,8 +149,7 @@ extension BrowserPage: WebKitPageHosting {
 // MARK: - Autofill
 
 private var activeAutofillTargetFrameKey: UInt8 = 0
-private var activeAutofillHandleIDKey: UInt8 = 0
-private var activeAutofillFrameTokenKey: UInt8 = 0
+private var autofillFocusRouterKey: UInt8 = 0
 
 extension BrowserPage {
     var activeAutofillTargetFrame: WKFrameInfo? {
@@ -162,28 +161,18 @@ extension BrowserPage {
         }
     }
 
-    var activeAutofillHandleID: UUID? {
-        get {
-            objc_getAssociatedObject(self, &activeAutofillHandleIDKey) as? UUID
+    var autofillFocusRouter: BrowserAutofillFocusRouter {
+        if let router = objc_getAssociatedObject(self, &autofillFocusRouterKey) as? BrowserAutofillFocusRouter {
+            return router
         }
-        set {
-            objc_setAssociatedObject(self, &activeAutofillHandleIDKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
-
-    var activeAutofillFrameToken: String? {
-        get {
-            objc_getAssociatedObject(self, &activeAutofillFrameTokenKey) as? String
-        }
-        set {
-            objc_setAssociatedObject(self, &activeAutofillFrameTokenKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
+        let router = BrowserAutofillFocusRouter()
+        objc_setAssociatedObject(self, &autofillFocusRouterKey, router, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return router
     }
 
     func invalidateAutofillFocusTarget() {
         activeAutofillTargetFrame = nil
-        activeAutofillHandleID = nil
-        activeAutofillFrameToken = nil
+        autofillFocusRouter.invalidate()
         autofillSession?.dismiss()
     }
 
@@ -225,51 +214,48 @@ extension BrowserPage {
         )
 
         let frameToken = dict["frameToken"] as? String
+        let focusToken = dict["focusToken"] as? String
+        let formID = dict["formID"] as? String
 
         if event == "blur" {
-            // Validate blur against the active focus frame token (stable per document/frame)
-            if let activeToken = activeAutofillFrameToken, let frameToken, activeToken == frameToken {
-                if let handleID = activeAutofillHandleID {
-                    session.receiveMessage(
-                        dict,
-                        frameSecurityOrigin: originString,
-                        isMainFrame: scriptMessage.frameInfo.isMainFrame,
-                        navigationGeneration: navigationGeneration,
-                        frameHandleID: handleID
-                    )
-                }
-                if session.activeField == nil {
-                    activeAutofillTargetFrame = nil
-                    activeAutofillHandleID = nil
-                    activeAutofillFrameToken = nil
-                }
+            if autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                activeAutofillTargetFrame = nil
+                session.dismiss()
             }
             return
         }
 
-        guard event == "focus" else { return }
+        guard event == "focus", let formID else { return }
 
-        // Reject tokenless or empty frameToken to prevent undismissable focus states
-        guard let validFrameToken = frameToken, !validFrameToken.isEmpty else { return }
+        guard let activeFocus = autofillFocusRouter.acceptFocus(
+            formID: formID,
+            frameToken: frameToken,
+            focusToken: focusToken,
+            securityOrigin: originString,
+            navigationGeneration: navigationGeneration
+        ) else {
+            return
+        }
 
-        let handleID = UUID()
         activeAutofillTargetFrame = scriptMessage.frameInfo
-        activeAutofillHandleID = handleID
-        activeAutofillFrameToken = validFrameToken
 
         session.receiveMessage(
             dict,
             frameSecurityOrigin: originString,
             isMainFrame: scriptMessage.frameInfo.isMainFrame,
             navigationGeneration: navigationGeneration,
-            frameHandleID: handleID
+            frameHandleID: activeFocus.handleID
         )
     }
 
     func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
         guard let session = autofillSession, let webView = webKitView else { return }
-        guard let frame = targetFrame ?? activeAutofillTargetFrame, let handleID = activeAutofillHandleID else {
-            // Reject fill closed if frame target or handle is missing or invalidated
+        autofillFocusRouter.beginSelection()
+        defer { autofillFocusRouter.endSelection() }
+
+        guard let frame = targetFrame ?? activeAutofillTargetFrame,
+            let activeFocus = autofillFocusRouter.activeFocus
+        else {
             invalidateAutofillFocusTarget()
             return
         }
@@ -288,7 +274,7 @@ extension BrowserPage {
             identity,
             expectedNavigationGeneration: navigationGeneration,
             expectedOrigin: expectedOrigin,
-            expectedFrameHandleID: handleID
+            expectedFrameHandleID: activeFocus.handleID
         ) { body, arguments in
             return try await webView.callAsyncJavaScript(
                 body,

@@ -15,6 +15,7 @@ public enum BrowserAutofillContentBridge {
           const formsByID = new Map();
           let nextFormID = 1;
           const frameToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("frame-" + Math.random().toString(36).slice(2));
+          let currentFocusToken = null;
           let blurTimeout = null;
 
           const post = (body) => {
@@ -144,11 +145,13 @@ public enum BrowserAutofillContentBridge {
             const root = formRootFor(element);
             const formID = idForForm(root);
             const rect = rectOf(element);
+            currentFocusToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("focus-" + Math.random().toString(36).slice(2));
 
             post({
               event: "focus",
               fieldType,
               formID,
+              focusToken: currentFocusToken,
               fieldRect: rect || undefined
             });
             return true;
@@ -183,9 +186,10 @@ public enum BrowserAutofillContentBridge {
             if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
               const root = formRootFor(target);
               const formID = idForForm(root);
+              const focusToken = currentFocusToken;
               if (blurTimeout) clearTimeout(blurTimeout);
               blurTimeout = setTimeout(() => {
-                post({ event: "blur", formID });
+                post({ event: "blur", formID, focusToken });
                 blurTimeout = null;
               }, 200);
             }
