@@ -632,4 +632,71 @@ struct AutofillTests {
         #expect(reloadedStore.identities(in: spaceToKeep).count == 1)
         #expect(reloadedStore.identities(in: spaceToKeep).first?.fullName == "Surviving User")
     }
+
+    @Test("Arc schema discovery handles local_addresses and contact_info table pairs accurately")
+    @MainActor
+    func testArcIntermediateAndLocalSchemas() throws {
+        // 1. Test local_addresses + local_addresses_type_tokens
+        let localDB = FileManager.default.temporaryDirectory.appendingPathComponent("Local_Web_Data.sqlite")
+        defer { try? FileManager.default.removeItem(at: localDB) }
+
+        var db1: OpaquePointer?
+        guard sqlite3_open(localDB.path, &db1) == SQLITE_OK, let db1 else {
+            Issue.record("Failed to create local SQLite database")
+            return
+        }
+        sqlite3_exec(db1, "CREATE TABLE local_addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db1, "CREATE TABLE local_addresses_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+        sqlite3_exec(db1, "INSERT INTO local_addresses VALUES ('guid-local');", nil, nil, nil)
+        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 7, 'Local Tester');", nil, nil, nil)
+        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 9, 'local@test.com');", nil, nil, nil)
+        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 30, '456 Branch Ave');", nil, nil, nil)
+        sqlite3_close(db1)
+
+        let localRecords = try BrowserAutofillImportReader.readProfiles(from: localDB)
+        #expect(localRecords.count == 1)
+        #expect(localRecords[0].fullName == "Local Tester")
+        #expect(localRecords[0].email == "local@test.com")
+        #expect(localRecords[0].streetAddress == "456 Branch Ave")
+
+        // 2. Test contact_info + contact_info_type_tokens
+        let contactDB = FileManager.default.temporaryDirectory.appendingPathComponent("Contact_Web_Data.sqlite")
+        defer { try? FileManager.default.removeItem(at: contactDB) }
+
+        var db2: OpaquePointer?
+        guard sqlite3_open(contactDB.path, &db2) == SQLITE_OK, let db2 else {
+            Issue.record("Failed to create contact SQLite database")
+            return
+        }
+        sqlite3_exec(db2, "CREATE TABLE contact_info (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db2, "CREATE TABLE contact_info_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+        sqlite3_exec(db2, "INSERT INTO contact_info VALUES ('guid-contact');", nil, nil, nil)
+        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 7, 'Contact Person');", nil, nil, nil)
+        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 9, 'contact@test.com');", nil, nil, nil)
+        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 30, '789 Remote St');", nil, nil, nil)
+        sqlite3_close(db2)
+
+        let contactRecords = try BrowserAutofillImportReader.readProfiles(from: contactDB)
+        #expect(contactRecords.count == 1)
+        #expect(contactRecords[0].fullName == "Contact Person")
+        #expect(contactRecords[0].email == "contact@test.com")
+        #expect(contactRecords[0].streetAddress == "789 Remote St")
+    }
+
+    @Test("Arc reader rejects non-existent or corrupted files safely")
+    @MainActor
+    func testArcReaderFailureHandling() {
+        let nonexistentURL = FileManager.default.temporaryDirectory.appendingPathComponent("nonexistent.sqlite")
+        #expect(throws: BrowserAutofillImportError.fileNotFound) {
+            try BrowserAutofillImportReader.readProfiles(from: nonexistentURL)
+        }
+
+        let corruptedURL = FileManager.default.temporaryDirectory.appendingPathComponent("corrupted.sqlite")
+        try? "not a valid sqlite file".data(using: .utf8)?.write(to: corruptedURL)
+        defer { try? FileManager.default.removeItem(at: corruptedURL) }
+
+        #expect(throws: BrowserAutofillImportError.unreadableDatabase) {
+            try BrowserAutofillImportReader.readProfiles(from: corruptedURL)
+        }
+    }
 }

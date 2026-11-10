@@ -37,6 +37,7 @@ struct BrowserDataPortabilityContent: View {
         .sheet(isPresented: $isShowingArcImport) {
             BrowserArcAutofillImportSheet(
                 browser: model.browser,
+                spaceAccess: model.spaceAccess,
                 records: discoveredArcRecords,
                 onImport: { spaceID, identities in
                     autofillStore.importIdentities(identities, into: spaceID)

@@ -5,20 +5,32 @@ import SwiftUI
 public struct BrowserArcAutofillImportSheet: View {
     @Environment(\.dismiss) private var dismiss
     let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
     let records: [ArcAutofillProfileRecord]
     let onImport: (UUID, [AutofillIdentity]) -> Void
 
     @State private var selectedSpaceID: UUID?
 
+    /// Filters available destination Spaces to only those that are unlocked and persistent.
+    private var eligibleSpaces: [SpaceModel] {
+        browser.spaceModels.filter { space in
+            !spaceAccess.isLocked(space) && !browser.isPrivateBrowsing
+        }
+    }
+
     public init(
         browser: BrowserStore,
+        spaceAccess: BrowserSpaceAccessController,
         records: [ArcAutofillProfileRecord],
         onImport: @escaping (UUID, [AutofillIdentity]) -> Void
     ) {
         self.browser = browser
+        self.spaceAccess = spaceAccess
         self.records = records
         self.onImport = onImport
-        _selectedSpaceID = State(initialValue: browser.shownSpace?.id ?? browser.spaceModels.first?.id)
+        let defaultSpace = browser.shownSpace.flatMap { !spaceAccess.isLocked($0) ? $0.id : nil }
+            ?? browser.spaceModels.first(where: { !spaceAccess.isLocked($0) })?.id
+        _selectedSpaceID = State(initialValue: defaultSpace)
     }
 
     public var body: some View {
@@ -28,7 +40,7 @@ public struct BrowserArcAutofillImportSheet: View {
                     CrestSpaceMenuPicker(
                         "Destination Space",
                         selection: $selectedSpaceID,
-                        spaces: CrestSpaceIdentity.list(browser.spaceModels)
+                        spaces: CrestSpaceIdentity.list(eligibleSpaces)
                     )
                 } header: {
                     Text("Destination")

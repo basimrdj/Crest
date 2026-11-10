@@ -64,11 +64,15 @@ public final class BrowserAutofillStore {
     // MARK: - Actions - Mutations
 
     /// Saves or updates an identity. If marked as default, unmarks other defaults in the same Space.
+    /// If it is the first identity in the Space, automatically marks it as default.
     public func save(_ identity: AutofillIdentity) {
         var updated = identity
         updated.updatedAt = Date()
 
-        if updated.isDefault {
+        let existingInSpace = identities.filter { $0.spaceID == updated.spaceID && $0.id != updated.id }
+        if existingInSpace.isEmpty {
+            updated.isDefault = true
+        } else if updated.isDefault {
             for index in identities.indices where identities[index].spaceID == updated.spaceID {
                 identities[index].isDefault = false
             }
