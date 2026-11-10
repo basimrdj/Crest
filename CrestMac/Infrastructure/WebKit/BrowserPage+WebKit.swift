@@ -145,3 +145,18 @@ extension BrowserPage: WebKitPageHosting {
         navigationReporter?.reportHistoryAgain()
     }
 }
+
+// MARK: - Autofill
+
+extension BrowserPage {
+    func receiveAutofillMessage(_ scriptMessage: WKScriptMessage) {
+        guard let webView = webKitView else { return }
+        if let source = scriptMessage.webView, source !== webView {
+            webKitEnginePage?.binding?.page(showing: source)?.host?.receiveAutofillMessage(scriptMessage)
+            return
+        }
+        if let dict = scriptMessage.body as? [String: Any] {
+            autofillSession?.receiveMessage(dict)
+        }
+    }
+}

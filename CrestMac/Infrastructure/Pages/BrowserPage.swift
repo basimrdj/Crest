@@ -205,6 +205,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// used it since, which the diagnostic log notes once they do.
     @ObservationIgnored var awaitsInputSincePresented = false
     @ObservationIgnored let credentialSession: BrowserCredentialSession
+    @ObservationIgnored var autofillSession: BrowserAutofillSession?
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
@@ -336,6 +337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: false))
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,
@@ -1158,6 +1160,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isRegionCapturePresented = false
         // The picker belongs to the document the page leaves.
         elementPicker.cancel()
+        autofillSession?.dismiss()
         // The site it goes to may have content blocking turned off, or on.
         if let url, let webKit = webKitAdapter {
             webKit.contentRuleSession.navigating(to: url, in: webKit.webView)

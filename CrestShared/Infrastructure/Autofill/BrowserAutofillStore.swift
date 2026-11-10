@@ -2,18 +2,29 @@ import Foundation
 import Observation
 
 /// Space-scoped persistent store for native autofill identities.
-/// Preserves Space privacy boundaries and supports CRUD operations.
+/// Preserves Space privacy boundaries, isolates files per Space in Application Support,
+/// and enforces in-memory-only storage for Private Spaces.
 @Observable
 @MainActor
 public final class BrowserAutofillStore {
     // MARK: - Variables
 
-    private let userDefaultsKey = "CrestAutofillIdentities"
+    public let isPrivate: Bool
     public private(set) var identities: [AutofillIdentity] = []
+    private let storageDirectory: URL?
 
     // MARK: - Initializers
 
-    public init() {
+    public init(isPrivate: Bool = false, customDirectory: URL? = nil) {
+        self.isPrivate = isPrivate
+        if isPrivate {
+            storageDirectory = nil
+        } else if let customDirectory {
+            storageDirectory = customDirectory
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            storageDirectory = appSupport?.appendingPathComponent("Crest/Autofill", isDirectory: true)
+        }
         load()
     }
 
@@ -64,7 +75,6 @@ public final class BrowserAutofillStore {
         if let existingIndex = identities.firstIndex(where: { $0.id == updated.id }) {
             identities[existingIndex] = updated
         } else {
-            // If it's the first identity in this space, make it default automatically
             if !identities.contains(where: { $0.spaceID == updated.spaceID }) {
                 updated.isDefault = true
             }
@@ -78,7 +88,6 @@ public final class BrowserAutofillStore {
         guard let index = identities.firstIndex(where: { $0.id == identityID }) else { return }
         let removed = identities.remove(at: index)
 
-        // If we deleted the default, assign a new default if any remain in the Space
         if removed.isDefault, let nextIndex = identities.firstIndex(where: { $0.spaceID == removed.spaceID }) {
             identities[nextIndex].isDefault = true
         }
@@ -103,7 +112,6 @@ public final class BrowserAutofillStore {
 
         for var item in incoming {
             item.spaceID = destinationSpaceID
-            // Deduplication rule: match on normalized email and streetAddress
             let isDuplicate = existing.contains { candidate in
                 let emailMatch = !item.email.isEmpty && candidate.email.caseInsensitiveCompare(item.email) == .orderedSame
                 let addressMatch = !item.streetAddress.isEmpty && candidate.streetAddress.caseInsensitiveCompare(item.streetAddress) == .orderedSame
@@ -123,8 +131,13 @@ public final class BrowserAutofillStore {
 
     // MARK: - Actions - Persistence
 
+    private var storageFileURL: URL? {
+        storageDirectory?.appendingPathComponent("identities.json")
+    }
+
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+        guard !isPrivate, let fileURL = storageFileURL, FileManager.default.fileExists(atPath: fileURL.path),
+            let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([AutofillIdentity].self, from: data)
         else {
             identities = []
@@ -134,7 +147,12 @@ public final class BrowserAutofillStore {
     }
 
     private func persist() {
-        guard let encoded = try? JSONEncoder().encode(identities) else { return }
-        UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+        guard !isPrivate, let directory = storageDirectory, let fileURL = storageFileURL else {
+            return
+        }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let encoded = try? JSONEncoder().encode(identities) {
+            try? encoded.write(to: fileURL, options: .atomic)
+        }
     }
 }

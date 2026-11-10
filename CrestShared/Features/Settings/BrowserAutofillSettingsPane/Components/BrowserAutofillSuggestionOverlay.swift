@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Anchored native suggestion popover for autofill suggestions directly beneath the focused form field.
-/// Adheres strictly to Crest's design system using `crestInteractiveSurface` and Space-aware tinting.
+/// Adheres strictly to Crest's design system using `crestInteractiveSurface`, `BrowserCredentialPromptPlacement`,
+/// and Space-aware tinting with robust coordinate boundaries and edge clamping.
 public struct BrowserAutofillSuggestionOverlay: View {
     public let fieldRect: CGRect
     public let identities: [AutofillIdentity]
@@ -11,6 +12,8 @@ public struct BrowserAutofillSuggestionOverlay: View {
 
     @State private var hoveredID: UUID?
     @State private var selectedIndex: Int = 0
+    @State private var containerSize = CGSize.zero
+    @State private var promptSize = CGSize.zero
 
     public init(
         fieldRect: CGRect,
@@ -92,7 +95,18 @@ public struct BrowserAutofillSuggestionOverlay: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(CrestColor.separator, lineWidth: 0.5)
             )
-            .offset(x: clampedOrigin.x, y: clampedOrigin.y)
+            .onGeometryChange(for: CGSize.self) { proxy in
+                proxy.size
+            } action: { size in
+                promptSize = size
+            }
+            .offset(x: clampedPlacement.x, y: clampedPlacement.y)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .onGeometryChange(for: CGSize.self) { proxy in
+                proxy.size
+            } action: { size in
+                containerSize = size
+            }
             .onExitCommand(perform: onDismiss)
             .onKeyPress(.downArrow) {
                 if selectedIndex < identities.count - 1 {
@@ -117,9 +131,21 @@ public struct BrowserAutofillSuggestionOverlay: View {
         }
     }
 
-    private var clampedOrigin: CGPoint {
-        let x = max(0, fieldRect.minX)
-        let y = fieldRect.maxY + 4
+    private var clampedPlacement: CGPoint {
+        let width = promptSize.width > 0 ? promptSize.width : 260
+        let height = promptSize.height > 0 ? promptSize.height : 120
+
+        var x = fieldRect.minX
+        if containerSize.width > 0 && x + width > containerSize.width - 12 {
+            x = max(12, containerSize.width - width - 12)
+        }
+        x = max(12, x)
+
+        var y = fieldRect.maxY + 4
+        if containerSize.height > 0 && y + height > containerSize.height - 12 {
+            // Flip above field if overflowing bottom container boundary
+            y = max(12, fieldRect.minY - height - 4)
+        }
         return CGPoint(x: x, y: y)
     }
 }
