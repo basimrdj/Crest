@@ -249,10 +249,13 @@ extension BrowserPage {
 
         guard event == "focus" else { return }
 
+        // Reject tokenless or empty frameToken to prevent undismissable focus states
+        guard let validFrameToken = frameToken, !validFrameToken.isEmpty else { return }
+
         let handleID = UUID()
         activeAutofillTargetFrame = scriptMessage.frameInfo
         activeAutofillHandleID = handleID
-        activeAutofillFrameToken = frameToken
+        activeAutofillFrameToken = validFrameToken
 
         session.receiveMessage(
             dict,

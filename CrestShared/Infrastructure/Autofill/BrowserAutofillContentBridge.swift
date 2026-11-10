@@ -115,22 +115,7 @@ public enum BrowserAutofillContentBridge {
             element.dispatchEvent(new Event("change", { bubbles: true }));
           };
 
-          const handleFocus = (element) => {
-            if (!isVisible(element)) return;
-            const fieldType = classifyField(element);
-            if (!fieldType) return;
 
-            const root = formRootFor(element);
-            const formID = idForForm(root);
-            const rect = rectOf(element);
-
-            post({
-              event: "focus",
-              fieldType,
-              formID,
-              fieldRect: rect || undefined
-            });
-          };
 
           globalThis.__crestAutofillBridge = Object.freeze({
             fill(formID, values) {
@@ -151,15 +136,44 @@ public enum BrowserAutofillContentBridge {
             }
           });
 
+          const handleFocus = (element) => {
+            if (!isVisible(element)) return false;
+            const fieldType = classifyField(element);
+            if (!fieldType) return false;
+
+            const root = formRootFor(element);
+            const formID = idForForm(root);
+            const rect = rectOf(element);
+
+            post({
+              event: "focus",
+              fieldType,
+              formID,
+              fieldRect: rect || undefined
+            });
+            return true;
+          };
+
           document.addEventListener("focusin", (event) => {
             if (!event.isTrusted) return;
-            if (blurTimeout) {
-              clearTimeout(blurTimeout);
-              blurTimeout = null;
-            }
             const target = event.target;
+            let isEligible = false;
             if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
-              handleFocus(target);
+              isEligible = handleFocus(target);
+            }
+            if (isEligible) {
+              // Focus entered another eligible autofill input; cancel pending blur
+              if (blurTimeout) {
+                clearTimeout(blurTimeout);
+                blurTimeout = null;
+              }
+            } else {
+              // Focus moved to non-autofill control (button, link, etc.); immediately flush pending blur if any
+              if (blurTimeout) {
+                clearTimeout(blurTimeout);
+                blurTimeout = null;
+                post({ event: "blur" });
+              }
             }
           }, true);
 
@@ -169,12 +183,11 @@ public enum BrowserAutofillContentBridge {
             if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
               const root = formRootFor(target);
               const formID = idForForm(root);
-              // Grace period to allow focus transfer between fields or click into native suggestion UI
               if (blurTimeout) clearTimeout(blurTimeout);
               blurTimeout = setTimeout(() => {
                 post({ event: "blur", formID });
                 blurTimeout = null;
-              }, 250);
+              }, 200);
             }
           }, true);
         })();
