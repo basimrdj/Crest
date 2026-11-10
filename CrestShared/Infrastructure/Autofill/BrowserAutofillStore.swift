@@ -109,12 +109,28 @@ public final class BrowserAutofillStore {
         persist()
     }
 
-    /// Batch imports identities into a destination Space, deduplicating against existing entries.
+    public enum AutofillImportAuthorizationError: Error, Equatable {
+        case destinationLocked
+        case privateBrowsingActive
+        case spaceNotFound
+    }
+
+    /// Batch imports identities into a destination Space, deduplicating against existing entries,
+    /// enforcing strict Space lock and private browsing policy at the store mutation boundary.
     @discardableResult
     public func importIdentities(
         _ incoming: [AutofillIdentity],
-        into destinationSpaceID: UUID
-    ) -> (importedCount: Int, duplicateCount: Int) {
+        into destinationSpaceID: UUID,
+        isLocked: Bool = false,
+        isPrivate: Bool = false
+    ) throws -> (importedCount: Int, duplicateCount: Int) {
+        guard !isLocked else {
+            throw AutofillImportAuthorizationError.destinationLocked
+        }
+        guard !isPrivate else {
+            throw AutofillImportAuthorizationError.privateBrowsingActive
+        }
+
         let current = identities(in: destinationSpaceID)
         var duplicates = 0
         var imported = 0

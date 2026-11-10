@@ -100,7 +100,7 @@ struct AutofillTests {
             streetAddress: "200 Lab Rd"
         )
 
-        let result = store.importIdentities([duplicate, novel], into: destinationSpace)
+        let result = try store.importIdentities([duplicate, novel], into: destinationSpace)
         #expect(result.duplicateCount == 1)
         #expect(result.importedCount == 1)
 
@@ -706,17 +706,6 @@ struct AutofillTests {
         let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
-        var isSpaceLocked = false
-        var isPrivateBrowsing = false
-
-        func commitImport(identities: [AutofillIdentity]) -> Bool {
-            guard !isSpaceLocked, !isPrivateBrowsing else {
-                return false
-            }
-            store.importIdentities(identities, into: spaceID)
-            return true
-        }
-
         let identity = AutofillIdentity(
             spaceID: spaceID,
             label: "Arc Import",
@@ -724,20 +713,21 @@ struct AutofillTests {
             email: "candidate@test.com"
         )
 
-        // 1. If Space locks before commit
-        isSpaceLocked = true
-        #expect(!commitImport(identities: [identity]), "Must fail closed when Space is locked at commit time")
+        // 1. If destination Space is locked at commit time, store throws destinationLocked
+        #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.destinationLocked) {
+            try store.importIdentities([identity], into: spaceID, isLocked: true, isPrivate: false)
+        }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 2. If private browsing is active at commit
-        isSpaceLocked = false
-        isPrivateBrowsing = true
-        #expect(!commitImport(identities: [identity]), "Must fail closed when in private browsing at commit time")
+        // 2. If private browsing is active at commit time, store throws privateBrowsingActive
+        #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.privateBrowsingActive) {
+            try store.importIdentities([identity], into: spaceID, isLocked: false, isPrivate: true)
+        }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 3. Normal authorized commit
-        isPrivateBrowsing = false
-        #expect(commitImport(identities: [identity]))
+        // 3. Normal authorized import succeeds
+        let result = try? store.importIdentities([identity], into: spaceID, isLocked: false, isPrivate: false)
+        #expect(result?.importedCount == 1)
         #expect(store.identities(in: spaceID).count == 1)
     }
 }

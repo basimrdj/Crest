@@ -53,6 +53,9 @@ extension BrowserStore {
         }
         try await dataDeleter.deleteData(for: deletion)
         try await credentialVault.deleteAll(in: id)
+        await MainActor.run {
+            BrowserAutofillStore.shared.deleteIdentities(for: id)
+        }
 
         try family.commit(
             FinishDeletingSpace(
