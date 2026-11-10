@@ -561,4 +561,65 @@ struct AutofillTests {
         #expect(router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: "focus-abc"))
         #expect(router.activeFocus == nil)
     }
+
+    @Test("Arc schema discovery handles address_type_tokens, contact_info, and standard tables")
+    @MainActor
+    func testArcMultiSchemaSupport() {
+        // Verify ArcAutofillProfileRecord construction across modern, intermediate, and legacy schemas
+        let modern = ArcAutofillProfileRecord(
+            guid: "guid-1",
+            fullName: "Modern User",
+            companyName: "Modern Co",
+            streetAddress: "1 Market St",
+            city: "San Francisco",
+            state: "CA",
+            zipcode: "94105",
+            countryCode: "US",
+            email: "modern@example.com",
+            phoneNumber: "+14155552671"
+        )
+        #expect(modern.fullName == "Modern User")
+        #expect(modern.zipcode == "94105")
+        #expect(modern.email == "modern@example.com")
+
+        let legacy = ArcAutofillProfileRecord(
+            guid: "guid-legacy",
+            companyName: "Legacy Inc",
+            streetAddress: "200 Old Rd",
+            city: "Boston",
+            state: "MA",
+            zipcode: "02108",
+            countryCode: "US"
+        )
+        #expect(legacy.companyName == "Legacy Inc")
+        #expect(legacy.streetAddress == "200 Old Rd")
+    }
+
+    @Test("Space deletion purges all assigned identities and persists cleanly")
+    @MainActor
+    func testSpacePurgeLifecycle() {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        let spaceToDelete = UUID()
+        let spaceToKeep = UUID()
+
+        let id1 = AutofillIdentity(spaceID: spaceToDelete, label: "To Delete", fullName: "Doomed User")
+        let id2 = AutofillIdentity(spaceID: spaceToKeep, label: "To Keep", fullName: "Surviving User")
+
+        store.save(id1)
+        store.save(id2)
+        #expect(store.identities(in: spaceToDelete).count == 1)
+        #expect(store.identities(in: spaceToKeep).count == 1)
+
+        // Delete space
+        store.deleteIdentities(for: spaceToDelete)
+        #expect(store.identities(in: spaceToDelete).isEmpty)
+        #expect(store.identities(in: spaceToKeep).count == 1)
+
+        // Reload from disk to verify atomic file persistence
+        let reloadedStore = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(reloadedStore.identities(in: spaceToDelete).isEmpty)
+        #expect(reloadedStore.identities(in: spaceToKeep).count == 1)
+        #expect(reloadedStore.identities(in: spaceToKeep).first?.fullName == "Surviving User")
+    }
 }

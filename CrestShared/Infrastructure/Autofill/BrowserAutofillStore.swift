@@ -11,7 +11,6 @@ public final class BrowserAutofillStore {
 
     public static let shared = BrowserAutofillStore()
 
-
     public let isPrivate: Bool
     public private(set) var identities: [AutofillIdentity] = []
     private let storageDirectory: URL?
@@ -78,47 +77,41 @@ public final class BrowserAutofillStore {
         if let existingIndex = identities.firstIndex(where: { $0.id == updated.id }) {
             identities[existingIndex] = updated
         } else {
-            if !identities.contains(where: { $0.spaceID == updated.spaceID }) {
-                updated.isDefault = true
-            }
             identities.append(updated)
         }
         persist()
     }
 
-    /// Deletes an identity by its ID.
-    public func delete(_ identityID: UUID) {
-        guard let index = identities.firstIndex(where: { $0.id == identityID }) else { return }
-        let removed = identities.remove(at: index)
-
-        if removed.isDefault, let nextIndex = identities.firstIndex(where: { $0.spaceID == removed.spaceID }) {
-            identities[nextIndex].isDefault = true
-        }
+    /// Removes an identity from the store.
+    public func delete(id: UUID) {
+        identities.removeAll { $0.id == id }
         persist()
     }
 
-    /// Purges all identities associated with a deleted Space.
+    /// Deletes all identities associated with a specific Space (e.g. on Space deletion).
     public func deleteIdentities(for spaceID: UUID) {
-        identities.removeAll(where: { $0.spaceID == spaceID })
+        identities.removeAll { $0.spaceID == spaceID }
         persist()
     }
 
-    /// Imports identities into a destination Space, performing deduplication against existing records.
+    /// Batch imports identities into a destination Space, deduplicating against existing entries.
     @discardableResult
     public func importIdentities(
         _ incoming: [AutofillIdentity],
         into destinationSpaceID: UUID
     ) -> (importedCount: Int, duplicateCount: Int) {
-        var imported = 0
+        let current = identities(in: destinationSpaceID)
         var duplicates = 0
-        let existing = identities(in: destinationSpaceID)
+        var imported = 0
 
-        for var item in incoming {
+        for candidate in incoming {
+            var item = candidate
             item.spaceID = destinationSpaceID
-            let isDuplicate = existing.contains { candidate in
-                let emailMatch = !item.email.isEmpty && candidate.email.caseInsensitiveCompare(item.email) == .orderedSame
-                let addressMatch = !item.streetAddress.isEmpty && candidate.streetAddress.caseInsensitiveCompare(item.streetAddress) == .orderedSame
-                let nameMatch = !item.fullName.isEmpty && candidate.fullName.caseInsensitiveCompare(item.fullName) == .orderedSame
+
+            let isDuplicate = current.contains { existing in
+                let emailMatch = !item.email.isEmpty && existing.email.caseInsensitiveCompare(item.email) == .orderedSame
+                let addressMatch = !item.streetAddress.isEmpty && existing.streetAddress.caseInsensitiveCompare(item.streetAddress) == .orderedSame
+                let nameMatch = !item.fullName.isEmpty && existing.fullName.caseInsensitiveCompare(item.fullName) == .orderedSame
                 return (emailMatch && nameMatch) || (addressMatch && nameMatch)
             }
 
@@ -139,23 +132,28 @@ public final class BrowserAutofillStore {
     }
 
     private func load() {
-        guard !isPrivate, let fileURL = storageFileURL, FileManager.default.fileExists(atPath: fileURL.path),
-            let data = try? Data(contentsOf: fileURL),
-            let decoded = try? JSONDecoder().decode([AutofillIdentity].self, from: data)
-        else {
+        guard !isPrivate, let fileURL = storageFileURL, FileManager.default.fileExists(atPath: fileURL.path) else {
             identities = []
             return
         }
-        identities = decoded
+        do {
+            let data = try Data(contentsOf: fileURL)
+            identities = try JSONDecoder().decode([AutofillIdentity].self, from: data)
+        } catch {
+            identities = []
+        }
     }
 
     private func persist() {
         guard !isPrivate, let directory = storageDirectory, let fileURL = storageFileURL else {
             return
         }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        if let encoded = try? JSONEncoder().encode(identities) {
-            try? encoded.write(to: fileURL, options: .atomic)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let encoded = try JSONEncoder().encode(identities)
+            try encoded.write(to: fileURL, options: [.atomic, .completeFileProtection])
+        } catch {
+            // Log or retain in memory if disk write fails
         }
     }
 }

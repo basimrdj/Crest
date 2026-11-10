@@ -3536,7 +3536,7 @@
     },
     "downloads-follow-page-site-choice": {
       "category": "fixed",
-      "message": "Downloads follow the Automatic Downloads choice of the site you\u2019re on, including files it serves from another address, such as GitHub release files. A blocked download\u2019s message no longer appears twice."
+      "message": "Downloads follow the Automatic Downloads choice of the site you’re on, including files it serves from another address, such as GitHub release files. A blocked download’s message no longer appears twice."
     },
     "chromium-pages-retain-requested-zoom": {
       "category": "fixed",
@@ -3720,7 +3720,7 @@
     },
     "onboarding-scan-for-more": {
       "category": "improved",
-      "message": "Setup no longer looks through other browsers\u2019 data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
+      "message": "Setup no longer looks through other browsers’ data when Crest first opens. It reads a browser only when you choose it to import, or everything when you press Scan for more."
     },
     "pinned-tab-unpin-menu": {
       "category": "improved",
@@ -3728,7 +3728,7 @@
     },
     "concentric-page-corners": {
       "category": "improved",
-      "message": "On Mac, a page\u2019s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
+      "message": "On Mac, a page’s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size."
     },
     "full-screen-page-top-band": {
       "category": "fixed",
@@ -3736,11 +3736,11 @@
     },
     "update-restart-recovers": {
       "category": "fixed",
-      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you\u2019re ready, and a page asking before you leave now comes to the front."
+      "message": "Restarting to install an update no longer gets stuck. If you choose to stay on a page, the update goes back to Ready to Install so you can restart when you’re ready, and a page asking before you leave now comes to the front."
     },
     "update-card-hide": {
       "category": "improved",
-      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings \u203a About shows where the update stands and offers the same buttons."
+      "message": "You can hide the update card in the sidebar until you next check for updates or restart Crest. Settings › About shows where the update stands and offers the same buttons."
     },
     "show-history-opens-sidebar": {
       "category": "fixed",
@@ -3784,11 +3784,11 @@
     },
     "icloud-sync-status-shows-waiting-uploads": {
       "category": "improved",
-      "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven\u2019t yet."
+      "message": "Sync settings say Up to date only when every change has reached iCloud, and Waiting to upload while some haven’t yet."
     },
     "command-palette-ranks-and-searches-sites": {
       "category": "new",
-      "message": "The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider\u2019s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google\u2019s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order."
+      "message": "The command palette puts the best match first, ranks the pages and tabs you use most and most recently, and learns which result you choose for what you type. It fills in sites you visit, including those that start with www, and Return opens what it filled in. Before you type it lists your recent tabs, so Return takes you back to the one you were on. Start typing a provider’s name or shortcut, such as yt for YouTube or claude, to see it under the field, and press Tab to search that site or ask that assistant directly. Hold Command, Shift or Option with Return to open a result in the background, in Split View or in a Quick Window. The new Search section in Settings sets one default search for every Space and one for private windows, turns search engines, AI assistants and websites on or off with options of their own, such as hiding Google’s AI Overviews, adds your own, and chooses what the palette shows, how many of each, and in what order."
     },
     "search-logos-keep-proportions": {
       "category": "fixed",
@@ -3816,7 +3816,7 @@
     },
     "settings-shows-real-app-icon": {
       "category": "fixed",
-      "message": "Settings on iPhone and iPad shows Crest\u2019s real app icon, including the one you chose, in light and dark."
+      "message": "Settings on iPhone and iPad shows Crest’s real app icon, including the one you chose, in light and dark."
     },
     "default-browser-status-remembered": {
       "category": "fixed",
@@ -3828,7 +3828,7 @@
     },
     "space-search-picker-icons": {
       "category": "improved",
-      "message": "A Space\u2019s Search with menu shows each provider\u2019s icon, like the default search menu."
+      "message": "A Space’s Search with menu shows each provider’s icon, like the default search menu."
     },
     "settings-section-colors": {
       "category": "improved",
@@ -3836,15 +3836,15 @@
     },
     "history-opens-over-page": {
       "category": "fixed",
-      "message": "On iPhone, Show Full History in a page\u2019s Back and Forward menus opens History."
+      "message": "On iPhone, Show Full History in a page’s Back and Forward menus opens History."
     },
     "download-prompt-over-page": {
       "category": "fixed",
-      "message": "On iPhone, Crest asks before downloading a risky file from the page you\u2019re viewing, instead of leaving the download waiting for approval."
+      "message": "On iPhone, Crest asks before downloading a risky file from the page you’re viewing, instead of leaving the download waiting for approval."
     },
     "tab-audio-indicator": {
       "category": "new",
-      "message": "A tab playing sound shows a speaker badge on its icon, which mutes or unmutes it, and bars behind its title that follow its sound on Chromium pages. Tabs taking part in tab sharing show a badge that goes to the other tab or stops sharing. Look and Feel can show the status in place of the tab\u2019s icon, or turn the bars off."
+      "message": "A tab playing sound shows a speaker badge on its icon, which mutes or unmutes it, and bars behind its title that follow its sound on Chromium pages. Tabs taking part in tab sharing show a badge that goes to the other tab or stops sharing. Look and Feel can show the status in place of the tab’s icon, or turn the bars off."
     },
     "page-commands-follow-peek": {
       "category": "fixed",
@@ -3856,7 +3856,7 @@
     },
     "agents-use-crest": {
       "category": "new",
-      "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page\u2019s console and network requests. Turn it on in Settings \u203a Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
+      "message": "On Mac, coding agents such as Claude Code and Codex can use Crest as their browser in the Spaces you choose: open and read tabs, click and type, take screenshots, and read a page’s console and network requests. Turn it on in Settings › Agents. Crest asks before each new agent connects, and every tab an agent uses shows its badge."
     },
     "2026-10-12-page-engine-events-own-behavior": {
       "category": "internal",
@@ -4016,7 +4016,7 @@
     },
     "2026-10-12-refuse-unexpected-edits-instead-of-quitting": {
       "category": "fixed",
-      "message": "Crest no longer quits when it can\u2019t make an edit, such as one on a tab that just closed or a change only a Space\u2019s owner may make."
+      "message": "Crest no longer quits when it can’t make an edit, such as one on a tab that just closed or a change only a Space’s owner may make."
     },
     "2026-10-12-prompt-hosts-answer-every-question": {
       "category": "internal",
@@ -4024,7 +4024,7 @@
     },
     "2026-10-12-refused-engine-report-safe": {
       "category": "fixed",
-      "message": "A page reporting something Crest can\u2019t use no longer closes the app."
+      "message": "A page reporting something Crest can’t use no longer closes the app."
     },
     "2026-10-12-concrete-pane-views": {
       "category": "internal",
@@ -4036,7 +4036,7 @@
     },
     "2026-10-12-sidebar-surface-material": {
       "category": "improved",
-      "message": "Choose how much the sidebar\u2019s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
+      "message": "Choose how much the sidebar’s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
     },
     "2026-10-12-sidebar-layer-shapes": {
       "category": "improved",
@@ -4112,7 +4112,7 @@
     },
     "translation-unsupported-page-language": {
       "category": "fixed",
-      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn\u2019t support says so instead of offering a translation that fails."
+      "message": "Pages in more languages, such as Swedish, now translate, and a page in a language Apple Translation doesn’t support says so instead of offering a translation that fails."
     },
     "cross-space-link-tab-activation": {
       "category": "fixed",
@@ -4136,7 +4136,7 @@
     },
     "quick-window-page-tools": {
       "category": "fixed",
-      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window\u2019s page."
+      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window’s page."
     },
     "space-switch-wraps-around": {
       "category": "fixed",
@@ -4156,7 +4156,7 @@
     },
     "quit-after-space-deletion-fails": {
       "category": "fixed",
-      "message": "Crest quits instead of waiting indefinitely when a Space couldn\u2019t be fully deleted, and tries deleting that Space again the next time it opens."
+      "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
     },
     "chromium-upstream-155-0-8059-39-1-1-6271503014ef": {
       "category": "fixed",
@@ -4164,19 +4164,19 @@
     },
     "http-dead-link-crash": {
       "category": "fixed",
-      "message": "Opening an http:// address that can\u2019t be reached shows Crest\u2019s error page instead of closing Crest."
+      "message": "Opening an http:// address that can’t be reached shows Crest’s error page instead of closing Crest."
     },
     "link-route-exact-site-name": {
       "category": "fixed",
-      "message": "A link route set to \u201cIs Exactly\u201d with just a site\u2019s name, such as docs.google.com, now matches that site\u2019s home page, and Links settings say that routes apply to links from other apps."
+      "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."
     },
     "link-route-address-field-editable": {
       "category": "fixed",
-      "message": "A link route\u2019s address field takes clicks and typing, with \u201cexample.com\u201d shown as a hint inside it instead of a fixed label beside it."
+      "message": "A link route’s address field takes clicks and typing, with “example.com” shown as a hint inside it instead of a fixed label beside it."
     },
     "settings-narrow-window-sidebar-clicks": {
       "category": "fixed",
-      "message": "In a narrow window, a Space\u2019s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
+      "message": "In a narrow window, a Space’s Crest Studio no longer covers the Settings sidebar, so its search field and Space buttons take clicks again."
     },
     "local-addresses-open-over-http": {
       "category": "fixed",
@@ -4184,7 +4184,7 @@
     },
     "tab-title-after-failed-load": {
       "category": "fixed",
-      "message": "When a page can\u2019t be opened, its tab in the sidebar shows the site it tried to open instead of the previous page\u2019s title."
+      "message": "When a page can’t be opened, its tab in the sidebar shows the site it tried to open instead of the previous page’s title."
     },
     "core-owned-tab-history": {
       "category": "internal",
@@ -4316,7 +4316,7 @@
     },
     "appearance-light-dark-follow-system": {
       "category": "new",
-      "message": "Keep Crest light or dark, or let it follow macOS, in Settings \u203a Appearance. Spaces can also dim their colors in dark."
+      "message": "Keep Crest light or dark, or let it follow macOS, in Settings › Appearance. Spaces can also dim their colors in dark."
     },
     "background-launch-for-connected-tools": {
       "category": "fixed",
@@ -4328,7 +4328,7 @@
     },
     "mcp-native-browser-tools": {
       "category": "improved",
-      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space\u2019s history once you agree, while private tabs remain inaccessible."
+      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space’s history once you agree, while private tabs remain inaccessible."
     },
     "sidebar-edge-reveals-for-moving-pointer": {
       "category": "fixed",
@@ -4344,7 +4344,7 @@
     },
     "agents-pointer-activity-and-questions": {
       "category": "new",
-      "message": "An agent\u2019s pointer shows where it works on a page, Settings \u203a Agents lists what each agent did, Stop All Agents stops every agent at once, and Crest asks before an agent opens a window. Agents can also read a page\u2019s text and answer its dialogs."
+      "message": "An agent’s pointer shows where it works on a page, Settings › Agents lists what each agent did, Stop All Agents stops every agent at once, and Crest asks before an agent opens a window. Agents can also read a page’s text and answer its dialogs."
     },
     "temporary-sidebar-interruptible-animation": {
       "category": "fixed",
@@ -4356,7 +4356,7 @@
     },
     "space-lock-stays-off": {
       "category": "fixed",
-      "message": "Turning off a Space\u2019s lock in Settings now sticks after one Touch ID or password check, instead of the lock coming back. With iCloud sync, turning a lock on or off reaches your other devices too, even where the Space is locked, without unlocking it there first. If a lock can\u2019t change, Crest says so at the top of the window."
+      "message": "Turning off a Space’s lock in Settings now sticks after one Touch ID or password check, instead of the lock coming back. With iCloud sync, turning a lock on or off reaches your other devices too, even where the Space is locked, without unlocking it there first. If a lock can’t change, Crest says so at the top of the window."
     },
     "sidebar-shift-click-selects-range": {
       "category": "fixed",
@@ -4516,7 +4516,7 @@
     },
     "sync-merge-save-freeze": {
       "category": "fixed",
-      "message": "Crest no longer freezes when an iCloud sync arrives while it\u2019s saving a change, such as deleting a Space, moving or closing several tabs, or importing from another browser."
+      "message": "Crest no longer freezes when an iCloud sync arrives while it’s saving a change, such as deleting a Space, moving or closing several tabs, or importing from another browser."
     },
     "recent-tab-switcher-previews": {
       "category": "new",
@@ -4560,11 +4560,11 @@
     },
     "quick-window-space-switcher": {
       "category": "new",
-      "message": "Click the Space in a Quick Window\u2019s address bar to switch Spaces. The page reloads in the Space you choose, with that Space\u2019s cookies and passwords, and Crest remembers the choice for that site."
+      "message": "Click the Space in a Quick Window’s address bar to switch Spaces. The page reloads in the Space you choose, with that Space’s cookies and passwords, and Crest remembers the choice for that site."
     },
     "quick-window-address-drag-selects-text": {
       "category": "fixed",
-      "message": "Dragging across a Quick Window\u2019s address field selects its text instead of moving the window. The space around the field still moves the window."
+      "message": "Dragging across a Quick Window’s address field selects its text instead of moving the window. The space around the field still moves the window."
     },
     "downloads-drag-out-as-files": {
       "category": "new",
@@ -4596,7 +4596,7 @@
     },
     "sub-spaces": {
       "category": "new",
-      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings \u203a Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
+      "message": "Sub-Spaces let several Spaces share one set of sign-ins, history, passwords and extensions while each keeps its own tabs and look. In Settings › Spaces a Sub-Space sits under its primary, and a group's page shows its Spaces' crests above the settings they share: + starts a Sub-Space, and on the Mac you can drag a Space into a group to add it or out of one to separate it. A Sub-Space you separate goes back to its own sign-ins and website data."
     },
     "sub-spaces-pinned-tabs": {
       "category": "new",
@@ -4820,7 +4820,7 @@
     },
     "quick-window-overflow-extension-menus": {
       "category": "fixed",
-      "message": "Pinned extensions behind \u00bb in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
+      "message": "Pinned extensions behind » in a Quick Window on Mac keep their right-click menu, and Command-L opens the palette in a blank Quick Window."
     },
     "iphone-palette-larger-text": {
       "category": "fixed",
@@ -4856,11 +4856,11 @@
     },
     "password-import-errors-say-what-happened": {
       "category": "fixed",
-      "message": "When a browser import during setup can\u2019t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space\u2019s passwords or the file couldn\u2019t be read, and no longer says your passwords were restored when nothing had changed."
+      "message": "When a browser import during setup can’t save some passwords, its summary says how many. Importing a password file in Settings says whether the Space’s passwords or the file couldn’t be read, and no longer says your passwords were restored when nothing had changed."
     },
     "reopen-pages-after-quit-choice": {
       "category": "fixed",
-      "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don\u2019t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can\u2019t keep you out."
+      "message": "If Crest quits unexpectedly while reopening your pages on Mac, the next launch asks whether to reopen them. Don’t Reopen opens each window on the Start Page with your tabs still in the sidebar, so a page that makes Crest quit can’t keep you out."
     },
     "sidebar-scroll-freeze": {
       "category": "fixed",
@@ -4868,11 +4868,11 @@
     },
     "shortcuts-follow-command-keyboard-layout": {
       "category": "fixed",
-      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak \u2013 QWERTY \u2318, Russian and Greek, so Command-X cuts instead of quitting Crest."
+      "message": "Keyboard shortcuts follow layouts that change keys while Command is held, such as Dvorak – QWERTY ⌘, Russian and Greek, so Command-X cuts instead of quitting Crest."
     },
     "search-provider-fragment-address": {
       "category": "fixed",
-      "message": "You can now add a search provider whose address puts the search after a #, such as PubChem\u2019s."
+      "message": "You can now add a search provider whose address puts the search after a #, such as PubChem’s."
     },
     "chromium-shift-click-peek": {
       "category": "fixed",
@@ -4912,7 +4912,7 @@
     },
     "sidebar-new-tab-row-height": {
       "category": "fixed",
-      "message": "On Mac, the sidebar\u2019s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them."
+      "message": "On Mac, the sidebar’s New Tab row keeps its usual height in a Space with only a few tabs, instead of stretching into the empty space below them."
     },
     "quick-window-opens-where-you-are": {
       "category": "fixed",
@@ -4936,7 +4936,7 @@
     },
     "mobile-long-press-peek": {
       "category": "improved",
-      "message": "On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system\u2019s link preview."
+      "message": "On iPhone and iPad, holding a link opens it in Peek, which grows from the link, instead of the system’s link preview."
     },
     "mobile-peek-link-menu": {
       "category": "new",
@@ -4948,11 +4948,11 @@
     },
     "peek-keeps-link-from-pinned-tab": {
       "category": "fixed",
-      "message": "A link that leaves a pinned tab\u2019s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn\u2019t available."
+      "message": "A link that leaves a pinned tab’s site, such as an article shared on Facebook, now loads in Peek instead of showing that the page isn’t available."
     },
     "extension-icon-control-click-menu": {
       "category": "fixed",
-      "message": "Control-clicking an extension\u2019s icon while its popup is open now opens the icon\u2019s menu, as a right-click does, instead of only closing the popup."
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
     },
     "mac-peek-size": {
       "category": "new",
@@ -4964,11 +4964,11 @@
     },
     "status-colors-house-palette": {
       "category": "improved",
-      "message": "Errors, warnings and confirmations, such as a failed download, a permission that needs attention or a secure site, now show in Crest\u2019s own red, amber and green, which are easier to read in Light Mode."
+      "message": "Errors, warnings and confirmations, such as a failed download, a permission that needs attention or a secure site, now show in Crest’s own red, amber and green, which are easier to read in Light Mode."
     },
     "settings-results-as-notices": {
       "category": "improved",
-      "message": "A finished password import, an app icon that couldn\u2019t change and a Space that couldn\u2019t be deleted now show in a notice at the top of the window instead of an alert you have to dismiss."
+      "message": "A finished password import, an app icon that couldn’t change and a Space that couldn’t be deleted now show in a notice at the top of the window instead of an alert you have to dismiss."
     },
     "choices-respond-to-pointer": {
       "category": "improved",
@@ -4976,7 +4976,7 @@
     },
     "password-and-route-buttons-match": {
       "category": "improved",
-      "message": "Reveal Password and Copy Password, and the move and delete buttons of a link route on iPhone and iPad, now look and respond like Crest\u2019s other buttons."
+      "message": "Reveal Password and Copy Password, and the move and delete buttons of a link route on iPhone and iPad, now look and respond like Crest’s other buttons."
     },
     "setup-secondary-text-consistent": {
       "category": "improved",
@@ -4984,19 +4984,19 @@
     },
     "menu-items-all-show-icons": {
       "category": "improved",
-      "message": "Every item in Crest\u2019s menus now shows its icon, including Select All and Deselect All, the folders in Move to Folder, and the Edit, Remove and Move items in Settings."
+      "message": "Every item in Crest’s menus now shows its icon, including Select All and Deselect All, the folders in Move to Folder, and the Edit, Remove and Move items in Settings."
     },
     "refusals-no-longer-sync-errors": {
       "category": "fixed",
-      "message": "A locked Space, a full split or another change Crest can\u2019t make no longer shows as a sync failure in Settings \u203a Sync. Adding a Space or Sub-Space past the limit, or pinning a tab when the pinned tabs are full, now says why in a notice."
+      "message": "A locked Space, a full split or another change Crest can’t make no longer shows as a sync failure in Settings › Sync. Adding a Space or Sub-Space past the limit, or pinning a tab when the pinned tabs are full, now says why in a notice."
     },
     "space-search-matches-address-bar": {
       "category": "fixed",
-      "message": "A Space\u2019s Browsing settings and the search providers agents see now name the same search engine the address bar searches with, including for a Space whose own engine is missing or no longer valid."
+      "message": "A Space’s Browsing settings and the search providers agents see now name the same search engine the address bar searches with, including for a Space whose own engine is missing or no longer valid."
     },
     "sign-in-popups-save-and-fill-passwords": {
       "category": "fixed",
-      "message": "A sign-in window a site opens in WebKit, such as a \u201cSign in with\u201d popup in a Quick Window, now offers to save the password you enter and fills saved passwords, on Mac, iPhone and iPad."
+      "message": "A sign-in window a site opens in WebKit, such as a “Sign in with” popup in a Quick Window, now offers to save the password you enter and fills saved passwords, on Mac, iPhone and iPad."
     },
     "mobile-export-through-engine": {
       "category": "fixed",
@@ -5008,15 +5008,15 @@
     },
     "core-owns-small-rules": {
       "category": "internal",
-      "message": "The core now decides whether a window follows a tab moved to another Space, expires download records with the rest of a Space\u2019s data, answers the camera and microphone choices an engine enforces, and carries what setup looks and the update card\u2019s buttons show."
+      "message": "The core now decides whether a window follows a tab moved to another Space, expires download records with the rest of a Space’s data, answers the camera and microphone choices an engine enforces, and carries what setup looks and the update card’s buttons show."
     },
     "space-studio-choices-fit-and-match": {
       "category": "fixed",
-      "message": "Crest Studio and setup now mark every choice in the same color, draw search fields like the rest of Settings and show long names in full, and setup keeps the chosen sidebar style in view. A link route\u2019s move buttons no longer look like delete buttons, and the New Space button in iPhone setup is easier to tap."
+      "message": "Crest Studio and setup now mark every choice in the same color, draw search fields like the rest of Settings and show long names in full, and setup keeps the chosen sidebar style in view. A link route’s move buttons no longer look like delete buttons, and the New Space button in iPhone setup is easier to tap."
     },
     "quick-window-shortcut-from-any-app": {
       "category": "new",
-      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings \u2192 Shortcuts."
+      "message": "On Mac, the New Quick Window shortcut works from any app while Crest is open. Change or clear it in Settings → Shortcuts."
     },
     "quick-window-shortcut-opens-over-your-window": {
       "category": "improved",
@@ -5024,7 +5024,7 @@
     },
     "site-controls-security-same-on-both-engines": {
       "category": "fixed",
-      "message": "Site Controls now describes a site\u2019s connection the same way whichever engine shows the page."
+      "message": "Site Controls now describes a site’s connection the same way whichever engine shows the page."
     },
     "core-owns-extension-policy": {
       "category": "internal",
@@ -5040,7 +5040,7 @@
     },
     "imported-extension-copies-continue-after-one-fails": {
       "category": "fixed",
-      "message": "When an extension chosen during import can\u2019t be installed in one Space, the other Spaces that chose it still receive it."
+      "message": "When an extension chosen during import can’t be installed in one Space, the other Spaces that chose it still receive it."
     },
     "imported-extension-copies-skip-a-space-being-deleted": {
       "category": "fixed",
@@ -5076,11 +5076,11 @@
     },
     "save-or-unsave-current-tab-command": {
       "category": "new",
-      "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings \u203a Shortcuts."
+      "message": "Save or Unsave Current Tab moves the tab you're on into Saved Tabs or back to Current Tabs, from the Tabs menu, the command palette, or a shortcut you choose in Settings › Shortcuts."
     },
     "press-a-shortcut-again-when-a-website-keeps-it": {
       "category": "new",
-      "message": "When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings \u203a Shortcuts, and switching Spaces now always reaches Crest."
+      "message": "When a website keeps a shortcut such as Command-S, Crest says to press it again, and the second press runs Crest's command. Choose Prefer Crest, Use Both or Prefer Website for each shortcut in Settings › Shortcuts, and switching Spaces now always reaches Crest."
     },
     "command-z-undo-stays-in-text-fields": {
       "category": "fixed",
@@ -5132,11 +5132,11 @@
     },
     "popovers-read-on-their-own-surface": {
       "category": "fixed",
-      "message": "Popovers and prompts such as the color and icon pickers, Site Controls, the save-password prompt and the screen-sharing picker stay readable whatever the Space\u2019s text color, Crest\u2019s appearance or the page behind them."
+      "message": "Popovers and prompts such as the color and icon pickers, Site Controls, the save-password prompt and the screen-sharing picker stay readable whatever the Space’s text color, Crest’s appearance or the page behind them."
     },
     "space-color-grid-and-custom-hex": {
       "category": "fixed",
-      "message": "The color grid in a Space\u2019s appearance fills its rows without gaps, and typing a hex value in the Colors window no longer closes the color popover."
+      "message": "The color grid in a Space’s appearance fills its rows without gaps, and typing a hex value in the Colors window no longer closes the color popover."
     },
     "settings-space-click-opens-its-page": {
       "category": "fixed",
@@ -5148,11 +5148,11 @@
     },
     "sidebar-more-tabs-hit-area": {
       "category": "fixed",
-      "message": "Tapping just below the sidebar\u2019s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad."
+      "message": "Tapping just below the sidebar’s Show more tabs arrow scrolls the list instead of opening the tab behind it, and VoiceOver names the arrow on iPhone and iPad."
     },
     "clear-unpinned-tabs-clears-the-space": {
       "category": "fixed",
-      "message": "Clear Unpinned Tabs and Shift-Command-K clear the Space\u2019s open tabs, as the sidebar\u2019s Clear does, however recently they were used."
+      "message": "Clear Unpinned Tabs and Shift-Command-K clear the Space’s open tabs, as the sidebar’s Clear does, however recently they were used."
     },
     "address-completion-steady-while-typing": {
       "category": "fixed",
@@ -5164,11 +5164,11 @@
     },
     "address-copy-url-button": {
       "category": "new",
-      "message": "On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings \u203a Appearance \u203a Address field."
+      "message": "On Mac, the address field can show a Copy URL button beside Site Controls. Turn it on in Settings › Appearance › Address field."
     },
     "finder-pdf-open-with": {
       "category": "new",
-      "message": "On Mac, Crest appears in Finder\u2019s Open With menu for PDFs, without becoming your default PDF app."
+      "message": "On Mac, Crest appears in Finder’s Open With menu for PDFs, without becoming your default PDF app."
     },
     "responsive-with-many-spaces-and-extensions": {
       "category": "improved",
@@ -5192,11 +5192,11 @@
     },
     "sidebar-slides-as-one": {
       "category": "improved",
-      "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn\u2019t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window\u2019s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
+      "message": "On Mac and iPhone, the sidebar slides in together with its tabs, and going to a Space that isn’t next to the current one slides there instead of cutting. On Mac, the sidebar that floats over the page appears once the pointer rests at the window’s edge for a moment, stays open when the pointer moves out past that edge, and can be resized by dragging its edge."
     },
     "built-in-ad-blocking": {
       "category": "new",
-      "message": "Crest blocks ads and trackers on every page, on Mac, iPhone and iPad, with EasyList, EasyPrivacy, uBlock Origin\u2019s lists and a list for your language, which stay up to date on their own. Blocked ads leave no empty boxes, floating video players are hidden, and the lists\u2019 fixes for sites that fight ad blockers run too. Add your own lists or filters in a Space\u2019s privacy settings, choose Block Element to hide anything the lists miss, and turn blocking off for a site from the page\u2019s actions."
+      "message": "Crest blocks ads and trackers on every page, on Mac, iPhone and iPad, with EasyList, EasyPrivacy, uBlock Origin’s lists and a list for your language, which stay up to date on their own. Blocked ads leave no empty boxes, floating video players are hidden, and the lists’ fixes for sites that fight ad blockers run too. Add your own lists or filters in a Space’s privacy settings, choose Block Element to hide anything the lists miss, and turn blocking off for a site from the page’s actions."
     },
     "ad-hiding-out-of-sites-reach": {
       "category": "improved",
@@ -5204,7 +5204,7 @@
     },
     "add-to-home-screen": {
       "category": "new",
-      "message": "On iPhone and iPad, Add to Home Screen in a page\u2019s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser."
+      "message": "On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser."
     },
     "full-screen-tab-close-crash": {
       "category": "fixed",
@@ -5212,11 +5212,11 @@
     },
     "full-screen-survives-page-moves": {
       "category": "fixed",
-      "message": "On Chromium pages on Mac, a full-screen page stays full screen when it moves to its next slide or video, instead of dropping back inside the window\u2019s border and sidebar."
+      "message": "On Chromium pages on Mac, a full-screen page stays full screen when it moves to its next slide or video, instead of dropping back inside the window’s border and sidebar."
     },
     "settings-smooth-with-lots-of-data": {
       "category": "fixed",
-      "message": "On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space\u2019s Privacy and Passwords pages open quickly and scroll, search and remove without freezing."
+      "message": "On Mac, Settings stays smooth with hundreds of saved websites, passwords and site permissions: a Space’s Privacy and Passwords pages open quickly and scroll, search and remove without freezing."
     },
     "settings-search-field-takes-typing": {
       "category": "fixed",

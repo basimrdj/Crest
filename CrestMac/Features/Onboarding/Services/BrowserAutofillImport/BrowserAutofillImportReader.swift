@@ -44,7 +44,11 @@ public enum BrowserAutofillImportError: Error, Equatable {
 }
 
 /// Reads structured autofill addresses and identities from Chromium and Arc Browser `Web Data` SQLite files.
-/// Opens read-only with safety PRAGMAs and without touching user passwords or payment records.
+/// Opens read-only with safety PRAGMAs and discovers multiple schema generations:
+/// - Modern Chromium `addresses` + `address_type_tokens` (current upstream)
+/// - Intermediate `local_addresses` / `contact_info`
+/// - Classic `autofill_profiles` + auxiliary tables
+/// - Legacy single-table `autofill_profiles`
 public final class BrowserAutofillImportReader {
     public static let maximumDatabaseByteCount = 512 * 1_024 * 1_024
 
@@ -77,6 +81,103 @@ public final class BrowserAutofillImportReader {
         sqlite3_exec(database, "PRAGMA query_only = ON", nil, nil, nil)
         sqlite3_exec(database, "PRAGMA trusted_schema = OFF", nil, nil, nil)
 
+        // 1. Try modern Chromium address_type_tokens schema
+        if let modernRecords = try? readModernAddressTokens(from: database), !modernRecords.isEmpty {
+            return modernRecords
+        }
+
+        // 2. Try intermediate contact_info schema
+        if let contactRecords = try? readContactInfoProfiles(from: database), !contactRecords.isEmpty {
+            return contactRecords
+        }
+
+        // 3. Try standard autofill_profiles with auxiliary tables
+        if let standardRecords = try? readStandardProfiles(from: database), !standardRecords.isEmpty {
+            return standardRecords
+        }
+
+        // 4. Try legacy single-table autofill_profiles
+        return try readLegacyProfiles(from: database)
+    }
+
+    private static func readModernAddressTokens(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
+        let sql = """
+            SELECT a.guid, t.type, t.value
+            FROM addresses a
+            JOIN address_type_tokens t ON a.guid = t.guid
+            """
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
+            return []
+        }
+        defer { sqlite3_finalize(statement) }
+
+        // Aggregate type tokens per guid:
+        // Chromium Autofill type IDs:
+        // 3: NAME_FULL, 5: NAME_FIRST, 7: NAME_LAST, 9: EMAIL_ADDRESS, 14: PHONE_HOME_WHOLE_NUMBER
+        // 30: ADDRESS_HOME_STREET_ADDRESS, 33: ADDRESS_HOME_CITY, 34: ADDRESS_HOME_STATE, 35: ADDRESS_HOME_ZIP, 36: ADDRESS_HOME_COUNTRY, 55: COMPANY_NAME
+        var dict: [String: [Int32: String]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let guid = string(statement, column: 0) else { continue }
+            let type = sqlite3_column_int(statement, 1)
+            let value = string(statement, column: 2) ?? ""
+            if dict[guid] == nil { dict[guid] = [:] }
+            dict[guid]?[type] = value
+        }
+
+        return dict.map { guid, fields in
+            ArcAutofillProfileRecord(
+                guid: guid,
+                fullName: fields[3] ?? fields[5] ?? "",
+                companyName: fields[55] ?? "",
+                streetAddress: fields[30] ?? "",
+                city: fields[33] ?? "",
+                state: fields[34] ?? "",
+                zipcode: fields[35] ?? "",
+                countryCode: fields[36] ?? "",
+                email: fields[9] ?? "",
+                phoneNumber: fields[14] ?? ""
+            )
+        }
+    }
+
+    private static func readContactInfoProfiles(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
+        let sql = """
+            SELECT guid, type, value
+            FROM contact_info
+            """
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
+            return []
+        }
+        defer { sqlite3_finalize(statement) }
+
+        var dict: [String: [Int32: String]] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let guid = string(statement, column: 0) else { continue }
+            let type = sqlite3_column_int(statement, 1)
+            let value = string(statement, column: 2) ?? ""
+            if dict[guid] == nil { dict[guid] = [:] }
+            dict[guid]?[type] = value
+        }
+
+        return dict.map { guid, fields in
+            ArcAutofillProfileRecord(
+                guid: guid,
+                fullName: fields[3] ?? fields[5] ?? "",
+                companyName: fields[55] ?? "",
+                streetAddress: fields[30] ?? "",
+                city: fields[33] ?? "",
+                state: fields[34] ?? "",
+                zipcode: fields[35] ?? "",
+                countryCode: fields[36] ?? "",
+                email: fields[9] ?? "",
+                phoneNumber: fields[14] ?? ""
+            )
+        }
+    }
+
+    private static func readStandardProfiles(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
         let sql = """
             SELECT p.guid,
                    COALESCE(n.full_name, ''),
@@ -98,7 +199,7 @@ public final class BrowserAutofillImportReader {
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
             let statement
         else {
-            return try readLegacyProfiles(from: database)
+            return []
         }
         defer { sqlite3_finalize(statement) }
 
