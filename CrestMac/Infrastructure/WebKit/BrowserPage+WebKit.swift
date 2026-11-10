@@ -150,6 +150,7 @@ extension BrowserPage: WebKitPageHosting {
 
 private var activeAutofillTargetFrameKey: UInt8 = 0
 private var activeAutofillHandleIDKey: UInt8 = 0
+private var activeAutofillFrameTokenKey: UInt8 = 0
 
 extension BrowserPage {
     var activeAutofillTargetFrame: WKFrameInfo? {
@@ -170,9 +171,19 @@ extension BrowserPage {
         }
     }
 
+    var activeAutofillFrameToken: String? {
+        get {
+            objc_getAssociatedObject(self, &activeAutofillFrameTokenKey) as? String
+        }
+        set {
+            objc_setAssociatedObject(self, &activeAutofillFrameTokenKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
     func invalidateAutofillFocusTarget() {
         activeAutofillTargetFrame = nil
         activeAutofillHandleID = nil
+        activeAutofillFrameToken = nil
         autofillSession?.dismiss()
     }
 
@@ -213,9 +224,11 @@ extension BrowserPage {
             port: origin.port
         )
 
+        let frameToken = dict["frameToken"] as? String
+
         if event == "blur" {
-            // Only dismiss if blur event is from the active frame
-            if let activeFrame = activeAutofillTargetFrame, activeFrame === scriptMessage.frameInfo {
+            // Validate blur against the active focus frame token (stable per document/frame)
+            if let activeToken = activeAutofillFrameToken, let frameToken, activeToken == frameToken {
                 if let handleID = activeAutofillHandleID {
                     session.receiveMessage(
                         dict,
@@ -228,6 +241,7 @@ extension BrowserPage {
                 if session.activeField == nil {
                     activeAutofillTargetFrame = nil
                     activeAutofillHandleID = nil
+                    activeAutofillFrameToken = nil
                 }
             }
             return
@@ -238,6 +252,7 @@ extension BrowserPage {
         let handleID = UUID()
         activeAutofillTargetFrame = scriptMessage.frameInfo
         activeAutofillHandleID = handleID
+        activeAutofillFrameToken = frameToken
 
         session.receiveMessage(
             dict,

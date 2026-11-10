@@ -484,4 +484,54 @@ struct AutofillTests {
         #expect(!didFill, "Fill with mismatched frame handle must fail closed")
         #expect(session.activeField == nil)
     }
+
+    @Test("Blur matching requires corresponding frameToken and does not clear active target on distinct token")
+    @MainActor
+    func testBlurFrameTokenMatching() {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "TokenTest",
+            fullName: "Token Tester",
+            email: "token@test.org"
+        )
+        store.save(identity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        let tokenA = UUID()
+        let tokenB = UUID()
+
+        // 1. Focus with token A
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-1", "fieldType": "email", "frameToken": "token-A"],
+            frameSecurityOrigin: "https://test.org:443",
+            isMainFrame: true,
+            navigationGeneration: 1,
+            frameHandleID: tokenA
+        )
+        #expect(session.isSuggestionPresented)
+
+        // 2. Blur from unrelated token B must NOT clear focus
+        session.receiveMessage(
+            ["event": "blur", "formID": "form-1", "frameToken": "token-B"],
+            frameSecurityOrigin: "https://test.org:443",
+            isMainFrame: true,
+            navigationGeneration: 1,
+            frameHandleID: tokenB
+        )
+        #expect(session.isSuggestionPresented, "Unrelated frame token blur must not dismiss suggestion")
+
+        // 3. Genuine blur with matching token A clears focus
+        session.receiveMessage(
+            ["event": "blur", "formID": "form-1", "frameToken": "token-A"],
+            frameSecurityOrigin: "https://test.org:443",
+            isMainFrame: true,
+            navigationGeneration: 1,
+            frameHandleID: tokenA
+        )
+        #expect(!session.isSuggestionPresented, "Matching frame token blur must dismiss suggestion")
+    }
 }

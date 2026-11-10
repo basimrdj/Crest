@@ -14,9 +14,11 @@ public enum BrowserAutofillContentBridge {
           const handler = webkit.messageHandlers.crestAutofill;
           const formsByID = new Map();
           let nextFormID = 1;
+          const frameToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("frame-" + Math.random().toString(36).slice(2));
+          let blurTimeout = null;
 
           const post = (body) => {
-            try { handler.postMessage({ version: 1, ...body }); } catch (_) {}
+            try { handler.postMessage({ version: 1, frameToken, ...body }); } catch (_) {}
           };
 
           const isVisible = (element) => {
@@ -151,6 +153,10 @@ public enum BrowserAutofillContentBridge {
 
           document.addEventListener("focusin", (event) => {
             if (!event.isTrusted) return;
+            if (blurTimeout) {
+              clearTimeout(blurTimeout);
+              blurTimeout = null;
+            }
             const target = event.target;
             if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
               handleFocus(target);
@@ -163,7 +169,12 @@ public enum BrowserAutofillContentBridge {
             if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
               const root = formRootFor(target);
               const formID = idForForm(root);
-              post({ event: "blur", formID });
+              // Grace period to allow focus transfer between fields or click into native suggestion UI
+              if (blurTimeout) clearTimeout(blurTimeout);
+              blurTimeout = setTimeout(() => {
+                post({ event: "blur", formID });
+                blurTimeout = null;
+              }, 250);
             }
           }, true);
         })();
