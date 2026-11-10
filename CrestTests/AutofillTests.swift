@@ -100,7 +100,7 @@ struct AutofillTests {
             streetAddress: "200 Lab Rd"
         )
 
-        let auth103 = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: destinationSpace, isLocked: false, isPrivate: false)
+        let auth103 = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: destinationSpace) { true }
         let result = try store.importIdentities([duplicate, novel], into: destinationSpace, authorization: auth103)
         #expect(result.duplicateCount == 1)
         #expect(result.importedCount == 1)
@@ -703,7 +703,7 @@ struct AutofillTests {
 
     @Test("Arc destination import fails closed if Space becomes locked or private between preview and commit")
     @MainActor
-    func testDestinationSpaceCommitTimeRevalidation() {
+    func testDestinationSpaceCommitTimeRevalidation() throws {
         let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
@@ -714,28 +714,34 @@ struct AutofillTests {
             email: "candidate@test.com"
         )
 
-        // 1. If destination Space is locked at commit time, token issuance fails with destinationLocked
+        var isSpaceLocked = false
+        var isSpaceDeleted = false
+
+        // 1. If destination Space is locked or deleted at issuance, token issuance throws destinationLocked
         #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.destinationLocked) {
-            _ = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: true, isPrivate: false)
+            _ = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID) { false }
         }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 2. If private browsing is active at commit time, token issuance fails with privateBrowsingActive
-        #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.privateBrowsingActive) {
-            _ = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: true)
+        // 2. If Space becomes locked or deleted after token issuance but before store mutation, import throws destinationLocked
+        let token = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID) {
+            !isSpaceLocked && !isSpaceDeleted
+        }
+        isSpaceLocked = true
+        #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.destinationLocked) {
+            try store.importIdentities([identity], into: spaceID, authorization: token)
         }
         #expect(store.identities(in: spaceID).isEmpty)
 
-        // 3. If a token issued for Space A is used to import into Space B, store throws unauthorizedDestination
+        // 3. If token issued for Space A is used to import into Space B, store throws unauthorizedDestination
         let otherSpaceID = UUID()
-        let tokenForSpace = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: false)
+        isSpaceLocked = false
         #expect(throws: BrowserAutofillStore.AutofillImportAuthorizationError.unauthorizedDestination) {
-            try store.importIdentities([identity], into: otherSpaceID, authorization: tokenForSpace)
+            try store.importIdentities([identity], into: otherSpaceID, authorization: token)
         }
 
-        // 4. Normal authorized import succeeds
-        let validToken = try BrowserAutofillStore.DestinationAuthorizationToken.issue(for: spaceID, isLocked: false, isPrivate: false)
-        let result = try? store.importIdentities([identity], into: spaceID, authorization: validToken)
+        // 4. Authorized live mutation succeeds
+        let result = try? store.importIdentities([identity], into: spaceID, authorization: token)
         #expect(result?.importedCount == 1)
         #expect(store.identities(in: spaceID).count == 1)
     }

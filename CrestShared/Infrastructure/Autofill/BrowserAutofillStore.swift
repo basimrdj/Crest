@@ -116,26 +116,29 @@ public final class BrowserAutofillStore {
         case unauthorizedDestination
     }
 
-    /// A cryptographic or owner-issued authorization capability token proving that the destination
-    /// Space exists in the active workspace and has been verified by the BrowserSpaceAccessController.
+    /// An unforgeable authorization capability token issued by an active Space owner or access controller.
     public struct DestinationAuthorizationToken: Equatable, Sendable {
         public let spaceID: UUID
-        private let secretToken: UUID
+        fileprivate let validator: @Sendable () -> Bool
+
+        public static func == (lhs: DestinationAuthorizationToken, rhs: DestinationAuthorizationToken) -> Bool {
+            lhs.spaceID == rhs.spaceID
+        }
 
         @MainActor
-        public static func issue(for spaceID: UUID, isLocked: Bool, isPrivate: Bool) throws -> DestinationAuthorizationToken {
-            guard !isLocked else {
+        public static func issue(
+            for spaceID: UUID,
+            validator: @escaping () -> Bool
+        ) throws -> DestinationAuthorizationToken {
+            guard validator() else {
                 throw AutofillImportAuthorizationError.destinationLocked
             }
-            guard !isPrivate else {
-                throw AutofillImportAuthorizationError.privateBrowsingActive
-            }
-            return DestinationAuthorizationToken(spaceID: spaceID, secretToken: UUID())
+            return DestinationAuthorizationToken(spaceID: spaceID, validator: validator)
         }
     }
 
     /// Batch imports identities into a destination Space, deduplicating against existing entries,
-    /// enforcing strict Space lock and private browsing policy through an owner-validated capability token.
+    /// revalidating Space authorization at the exact moment of store mutation.
     @discardableResult
     public func importIdentities(
         _ incoming: [AutofillIdentity],
@@ -144,6 +147,9 @@ public final class BrowserAutofillStore {
     ) throws -> (importedCount: Int, duplicateCount: Int) {
         guard authorization.spaceID == destinationSpaceID else {
             throw AutofillImportAuthorizationError.unauthorizedDestination
+        }
+        guard authorization.validator() else {
+            throw AutofillImportAuthorizationError.destinationLocked
         }
 
         let current = identities(in: destinationSpaceID)
