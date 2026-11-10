@@ -148,7 +148,35 @@ extension BrowserPage: WebKitPageHosting {
 
 // MARK: - Autofill
 
+private var activeAutofillTargetFrameKey: UInt8 = 0
+
 extension BrowserPage {
+    var activeAutofillTargetFrame: WKFrameInfo? {
+        get {
+            objc_getAssociatedObject(self, &activeAutofillTargetFrameKey) as? WKFrameInfo
+        }
+        set {
+            objc_setAssociatedObject(self, &activeAutofillTargetFrameKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    /// Normalizes scheme, host, and port into a canonical origin string.
+    private static func canonicalOrigin(protocol proto: String, host: String, port: Int) -> String {
+        let normalizedPort: Int
+        if port == 0 {
+            if proto.lowercased() == "https" {
+                normalizedPort = 443
+            } else if proto.lowercased() == "http" {
+                normalizedPort = 80
+            } else {
+                normalizedPort = 0
+            }
+        } else {
+            normalizedPort = port
+        }
+        return "\(proto.lowercased())://\(host.lowercased()):\(normalizedPort)"
+    }
+
     func receiveAutofillMessage(_ scriptMessage: WKScriptMessage) {
         guard let webView = webKitView else { return }
         if let source = scriptMessage.webView, source !== webView {
@@ -160,7 +188,13 @@ extension BrowserPage {
 
         if let dict = scriptMessage.body as? [String: Any] {
             let origin = scriptMessage.frameInfo.securityOrigin
-            let originString = "\(origin.protocol)://\(origin.host):\(origin.port)"
+            guard !origin.host.isEmpty else { return }
+            let originString = Self.canonicalOrigin(
+                protocol: origin.protocol,
+                host: origin.host,
+                port: origin.port
+            )
+            activeAutofillTargetFrame = scriptMessage.frameInfo
             session.receiveMessage(
                 dict,
                 frameSecurityOrigin: originString,
@@ -170,37 +204,35 @@ extension BrowserPage {
         }
     }
 
-    func fillAutofillIdentity(_ identity: AutofillIdentity, in frameInfo: WKFrameInfo? = nil) async throws {
+    func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
         guard let session = autofillSession, let webView = webKitView else { return }
-        let currentOrigin: String?
-        if let origin = frameInfo?.securityOrigin {
-            currentOrigin = "\(origin.protocol)://\(origin.host):\(origin.port)"
-        } else if let url = webView.url {
-            currentOrigin = "\(url.scheme ?? "")://\(url.host ?? ""):\(url.port ?? 0)"
-        } else {
-            currentOrigin = nil
+        guard let frame = targetFrame ?? activeAutofillTargetFrame else {
+            // Reject fill closed if frame target is missing or invalidated
+            session.dismiss()
+            return
         }
+        let origin = frame.securityOrigin
+        guard !origin.host.isEmpty else {
+            session.dismiss()
+            return
+        }
+        let expectedOrigin = Self.canonicalOrigin(
+            protocol: origin.protocol,
+            host: origin.host,
+            port: origin.port
+        )
 
         try await session.fill(
             identity,
             expectedNavigationGeneration: navigationGeneration,
-            expectedOrigin: currentOrigin
+            expectedOrigin: expectedOrigin
         ) { body, arguments in
-            if let frameInfo {
-                return try await webView.callAsyncJavaScript(
-                    body,
-                    arguments: arguments,
-                    in: frameInfo,
-                    contentWorld: BrowserAutofillContentBridge.contentWorld
-                )
-            } else {
-                return try await webView.callAsyncJavaScript(
-                    body,
-                    arguments: arguments,
-                    in: nil,
-                    contentWorld: BrowserAutofillContentBridge.contentWorld
-                )
-            }
+            return try await webView.callAsyncJavaScript(
+                body,
+                arguments: arguments,
+                in: frame,
+                contentWorld: BrowserAutofillContentBridge.contentWorld
+            )
         }
     }
 }

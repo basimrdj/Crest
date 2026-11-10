@@ -42,27 +42,33 @@ public enum BrowserAutofillContentBridge {
               return null;
             }
 
-            const autocomplete = normalizeToken(input.getAttribute("autocomplete"));
-            if (autocomplete === "off" || autocomplete === "new-password" || autocomplete === "current-password" || autocomplete === "one-time-code") {
+            const rawAutocomplete = normalizeToken(input.getAttribute("autocomplete"));
+            if (rawAutocomplete === "off" || rawAutocomplete === "new-password" || rawAutocomplete === "current-password" || rawAutocomplete === "one-time-code") {
               return null;
             }
 
-            // Standard HTML autocomplete tokens
-            if (autocomplete.includes("name") && !autocomplete.includes("username") && !autocomplete.includes("organization")) {
-              if (autocomplete.includes("given-name")) return "givenName";
-              if (autocomplete.includes("family-name")) return "familyName";
-              if (autocomplete.includes("additional-name")) return "middleName";
-              return "fullName";
+            // Split into distinct tokens to prevent substring false-positives (e.g. cc-name, nickname)
+            const tokens = rawAutocomplete.split(/\s+/);
+
+            // Exclude payment / card tokens explicitly (fail closed to address/identity scope)
+            if (tokens.some(t => t.startsWith("cc-") || t.startsWith("transaction-") || t === "csc" || t === "cvv")) {
+              return null;
             }
-            if (autocomplete.includes("organization")) return "organization";
-            if (autocomplete.includes("email") || input.type === "email") return "email";
-            if (autocomplete.includes("tel") || input.type === "tel") return "phoneNumber";
-            if (autocomplete.includes("street-address") || autocomplete.includes("address-line1")) return "streetAddress";
-            if (autocomplete.includes("address-line2")) return "addressLine2";
-            if (autocomplete.includes("address-level2")) return "city";
-            if (autocomplete.includes("address-level1")) return "stateOrProvince";
-            if (autocomplete.includes("postal-code")) return "postalCode";
-            if (autocomplete.includes("country")) return "countryOrRegion";
+
+            // Standard HTML autocomplete tokens (exact token matching)
+            if (tokens.includes("name")) return "fullName";
+            if (tokens.includes("given-name")) return "givenName";
+            if (tokens.includes("family-name")) return "familyName";
+            if (tokens.includes("additional-name")) return "middleName";
+            if (tokens.includes("organization")) return "organization";
+            if (tokens.includes("email") || input.type === "email") return "email";
+            if (tokens.includes("tel") || input.type === "tel") return "phoneNumber";
+            if (tokens.includes("street-address") || tokens.includes("address-line1")) return "streetAddress";
+            if (tokens.includes("address-line2")) return "addressLine2";
+            if (tokens.includes("address-level2")) return "city";
+            if (tokens.includes("address-level1")) return "stateOrProvince";
+            if (tokens.includes("postal-code")) return "postalCode";
+            if (tokens.includes("country") || tokens.includes("country-name")) return "countryOrRegion";
 
             // Fallback heuristics based on name/id attributes
             const identifier = `${input.name || ""} ${input.id || ""} ${input.placeholder || ""}`.toLowerCase();

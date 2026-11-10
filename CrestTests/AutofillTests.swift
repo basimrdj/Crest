@@ -323,4 +323,91 @@ struct AutofillTests {
         let session = BrowserAutofillSession(spaceID: spaceID, store: privateStore)
         #expect(session.matchingIdentities.isEmpty)
     }
+
+    @Test("BrowserAutofillSession fails closed on missing, opaque or mismatched origins and wrong spaces")
+    @MainActor
+    func testSessionStrictFailClosed() async throws {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+        let otherSpaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Valid",
+            fullName: "Valid User",
+            email: "valid@example.com"
+        )
+        let otherSpaceIdentity = AutofillIdentity(
+            spaceID: otherSpaceID,
+            label: "Wrong Space",
+            fullName: "Attacker User",
+            email: "attacker@other.com"
+        )
+        store.save(identity)
+        store.save(otherSpaceIdentity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        // 1. Opaque / null origin rejection
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-1", "fieldType": "email"],
+            frameSecurityOrigin: "null",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+        #expect(!session.isSuggestionPresented, "Opaque null origin must be rejected")
+
+        // 2. Empty origin rejection
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-1", "fieldType": "email"],
+            frameSecurityOrigin: "",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+        #expect(!session.isSuggestionPresented, "Empty origin must be rejected")
+
+        // 3. Normal focus setup
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-1", "fieldType": "email"],
+            frameSecurityOrigin: "https://example.com:443",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+        #expect(session.isSuggestionPresented)
+
+        var evaluatorRan = false
+
+        // 4. Fill rejected when identity belongs to another Space
+        try await session.fill(
+            otherSpaceIdentity,
+            expectedNavigationGeneration: 1,
+            expectedOrigin: "https://example.com:443"
+        ) { _, _ in
+            evaluatorRan = true
+            return true
+        }
+        #expect(!evaluatorRan, "Fill must never evaluate for cross-space identity")
+        #expect(session.activeField == nil)
+
+        // 5. Normal focus setup again
+        session.receiveMessage(
+            ["event": "focus", "formID": "form-1", "fieldType": "email"],
+            frameSecurityOrigin: "https://example.com:443",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+
+        // 6. Fill rejected when expected origin is empty or mismatched
+        evaluatorRan = false
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 1,
+            expectedOrigin: ""
+        ) { _, _ in
+            evaluatorRan = true
+            return true
+        }
+        #expect(!evaluatorRan, "Fill must fail closed on empty expected origin")
+        #expect(session.activeField == nil)
+    }
 }

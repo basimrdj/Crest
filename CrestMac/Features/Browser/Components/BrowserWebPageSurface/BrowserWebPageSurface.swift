@@ -112,6 +112,23 @@ struct BrowserWebPageSurface: View {
                 capabilities: capabilities
             )
 
+            if let autofillSession = page.autofillSession, autofillSession.isSuggestionPresented, let field = autofillSession.activeField {
+                BrowserAutofillSuggestionOverlay(
+                    fieldRect: field.rect ?? CGRect(x: 20, y: 20, width: 200, height: 32),
+                    identities: autofillSession.matchingIdentities,
+                    spaceAccent: browser.spaceModel(page.spaceID)?.settings.look.colors.first?.color ?? .accentColor,
+                    onSelect: { identity in
+                        Task { @MainActor in
+                            try? await page.fillAutofillIdentity(identity)
+                        }
+                    },
+                    onDismiss: {
+                        autofillSession.dismiss()
+                    }
+                )
+                .zIndex(BrowserWebPageSurfaceMetrics.feedbackZIndex + 10)
+            }
+
             if page.isRegionCapturePresented {
                 BrowserRegionCaptureOverlay(page: page)
                     .zIndex(BrowserWebPageSurfaceMetrics.regionCaptureZIndex)

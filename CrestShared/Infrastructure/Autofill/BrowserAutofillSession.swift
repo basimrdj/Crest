@@ -11,17 +11,19 @@ public final class BrowserAutofillSession {
         public let formID: String
         public let fieldType: String
         public let rect: CGRect?
-        public let frameSecurityOrigin: String?
+        public let frameSecurityOrigin: String
         public let isMainFrame: Bool
         public let navigationGeneration: UInt64
+        public let frameHandleID: UUID
 
         public init(
             formID: String,
             fieldType: String,
             rect: CGRect? = nil,
-            frameSecurityOrigin: String? = nil,
+            frameSecurityOrigin: String,
             isMainFrame: Bool = true,
-            navigationGeneration: UInt64 = 0
+            navigationGeneration: UInt64 = 0,
+            frameHandleID: UUID = UUID()
         ) {
             self.formID = formID
             self.fieldType = fieldType
@@ -29,6 +31,7 @@ public final class BrowserAutofillSession {
             self.frameSecurityOrigin = frameSecurityOrigin
             self.isMainFrame = isMainFrame
             self.navigationGeneration = navigationGeneration
+            self.frameHandleID = frameHandleID
         }
     }
 
@@ -58,10 +61,17 @@ public final class BrowserAutofillSession {
 
     public func receiveMessage(
         _ body: [String: Any],
-        frameSecurityOrigin: String? = nil,
+        frameSecurityOrigin: String,
         isMainFrame: Bool = true,
-        navigationGeneration: UInt64 = 0
+        navigationGeneration: UInt64 = 0,
+        frameHandleID: UUID = UUID()
     ) {
+        guard !frameSecurityOrigin.isEmpty, frameSecurityOrigin != "null" else {
+            // Fail closed on opaque, null, or empty security origins
+            activeField = nil
+            return
+        }
+
         guard let event = body["event"] as? String else { return }
 
         switch event {
@@ -84,7 +94,8 @@ public final class BrowserAutofillSession {
                 rect: fieldRect,
                 frameSecurityOrigin: frameSecurityOrigin,
                 isMainFrame: isMainFrame,
-                navigationGeneration: navigationGeneration
+                navigationGeneration: navigationGeneration,
+                frameHandleID: frameHandleID
             )
 
         case "blur":
@@ -97,24 +108,35 @@ public final class BrowserAutofillSession {
 
     public func fill(
         _ identity: AutofillIdentity,
-        expectedNavigationGeneration: UInt64? = nil,
-        expectedOrigin: String? = nil,
+        expectedNavigationGeneration: UInt64,
+        expectedOrigin: String,
+        expectedFrameHandleID: UUID? = nil,
         evaluate: Evaluate
     ) async throws {
         guard let field = activeField else { return }
 
-        // Validate generation staleness if navigation occurred
-        if let expectedGen = expectedNavigationGeneration, field.navigationGeneration != expectedGen {
+        // Strict Space isolation check (fail closed)
+        guard identity.spaceID == spaceID else {
             activeField = nil
             return
         }
 
-        // Validate security origin matches bound target
-        if let expectedOrig = expectedOrigin, let fieldOrig = field.frameSecurityOrigin, !fieldOrig.isEmpty {
-            guard fieldOrig == expectedOrig else {
-                activeField = nil
-                return
-            }
+        // Strict generation staleness check (fail closed)
+        guard field.navigationGeneration == expectedNavigationGeneration else {
+            activeField = nil
+            return
+        }
+
+        // Strict security origin validation (fail closed)
+        guard !expectedOrigin.isEmpty, field.frameSecurityOrigin == expectedOrigin else {
+            activeField = nil
+            return
+        }
+
+        // Strict frame handle match if target frame was specified
+        if let expectedFrameHandleID, field.frameHandleID != expectedFrameHandleID {
+            activeField = nil
+            return
         }
 
         let payload: [String: String] = [
