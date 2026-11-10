@@ -526,4 +526,39 @@ struct AutofillTests {
         #expect(router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-1", focusToken: "focus-1"))
         #expect(router.activeFocus == nil)
     }
+
+    @Test("BrowserAutofillFocusRouter strictly enforces token presence and pointer-down selection immunity")
+    @MainActor
+    func testRouterTokenAndSelectionImmunity() {
+        let router = BrowserAutofillFocusRouter()
+
+        // 1. Establish valid active focus
+        let active = router.acceptFocus(
+            formID: "form-1",
+            frameToken: "frame-xyz",
+            focusToken: "focus-abc",
+            securityOrigin: "https://example.com:443",
+            navigationGeneration: 2
+        )
+        #expect(active != nil)
+
+        // 2. Tokenless blur (missing focusToken) MUST NOT dismiss active focus
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: nil))
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: ""))
+        #expect(router.activeFocus != nil, "Blur missing focusToken must not dismiss active focus")
+
+        // 3. Stale blur with different focusToken MUST NOT dismiss
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: "focus-stale"))
+        #expect(router.activeFocus != nil)
+
+        // 4. Pointer-down / selection began protects against matching blur
+        router.beginSelection()
+        #expect(!router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: "focus-abc"))
+        #expect(router.activeFocus != nil, "Matching blur during selection must be suppressed")
+        router.endSelection()
+
+        // 5. Once selection ends, matching blur dismisses
+        #expect(router.shouldDismissOnBlur(formID: "form-1", frameToken: "frame-xyz", focusToken: "focus-abc"))
+        #expect(router.activeFocus == nil)
+    }
 }

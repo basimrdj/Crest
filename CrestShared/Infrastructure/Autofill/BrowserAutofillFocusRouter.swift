@@ -69,6 +69,7 @@ public final class BrowserAutofillFocusRouter {
     }
 
     /// Evaluates whether an incoming blur event should dismiss the active focus.
+    /// Strictly requires matching non-empty frameToken and focusToken to prevent wildcard dismissal.
     public func shouldDismissOnBlur(
         formID: String?,
         frameToken: String?,
@@ -78,12 +79,14 @@ public final class BrowserAutofillFocusRouter {
         guard !isSelecting else { return false }
         guard let current = activeFocus else { return false }
 
-        // Must match frameToken
-        guard let frameToken, frameToken == current.frameToken else { return false }
+        // Must provide and match non-empty frameToken
+        guard let frameToken, !frameToken.isEmpty, frameToken == current.frameToken else {
+            return false
+        }
 
-        // If focusToken is provided, it must match the active focus token
-        if let focusToken, !focusToken.isEmpty {
-            guard focusToken == current.focusToken else { return false }
+        // Must provide and match non-empty focusToken
+        guard let focusToken, !focusToken.isEmpty, focusToken == current.focusToken else {
+            return false
         }
 
         // If formID is provided, it must match

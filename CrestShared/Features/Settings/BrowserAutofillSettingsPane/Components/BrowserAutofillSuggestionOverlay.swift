@@ -7,6 +7,7 @@ public struct BrowserAutofillSuggestionOverlay: View {
     public let fieldRect: CGRect
     public let identities: [AutofillIdentity]
     public let spaceAccent: Color
+    public let onSelectionBegan: () -> Void
     public let onSelect: (AutofillIdentity) -> Void
     public let onDismiss: () -> Void
 
@@ -19,12 +20,14 @@ public struct BrowserAutofillSuggestionOverlay: View {
         fieldRect: CGRect,
         identities: [AutofillIdentity],
         spaceAccent: Color,
+        onSelectionBegan: @escaping () -> Void = {},
         onSelect: @escaping (AutofillIdentity) -> Void,
         onDismiss: @escaping () -> Void = {}
     ) {
         self.fieldRect = fieldRect
         self.identities = identities
         self.spaceAccent = spaceAccent
+        self.onSelectionBegan = onSelectionBegan
         self.onSelect = onSelect
         self.onDismiss = onDismiss
     }
@@ -69,6 +72,12 @@ public struct BrowserAutofillSuggestionOverlay: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in
+                                onSelectionBegan()
+                            }
+                    )
                     .background(
                         (hoveredID == identity.id || selectedIndex == index)
                             ? CrestColor.fillSubtle

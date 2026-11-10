@@ -171,11 +171,13 @@ public enum BrowserAutofillContentBridge {
                 blurTimeout = null;
               }
             } else {
-              // Focus moved to non-autofill control (button, link, etc.); immediately flush pending blur if any
+              // Focus moved to non-autofill control (button, link, etc.); immediately flush pending blur if any with active focusToken
               if (blurTimeout) {
                 clearTimeout(blurTimeout);
                 blurTimeout = null;
-                post({ event: "blur" });
+                if (currentFocusToken) {
+                  post({ event: "blur", focusToken: currentFocusToken });
+                }
               }
             }
           }, true);

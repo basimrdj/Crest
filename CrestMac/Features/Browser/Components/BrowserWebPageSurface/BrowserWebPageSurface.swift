@@ -117,12 +117,16 @@ struct BrowserWebPageSurface: View {
                     fieldRect: field.rect ?? CGRect(x: 20, y: 20, width: 200, height: 32),
                     identities: autofillSession.matchingIdentities,
                     spaceAccent: browser.spaceModel(page.spaceID)?.settings.look.colors.first?.color ?? .accentColor,
+                    onSelectionBegan: {
+                        page.autofillFocusRouter.beginSelection()
+                    },
                     onSelect: { identity in
                         Task { @MainActor in
                             try? await page.fillAutofillIdentity(identity)
                         }
                     },
                     onDismiss: {
+                        page.autofillFocusRouter.endSelection()
                         autofillSession.dismiss()
                     }
                 )
