@@ -9,6 +9,9 @@ import Observation
 public final class BrowserAutofillStore {
     // MARK: - Variables
 
+    public static let shared = BrowserAutofillStore()
+
+
     public let isPrivate: Bool
     public private(set) var identities: [AutofillIdentity] = []
     private let storageDirectory: URL?
