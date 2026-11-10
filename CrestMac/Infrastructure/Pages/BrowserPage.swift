@@ -337,7 +337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+        autofillSession = nil // Lazily initialized once actual page/Space privacy policy is applied
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,
@@ -601,6 +601,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
         autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+    }
+
+    /// Accesses or initializes the autofill session ensuring privacy mode is strictly adhered to.
+    func ensureAutofillSession() -> BrowserAutofillSession {
+        if let session = autofillSession { return session }
+        let session = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+        autofillSession = session
+        return session
     }
 
     /// Tries again to show a page its engine couldn't create.

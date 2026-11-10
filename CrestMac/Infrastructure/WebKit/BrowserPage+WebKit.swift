@@ -156,7 +156,7 @@ extension BrowserPage {
             return
         }
         if let dict = scriptMessage.body as? [String: Any] {
-            autofillSession?.receiveMessage(dict)
+            ensureAutofillSession().receiveMessage(dict)
         }
     }
 }
