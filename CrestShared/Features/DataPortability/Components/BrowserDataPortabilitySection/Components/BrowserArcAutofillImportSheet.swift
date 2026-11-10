@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Sheet for previewing and importing discovered Arc Browser identities into a selected Space.
@@ -94,3 +95,5 @@ public struct BrowserArcAutofillImportSheet: View {
         .frame(minWidth: 440, minHeight: 480)
     }
 }
+
+#endif

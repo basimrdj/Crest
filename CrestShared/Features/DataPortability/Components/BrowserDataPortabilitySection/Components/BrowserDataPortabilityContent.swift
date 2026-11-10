@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct BrowserDataPortabilityContent: View {
+#if os(macOS)
     @State private var discoveredArcRecords: [ArcAutofillProfileRecord] = []
     @State private var isShowingArcImport = false
+#endif
     @State private var autofillStore = BrowserAutofillStore()
     let model: BrowserDataPortabilityModel
     let showsMacOSImportRequirement: Bool
@@ -13,6 +15,7 @@ struct BrowserDataPortabilityContent: View {
                 BrowserDataPortabilityMacRequirement()
             }
             BrowserDataPortabilityExportControls(model: model)
+#if os(macOS)
             Button("Import Arc Addresses…") {
                 if let url = BrowserArcAutofillDiscovery.defaultUserDataURL(),
                    let records = try? BrowserAutofillImportReader.readProfiles(from: url) {
@@ -23,12 +26,14 @@ struct BrowserDataPortabilityContent: View {
                 isShowingArcImport = true
             }
             .accessibilityIdentifier("import-arc-autofill")
+#endif
             BrowserDataPortabilityProgressStatus(model: model)
         } header: {
             Text("Import and export")
         } footer: {
             BrowserDataPortabilityFootnotes()
         }
+        #if os(macOS)
         .sheet(isPresented: $isShowingArcImport) {
             BrowserArcAutofillImportSheet(
                 browser: model.browser,
@@ -38,5 +43,6 @@ struct BrowserDataPortabilityContent: View {
                 }
             )
         }
+#endif
     }
 }

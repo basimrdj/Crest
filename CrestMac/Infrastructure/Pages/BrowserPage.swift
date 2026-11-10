@@ -337,7 +337,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: false))
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: BrowserAutofillStore(isPrivate: isPrivateBrowsing))
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,

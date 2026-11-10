@@ -32,7 +32,7 @@ struct AutofillTests {
     @Test("BrowserAutofillStore enforces strict Space isolation")
     @MainActor
     func testSpaceIsolation() {
-        let store = BrowserAutofillStore()
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceA = UUID()
         let spaceB = UUID()
 
@@ -71,7 +71,7 @@ struct AutofillTests {
     @Test("BrowserAutofillStore handles deduplication during import")
     @MainActor
     func testImportDeduplication() {
-        let store = BrowserAutofillStore()
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let destinationSpace = UUID()
 
         let existing = AutofillIdentity(
@@ -113,7 +113,7 @@ struct AutofillTests {
     @Test("BrowserAutofillSession manages focus and fill lifecycle without submitting")
     @MainActor
     func testSessionFillLifecycle() async throws {
-        let store = BrowserAutofillStore()
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
