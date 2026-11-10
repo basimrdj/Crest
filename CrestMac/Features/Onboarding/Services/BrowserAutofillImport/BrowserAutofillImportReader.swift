@@ -84,6 +84,17 @@ public final class BrowserAutofillImportReader {
         case addressHomeStreetAddress = 77
     }
 
+    private static func tableExists(_ tableName: String, in database: OpaquePointer) -> Bool {
+        let sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1;"
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
+            return false
+        }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, tableName, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        return sqlite3_step(statement) == SQLITE_ROW
+    }
+
     public static func readProfiles(from databaseURL: URL) throws -> [ArcAutofillProfileRecord] {
         guard FileManager.default.fileExists(atPath: databaseURL.path) else {
             throw BrowserAutofillImportError.fileNotFound
@@ -113,28 +124,28 @@ public final class BrowserAutofillImportReader {
         sqlite3_exec(database, "PRAGMA query_only = ON", nil, nil, nil)
         sqlite3_exec(database, "PRAGMA trusted_schema = OFF", nil, nil, nil)
 
-        // 1. Try modern Chromium address_type_tokens schema
-        if let records = try? readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database), !records.isEmpty {
-            return records
+        // Check which schema tables actually exist in sqlite_master
+        if tableExists("addresses", in: database) && tableExists("address_type_tokens", in: database) {
+            return try readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database)
         }
 
-        // 2. Try modern local_addresses + local_addresses_type_tokens schema
-        if let records = try? readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database), !records.isEmpty {
-            return records
+        if tableExists("local_addresses", in: database) && tableExists("local_addresses_type_tokens", in: database) {
+            return try readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database)
         }
 
-        // 3. Try intermediate contact_info + contact_info_type_tokens schema
-        if let records = try? readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database), !records.isEmpty {
-            return records
+        if tableExists("contact_info", in: database) && tableExists("contact_info_type_tokens", in: database) {
+            return try readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database)
         }
 
-        // 4. Try standard autofill_profiles with auxiliary tables
-        if let standardRecords = try? readStandardProfiles(from: database), !standardRecords.isEmpty {
-            return standardRecords
+        if tableExists("autofill_profiles", in: database) {
+            if tableExists("autofill_profile_names", in: database) {
+                return try readStandardProfiles(from: database)
+            } else {
+                return try readLegacyProfiles(from: database)
+            }
         }
 
-        // 5. Try legacy single-table autofill_profiles
-        return try readLegacyProfiles(from: database)
+        throw BrowserAutofillImportError.unreadableDatabase
     }
 
     private static func readAddressTokenTable(

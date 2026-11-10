@@ -101,10 +101,16 @@ public struct BrowserArcAutofillImportSheet: View {
                     Button("Import") {
                         guard let spaceID = selectedSpaceID else { return }
                         let identities = records.map { record in
-                            AutofillIdentity(
+                            let nameTokens = record.fullName.split(separator: " ").map(String.init)
+                            let givenName = nameTokens.first ?? ""
+                            let familyName = nameTokens.count > 1 ? nameTokens.dropFirst().joined(separator: " ") : ""
+
+                            return AutofillIdentity(
                                 spaceID: spaceID,
                                 label: record.fullName.isEmpty ? "Arc Address" : record.fullName,
                                 fullName: record.fullName,
+                                givenName: givenName,
+                                familyName: familyName,
                                 organization: record.companyName,
                                 email: record.email,
                                 phoneNumber: record.phoneNumber,

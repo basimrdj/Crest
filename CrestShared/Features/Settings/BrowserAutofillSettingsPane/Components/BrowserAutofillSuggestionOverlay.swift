@@ -77,6 +77,9 @@ public struct BrowserAutofillSuggestionOverlay: View {
                             .onChanged { _ in
                                 onSelectionBegan()
                             }
+                            .onEnded { _ in
+                                // Keep selection active until button action commits or dismisses
+                            }
                     )
                     .background(
                         (hoveredID == identity.id || selectedIndex == index)

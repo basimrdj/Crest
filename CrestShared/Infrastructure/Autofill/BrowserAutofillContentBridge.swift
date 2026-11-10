@@ -123,10 +123,18 @@ public enum BrowserAutofillContentBridge {
               const root = formsByID.get(formID)?.deref();
               if (!root || !root.isConnected) return false;
 
-              const inputs = Array.from(root.querySelectorAll("input, select, textarea")).filter(isVisible);
+              // Bound form autofill: only query inputs directly belonging to this form root
+              const inputs = root instanceof HTMLFormElement
+                ? Array.from(root.elements).filter(isVisible)
+                : Array.from(root.querySelectorAll("input, select, textarea")).filter(isVisible);
+
               let filledCount = 0;
 
               for (const input of inputs) {
+                // Respect explicit field or form autocomplete=off
+                const autocomplete = (input.getAttribute("autocomplete") || "").toLowerCase().trim();
+                if (autocomplete === "off" || input.disabled || input.readOnly) continue;
+
                 const kind = classifyField(input);
                 if (kind && values[kind] !== undefined && values[kind] !== "") {
                   setElementValue(input, values[kind]);
