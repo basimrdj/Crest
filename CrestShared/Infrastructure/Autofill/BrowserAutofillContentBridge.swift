@@ -135,11 +135,10 @@ public enum BrowserAutofillContentBridge {
                 const autocomplete = (input.getAttribute("autocomplete") || "").toLowerCase().trim();
                 if (autocomplete === "off" || input.disabled || input.readOnly) continue;
 
-                // Section isolation: if focused input belonged to a specific section, only fill matching section
-                if (targetSection) {
-                  const inputSection = sectionOf(input);
-                  if (inputSection && inputSection !== targetSection) continue;
-                }
+                // Section isolation: fill only inputs sharing the exact section/mode group key
+                const effectiveTarget = targetSection || "default";
+                const inputSection = sectionOf(input);
+                if (inputSection !== effectiveTarget) continue;
 
                 const kind = classifyField(input);
                 if (kind && values[kind] !== undefined && values[kind] !== "") {
@@ -154,11 +153,16 @@ public enum BrowserAutofillContentBridge {
           const sectionOf = (element) => {
             const autocomplete = (element.getAttribute("autocomplete") || "").toLowerCase().trim();
             const tokens = autocomplete.split(/\s+/);
+            let sectionPrefix = "";
+            let mode = "";
             for (const token of tokens) {
-              if (token.startsWith("section-")) return token;
-              if (token === "shipping" || token === "billing") return token;
+              if (token.startsWith("section-")) sectionPrefix = token;
+              if (token === "shipping" || token === "billing") mode = token;
             }
-            return null;
+            if (sectionPrefix && mode) return `${sectionPrefix}:${mode}`;
+            if (sectionPrefix) return sectionPrefix;
+            if (mode) return mode;
+            return "default";
           };
 
           const handleFocus = (element) => {
