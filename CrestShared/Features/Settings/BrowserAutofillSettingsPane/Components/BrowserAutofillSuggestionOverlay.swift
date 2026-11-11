@@ -77,8 +77,13 @@ public struct BrowserAutofillSuggestionOverlay: View {
                             .onChanged { _ in
                                 onSelectionBegan()
                             }
-                            .onEnded { _ in
-                                // Keep selection active until button action commits or dismisses
+                            .onEnded { value in
+                                // If dragged away from the button surface, cancel selection hold
+                                let isOutside = value.translation.width > 100 || value.translation.width < -100
+                                    || value.translation.height > 60 || value.translation.height < -60
+                                if isOutside {
+                                    onDismiss()
+                                }
                             }
                     )
                     .background(

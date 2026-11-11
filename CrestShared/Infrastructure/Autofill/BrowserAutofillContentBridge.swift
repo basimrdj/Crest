@@ -11,7 +11,7 @@ public enum BrowserAutofillContentBridge {
           "use strict";
           if (globalThis.__crestAutofillBridge) return;
 
-          const handler = webkit.messageHandlers.crestAutofill;
+          const handler = (globalThis.webkit && globalThis.webkit.messageHandlers && globalThis.webkit.messageHandlers.crestAutofill) || globalThis.crestAutofillHost || null;
           const formsByID = new Map();
           let nextFormID = 1;
           const frameToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("frame-" + Math.random().toString(36).slice(2));

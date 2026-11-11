@@ -401,6 +401,47 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             }
         }
         if let scripting = pageEngine.contentScripting {
+            _ = scripting.install(
+                BrowserContentScript(
+                    source: BrowserAutofillContentBridge.source,
+                    handlerName: BrowserAutofillContentBridge.messageHandlerName,
+                    mainFrameOnly: false
+                )
+            ) { [weak self] message in
+                guard let self else { return }
+                guard let session = self.ensureAutofillSession() else { return }
+                if let dict = message.body as? [String: Any],
+                   let formID = dict["formID"] as? String,
+                   let frameToken = dict["frameToken"] as? String,
+                   let focusToken = dict["focusToken"] as? String {
+                    let originString = "\(message.frame.securityProtocol)://\(message.frame.host):\(message.frame.port)"
+                    if let event = dict["event"] as? String {
+                        if event == "blur" {
+                            if self.autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                                session.dismiss()
+                            }
+                        } else if event == "focus" {
+                            if let activeFocus = self.autofillFocusRouter.acceptFocus(
+                                formID: formID,
+                                frameToken: frameToken,
+                                focusToken: focusToken,
+                                securityOrigin: originString,
+                                navigationGeneration: self.navigationGeneration
+                            ) {
+                                session.receiveMessage(
+                                    dict,
+                                    frameSecurityOrigin: originString,
+                                    isMainFrame: message.frame.isMainFrame,
+                                    navigationGeneration: self.navigationGeneration,
+                                    frameHandleID: activeFocus.handleID
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if let scripting = pageEngine.contentScripting {
             cosmeticFilters = BrowserCosmeticFilterSession(
                 core: downloadCenter.core, spaceID: spaceID, picker: elementPicker,
                 siteURL: { [weak self] in self?.pageEngine.currentURL ?? self?.live.documentURL },
