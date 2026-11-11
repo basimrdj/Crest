@@ -208,6 +208,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var autofillSession: BrowserAutofillSession?
     @ObservationIgnored private(set) var isPrivacyPolicyConfigured = false
     @ObservationIgnored private(set) var navigationGeneration: UInt64 = 0
+    @ObservationIgnored private var activeChromiumTargetFrame: BrowserContentFrame?
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
@@ -428,6 +429,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                                 securityOrigin: originString,
                                 navigationGeneration: self.navigationGeneration
                             ) {
+                                self.activeChromiumTargetFrame = message.frame
                                 session.receiveMessage(
                                     dict,
                                     frameSecurityOrigin: originString,
@@ -947,6 +949,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             return
         }
 
+        guard let targetFrame = activeChromiumTargetFrame else {
+            session.dismiss()
+            return
+        }
+
         try await session.fill(
             identity,
             expectedNavigationGeneration: navigationGeneration,
@@ -954,8 +961,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             expectedFrameHandleID: activeFocus.handleID
         ) { [weak self] body, arguments in
             guard let self else { return nil }
-            return try await scripting.callAsyncJavaScriptInMainFrame(body, arguments: arguments)
+            return try await scripting.callAsyncJavaScript(body, arguments: arguments, in: targetFrame)
         }
+        activeChromiumTargetFrame = nil
     }
 
     /// Fills go back through the channel the credential bridge came in on.
