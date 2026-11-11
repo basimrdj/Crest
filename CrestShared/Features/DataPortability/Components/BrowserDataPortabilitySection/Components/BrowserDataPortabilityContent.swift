@@ -19,17 +19,34 @@ struct BrowserDataPortabilityContent: View {
 #if os(macOS)
             Button("Import Arc Addresses…") {
                 discoveredArcRecords = []
-                guard let url = BrowserArcAutofillDiscovery.defaultUserDataURL() else {
+                guard let userDir = BrowserArcAutofillDiscovery.defaultUserDataDirectory() else {
                     arcDiscoveryErrorMessage = "No Arc installation or profile was discovered on this Mac."
                     isShowingArcImport = true
                     return
                 }
-                do {
-                    discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: url)
-                    arcDiscoveryErrorMessage = nil
-                } catch {
-                    discoveredArcRecords = []
-                    arcDiscoveryErrorMessage = "Failed to read Arc database: \(error.localizedDescription)"
+
+                let profiles = BrowserAutofillImportReader.discoverProfileDatabases(in: userDir)
+                if profiles.isEmpty {
+                    if let defaultURL = BrowserArcAutofillDiscovery.defaultUserDataURL() {
+                        do {
+                            discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: defaultURL)
+                            arcDiscoveryErrorMessage = nil
+                        } catch {
+                            discoveredArcRecords = []
+                            arcDiscoveryErrorMessage = "Failed to read Arc database: \(error.localizedDescription)"
+                        }
+                    } else {
+                        arcDiscoveryErrorMessage = "No Arc profiles found."
+                    }
+                } else {
+                    var allRecords: [ArcAutofillProfileRecord] = []
+                    for profile in profiles {
+                        if let records = try? BrowserAutofillImportReader.readProfiles(from: profile.databaseURL) {
+                            allRecords.append(contentsOf: records)
+                        }
+                    }
+                    discoveredArcRecords = allRecords
+                    arcDiscoveryErrorMessage = allRecords.isEmpty ? "No autofill records found in discovered profiles." : nil
                 }
                 isShowingArcImport = true
             }
