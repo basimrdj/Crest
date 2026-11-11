@@ -122,7 +122,7 @@ struct BrowserWebPageSurface: View {
                     },
                     onSelect: { identity in
                         Task { @MainActor in
-                            try? await page.fillAutofillIdentity(identity)
+                            try? await page.fillAutofillIdentityOnCurrentEngine(identity)
                         }
                     },
                     onDismiss: {

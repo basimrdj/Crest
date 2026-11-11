@@ -823,4 +823,25 @@ struct AutofillTests {
         #expect(discoveredArcRecords.isEmpty)
         #expect(arcDiscoveryErrorMessage != nil)
     }
+
+    @Test("Arc reader rejects tables with missing required columns without treating as empty")
+    @MainActor
+    func testArcReaderMalformedColumns() throws {
+        let malformedDB = FileManager.default.temporaryDirectory.appendingPathComponent("Malformed_Web_Data.sqlite")
+        defer { try? FileManager.default.removeItem(at: malformedDB) }
+
+        var db: OpaquePointer?
+        guard sqlite3_open(malformedDB.path, &db) == SQLITE_OK, let db else {
+            Issue.record("Failed to create SQLite database for malformed test")
+            return
+        }
+        // Create addresses table, but address_type_tokens is missing required 'type' and 'value' columns
+        sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, wrong_col TEXT);", nil, nil, nil)
+        sqlite3_close(db)
+
+        #expect(throws: BrowserAutofillImportError.unreadableDatabase) {
+            try BrowserAutofillImportReader.readProfiles(from: malformedDB)
+        }
+    }
 }

@@ -932,6 +932,32 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         try await credentialSession.fillGeneratedPassword(password, for: requestID, evaluate: evaluate)
     }
 
+    /// Evaluates autofill identity fill across engines (WebKit or Chromium content scripting).
+    func fillAutofillIdentityOnCurrentEngine(_ identity: AutofillIdentity) async throws {
+        #if os(macOS)
+        if webKitAdapter != nil {
+            try await fillAutofillIdentity(identity)
+            return
+        }
+        #endif
+        guard let scripting = pageEngine.contentScripting,
+              let session = autofillSession,
+              let activeFocus = autofillFocusRouter.activeFocus
+        else {
+            return
+        }
+
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: navigationGeneration,
+            expectedOrigin: activeFocus.securityOrigin,
+            expectedFrameHandleID: activeFocus.handleID
+        ) { [weak self] body, arguments in
+            guard let self else { return nil }
+            return try await scripting.callAsyncJavaScriptInMainFrame(body, arguments: arguments)
+        }
+    }
+
     /// Fills go back through the channel the credential bridge came in on.
     private var credentialEvaluator: BrowserCredentialSession.Evaluate? {
         guard let scripting = pageEngine.contentScripting else { return engineAdapter.credentialEvaluator }

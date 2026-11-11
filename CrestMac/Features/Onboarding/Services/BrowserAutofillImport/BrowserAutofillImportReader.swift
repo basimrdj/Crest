@@ -156,7 +156,7 @@ public final class BrowserAutofillImportReader {
         let sql = "SELECT a.guid, t.type, t.value FROM \(mainTable) a JOIN \(tokenTable) t ON a.guid = t.guid"
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
-            return []
+            throw BrowserAutofillImportError.unreadableDatabase
         }
         defer { sqlite3_finalize(statement) }
 
