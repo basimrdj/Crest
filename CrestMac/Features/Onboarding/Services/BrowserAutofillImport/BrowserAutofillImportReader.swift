@@ -3,9 +3,11 @@ import SQLite3
 
 public struct ArcAutofillProfileRecord: Equatable, Sendable {
     public let guid: String
+    public let profileName: String
     public let fullName: String
     public let companyName: String
     public let streetAddress: String
+    public let addressLine2: String
     public let city: String
     public let state: String
     public let zipcode: String
@@ -13,11 +15,17 @@ public struct ArcAutofillProfileRecord: Equatable, Sendable {
     public let email: String
     public let phoneNumber: String
 
+    public var compoundID: String {
+        "\(profileName):\(guid)"
+    }
+
     public init(
         guid: String,
+        profileName: String = "Default",
         fullName: String = "",
         companyName: String = "",
         streetAddress: String = "",
+        addressLine2: String = "",
         city: String = "",
         state: String = "",
         zipcode: String = "",
@@ -26,9 +34,11 @@ public struct ArcAutofillProfileRecord: Equatable, Sendable {
         phoneNumber: String = ""
     ) {
         self.guid = guid
+        self.profileName = profileName
         self.fullName = fullName
         self.companyName = companyName
         self.streetAddress = streetAddress
+        self.addressLine2 = addressLine2
         self.city = city
         self.state = state
         self.zipcode = zipcode
@@ -180,20 +190,15 @@ public final class BrowserAutofillImportReader {
                 fullName = [first, last].filter { !$0.isEmpty }.joined(separator: " ")
             }
 
-            let streetAddress: String
-            if let fullStreet = fields[ChromiumFieldType.addressHomeStreetAddress.rawValue], !fullStreet.isEmpty {
-                streetAddress = fullStreet
-            } else {
-                let line1 = fields[ChromiumFieldType.addressHomeLine1.rawValue] ?? ""
-                let line2 = fields[ChromiumFieldType.addressHomeLine2.rawValue] ?? ""
-                streetAddress = [line1, line2].filter { !$0.isEmpty }.joined(separator: ", ")
-            }
+            let line1 = fields[ChromiumFieldType.addressHomeLine1.rawValue] ?? fields[ChromiumFieldType.addressHomeStreetAddress.rawValue] ?? ""
+            let line2 = fields[ChromiumFieldType.addressHomeLine2.rawValue] ?? ""
 
             return ArcAutofillProfileRecord(
                 guid: guid,
                 fullName: fullName,
                 companyName: fields[ChromiumFieldType.companyName.rawValue] ?? "",
-                streetAddress: streetAddress,
+                streetAddress: line1,
+                addressLine2: line2,
                 city: fields[ChromiumFieldType.addressHomeCity.rawValue] ?? "",
                 state: fields[ChromiumFieldType.addressHomeState.rawValue] ?? "",
                 zipcode: fields[ChromiumFieldType.addressHomeZip.rawValue] ?? "",

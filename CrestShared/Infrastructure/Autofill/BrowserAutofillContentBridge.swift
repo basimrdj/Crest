@@ -50,6 +50,14 @@ public enum BrowserAutofillContentBridge {
               return null;
             }
 
+            // Honor form-level autocomplete="off" when input has no overriding autocomplete attribute
+            if (!rawAutocomplete) {
+              const form = input.form || input.closest("form");
+              if (form && normalizeToken(form.getAttribute("autocomplete")) === "off") {
+                return null;
+              }
+            }
+
             // Split into distinct tokens to prevent substring false-positives (e.g. cc-name, nickname)
             const tokens = rawAutocomplete.split(/\s+/);
 

@@ -68,7 +68,7 @@ public struct BrowserArcAutofillImportSheet: View {
                 }
 
                 Section("Discovered Arc Profiles (\(records.count))") {
-                    ForEach(records, id: \.guid) { record in
+                    ForEach(records, id: \.compoundID) { record in
                         VStack(alignment: .leading, spacing: 3) {
                             Text(record.fullName.isEmpty ? "Unnamed Profile" : record.fullName)
                                 .font(CrestTypography.controlTitle)
@@ -107,7 +107,7 @@ public struct BrowserArcAutofillImportSheet: View {
 
                             return AutofillIdentity(
                                 spaceID: spaceID,
-                                label: record.fullName.isEmpty ? "Arc Address" : record.fullName,
+                                label: record.fullName.isEmpty ? "Arc Address (\(record.profileName))" : record.fullName,
                                 fullName: record.fullName,
                                 givenName: givenName,
                                 familyName: familyName,
@@ -115,6 +115,7 @@ public struct BrowserArcAutofillImportSheet: View {
                                 email: record.email,
                                 phoneNumber: record.phoneNumber,
                                 streetAddress: record.streetAddress,
+                                addressLine2: record.addressLine2,
                                 city: record.city,
                                 stateOrProvince: record.state,
                                 postalCode: record.zipcode,

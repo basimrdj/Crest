@@ -931,4 +931,30 @@ struct AutofillTests {
 
         #expect(filledIDs == ["input-1", "input-4"], "Must strictly isolate to matching compound section group, excluding billing and unsectioned fields")
     }
+
+    @Test("Arc reader extracts addressLine2 and preserves line1 without truncation")
+    @MainActor
+    func testArcReaderAddressLine2Preservation() throws {
+        let tempDB = FileManager.default.temporaryDirectory.appendingPathComponent("Line2_Web_Data.sqlite")
+        defer { try? FileManager.default.removeItem(at: tempDB) }
+
+        var db: OpaquePointer?
+        guard sqlite3_open(tempDB.path, &db) == SQLITE_OK, let db else {
+            Issue.record("Failed to create SQLite database for line2 test")
+            return
+        }
+        sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+        sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO addresses VALUES ('guid-line2');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 7, 'Apartment Resident');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 30, '742 Evergreen Terrace');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 31, 'Apt 4B');", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 33, 'Springfield');", nil, nil, nil)
+        sqlite3_close(db)
+
+        let records = try BrowserAutofillImportReader.readProfiles(from: tempDB)
+        #expect(records.count == 1)
+        #expect(records[0].streetAddress == "742 Evergreen Terrace")
+        #expect(records[0].addressLine2 == "Apt 4B", "Address line 2 must be preserved separately")
+    }
 }
