@@ -145,3 +145,144 @@ extension BrowserPage: WebKitPageHosting {
         navigationReporter?.reportHistoryAgain()
     }
 }
+
+// MARK: - Autofill
+
+private var activeAutofillTargetFrameKey: UInt8 = 0
+private var autofillFocusRouterKey: UInt8 = 0
+
+extension BrowserPage {
+    var activeAutofillTargetFrame: WKFrameInfo? {
+        get {
+            objc_getAssociatedObject(self, &activeAutofillTargetFrameKey) as? WKFrameInfo
+        }
+        set {
+            objc_setAssociatedObject(self, &activeAutofillTargetFrameKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    var autofillFocusRouter: BrowserAutofillFocusRouter {
+        if let router = objc_getAssociatedObject(self, &autofillFocusRouterKey) as? BrowserAutofillFocusRouter {
+            return router
+        }
+        let router = BrowserAutofillFocusRouter()
+        objc_setAssociatedObject(self, &autofillFocusRouterKey, router, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return router
+    }
+
+    func invalidateAutofillFocusTarget() {
+        activeAutofillTargetFrame = nil
+        autofillFocusRouter.invalidate()
+        autofillSession?.dismiss()
+    }
+
+    /// Normalizes scheme, host, and port into a canonical origin string.
+    private static func canonicalOrigin(protocol proto: String, host: String, port: Int) -> String {
+        let normalizedPort: Int
+        if port == 0 {
+            if proto.lowercased() == "https" {
+                normalizedPort = 443
+            } else if proto.lowercased() == "http" {
+                normalizedPort = 80
+            } else {
+                normalizedPort = 0
+            }
+        } else {
+            normalizedPort = port
+        }
+        return "\(proto.lowercased())://\(host.lowercased()):\(normalizedPort)"
+    }
+
+    func receiveAutofillMessage(_ scriptMessage: WKScriptMessage) {
+        guard let webView = webKitView else { return }
+        if let source = scriptMessage.webView, source !== webView {
+            webKitEnginePage?.binding?.page(showing: source)?.host?.receiveAutofillMessage(scriptMessage)
+            return
+        }
+        // Enforce privacy configuration readiness
+        guard let session = ensureAutofillSession() else { return }
+
+        guard let dict = scriptMessage.body as? [String: Any],
+            let event = dict["event"] as? String else { return }
+
+        let origin = scriptMessage.frameInfo.securityOrigin
+        guard !origin.host.isEmpty else { return }
+        let originString = Self.canonicalOrigin(
+            protocol: origin.protocol,
+            host: origin.host,
+            port: origin.port
+        )
+
+        let frameToken = dict["frameToken"] as? String
+        let focusToken = dict["focusToken"] as? String
+        let formID = dict["formID"] as? String
+
+        if event == "blur" {
+            if autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                activeAutofillTargetFrame = nil
+                session.dismiss()
+            }
+            return
+        }
+
+        guard event == "focus", let formID else { return }
+
+        guard let activeFocus = autofillFocusRouter.acceptFocus(
+            formID: formID,
+            frameToken: frameToken,
+            focusToken: focusToken,
+            securityOrigin: originString,
+            navigationGeneration: navigationGeneration
+        ) else {
+            return
+        }
+
+        activeAutofillTargetFrame = scriptMessage.frameInfo
+
+        session.receiveMessage(
+            dict,
+            frameSecurityOrigin: originString,
+            isMainFrame: scriptMessage.frameInfo.isMainFrame,
+            navigationGeneration: navigationGeneration,
+            frameHandleID: activeFocus.handleID
+        )
+    }
+
+    func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
+        guard let session = autofillSession, let webView = webKitView else { return }
+        autofillFocusRouter.beginSelection()
+        defer { autofillFocusRouter.endSelection() }
+
+        guard let frame = targetFrame ?? activeAutofillTargetFrame,
+            let activeFocus = autofillFocusRouter.activeFocus
+        else {
+            invalidateAutofillFocusTarget()
+            return
+        }
+        let origin = frame.securityOrigin
+        guard !origin.host.isEmpty else {
+            invalidateAutofillFocusTarget()
+            return
+        }
+        let expectedOrigin = Self.canonicalOrigin(
+            protocol: origin.protocol,
+            host: origin.host,
+            port: origin.port
+        )
+
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: navigationGeneration,
+            expectedOrigin: expectedOrigin,
+            expectedFrameHandleID: activeFocus.handleID
+        ) { body, arguments in
+            return try await webView.callAsyncJavaScript(
+                body,
+                arguments: arguments,
+                in: frame,
+                contentWorld: BrowserAutofillContentBridge.contentWorld
+            )
+        }
+        invalidateAutofillFocusTarget()
+    }
+}

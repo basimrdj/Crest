@@ -205,6 +205,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// used it since, which the diagnostic log notes once they do.
     @ObservationIgnored var awaitsInputSincePresented = false
     @ObservationIgnored let credentialSession: BrowserCredentialSession
+    var autofillSession: BrowserAutofillSession?
+    @ObservationIgnored private(set) var isPrivacyPolicyConfigured = false
+    @ObservationIgnored private(set) var navigationGeneration: UInt64 = 0
+    @ObservationIgnored private var activeChromiumTargetFrame: BrowserContentFrame?
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
     }
@@ -336,6 +340,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
+        autofillSession = nil // Lazily initialized once actual page/Space privacy policy is applied
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,
@@ -394,6 +399,49 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 guard let self else { return }
                 self.credentialSession.receive(
                     message.body, from: message.frame, topLevelURL: self.pageEngine.currentURL)
+            }
+        }
+        if let scripting = pageEngine.contentScripting {
+            _ = scripting.install(
+                BrowserContentScript(
+                    source: BrowserAutofillContentBridge.source,
+                    handlerName: BrowserAutofillContentBridge.messageHandlerName,
+                    mainFrameOnly: false
+                )
+            ) { [weak self] message in
+                guard let self else { return }
+                guard let session = self.ensureAutofillSession() else { return }
+                if let dict = message.body as? [String: Any],
+                   let formID = dict["formID"] as? String,
+                   let frameToken = dict["frameToken"] as? String,
+                   let focusToken = dict["focusToken"] as? String {
+                    let originString = "\(message.frame.securityProtocol)://\(message.frame.host):\(message.frame.port)"
+                    if let event = dict["event"] as? String {
+                        if event == "blur" {
+                            if self.autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                                self.activeChromiumTargetFrame = nil
+                                session.dismiss()
+                            }
+                        } else if event == "focus" {
+                            if let activeFocus = self.autofillFocusRouter.acceptFocus(
+                                formID: formID,
+                                frameToken: frameToken,
+                                focusToken: focusToken,
+                                securityOrigin: originString,
+                                navigationGeneration: self.navigationGeneration
+                            ) {
+                                self.activeChromiumTargetFrame = message.frame
+                                session.receiveMessage(
+                                    dict,
+                                    frameSecurityOrigin: originString,
+                                    isMainFrame: message.frame.isMainFrame,
+                                    navigationGeneration: self.navigationGeneration,
+                                    frameHandleID: activeFocus.handleID
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
         if let scripting = pageEngine.contentScripting {
@@ -595,8 +643,25 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether the page belongs to a private window, which its engine takes
     /// on, now and whenever the page moves to another engine.
     func setPrivateBrowsing(_ isPrivate: Bool) {
+        isPrivacyPolicyConfigured = true
+        guard isPrivateBrowsing != isPrivate else { return }
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
+        #if os(macOS)
+        invalidateAutofillFocusTarget()
+        #else
+        autofillSession?.dismiss()
+        #endif
+        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+    }
+
+    /// Accesses or initializes the autofill session ensuring privacy mode is strictly adhered to.
+    func ensureAutofillSession() -> BrowserAutofillSession? {
+        guard isPrivacyPolicyConfigured else { return nil }
+        if let session = autofillSession { return session }
+        let session = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+        autofillSession = session
+        return session
     }
 
     /// Tries again to show a page its engine couldn't create.
@@ -868,6 +933,38 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
         guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fillGeneratedPassword(password, for: requestID, evaluate: evaluate)
+    }
+
+    /// Evaluates autofill identity fill across engines (WebKit or Chromium content scripting).
+    func fillAutofillIdentityOnCurrentEngine(_ identity: AutofillIdentity) async throws {
+        #if os(macOS)
+        if webKitAdapter != nil {
+            try await fillAutofillIdentity(identity)
+            return
+        }
+        #endif
+        guard let scripting = pageEngine.contentScripting,
+              let session = autofillSession,
+              let activeFocus = autofillFocusRouter.activeFocus
+        else {
+            return
+        }
+
+        defer { activeChromiumTargetFrame = nil }
+        guard let targetFrame = activeChromiumTargetFrame else {
+            session.dismiss()
+            return
+        }
+
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: navigationGeneration,
+            expectedOrigin: activeFocus.securityOrigin,
+            expectedFrameHandleID: activeFocus.handleID
+        ) { [weak self] body, arguments in
+            guard let self else { return nil }
+            return try await scripting.callAsyncJavaScript(body, arguments: arguments, in: targetFrame)
+        }
     }
 
     /// Fills go back through the channel the credential bridge came in on.
@@ -1158,6 +1255,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isRegionCapturePresented = false
         // The picker belongs to the document the page leaves.
         elementPicker.cancel()
+        navigationGeneration &+= 1
+        activeChromiumTargetFrame = nil
+        #if os(macOS)
+        invalidateAutofillFocusTarget()
+        #else
+        autofillSession?.dismiss()
+        #endif
         // The site it goes to may have content blocking turned off, or on.
         if let url, let webKit = webKitAdapter {
             webKit.contentRuleSession.navigating(to: url, in: webKit.webView)

@@ -44,6 +44,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     private var mediaSessionMessageProxy: BrowserScriptMessageProxy?
     private var hostedNotificationMessageProxy: BrowserScriptMessageProxy?
     private var cosmeticFilterMessageProxy: BrowserScriptMessageProxy?
+    private var autofillMessageProxy: BrowserScriptMessageProxy?
     /// Names the document the hosted notification bridge answers; a new one
     /// begins with each navigation.
     var hostedNotificationDocumentIdentifier = UUID().uuidString
@@ -150,6 +151,11 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         webView.allowsLinkPreview = true
         observeWebViewState()
         let controller = webView.configuration.userContentController
+        if ownsUserContentController {
+            autofillMessageProxy = BrowserAutofillContentBridge.install(in: controller) { [weak page] message in
+                page?.receiveAutofillMessage(message)
+            }
+        }
         if allowsCredentialAccess, ownsUserContentController {
             credentialMessageProxy = BrowserCredentialContentBridge.install(in: controller) { [weak page] message in
                 page?.receiveCredentialMessage(message)
@@ -227,6 +233,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             hostedNotificationMessageProxy = nil
             mediaSessionMessageProxy = nil
             cosmeticFilterMessageProxy = nil
+            autofillMessageProxy = nil
             return
         }
         let controller = webView.configuration.userContentController
@@ -266,6 +273,10 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
             cosmeticFilterMessageProxy, name: BrowserCosmeticFilterContentBridge.messageHandlerName,
             world: BrowserCosmeticFilterContentBridge.contentWorld)
         cosmeticFilterMessageProxy = nil
+        remove(
+            autofillMessageProxy, name: BrowserAutofillContentBridge.messageHandlerName,
+            world: BrowserAutofillContentBridge.contentWorld)
+        autofillMessageProxy = nil
     }
 
     // MARK: - Actions - Page services

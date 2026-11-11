@@ -1,0 +1,161 @@
+#if os(macOS)
+import SwiftUI
+
+/// Sheet for previewing and importing discovered Arc Browser identities into a selected Space.
+public struct BrowserArcAutofillImportSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
+    let records: [ArcAutofillProfileRecord]
+    let discoveryErrorMessage: String?
+    let onImport: (UUID, [AutofillIdentity]) throws -> Void
+
+    @State private var selectedSpaceID: UUID?
+    @State private var importErrorMessage: String?
+    @State private var selectedRecordIDs: Set<String> = []
+
+    /// Filters available destination Spaces to only those that are unlocked and persistent.
+    private var eligibleSpaces: [SpaceModel] {
+        browser.spaceModels.filter { space in
+            !spaceAccess.isLocked(space) && !browser.isPrivateBrowsing
+        }
+    }
+
+    public init(
+        browser: BrowserStore,
+        spaceAccess: BrowserSpaceAccessController,
+        records: [ArcAutofillProfileRecord],
+        discoveryErrorMessage: String? = nil,
+        onImport: @escaping (UUID, [AutofillIdentity]) throws -> Void
+    ) {
+        self.browser = browser
+        self.spaceAccess = spaceAccess
+        self.records = records
+        self.discoveryErrorMessage = discoveryErrorMessage
+        self.onImport = onImport
+        let defaultSpace = browser.shownSpace.flatMap { !spaceAccess.isLocked($0) ? $0.id : nil }
+            ?? browser.spaceModels.first(where: { !spaceAccess.isLocked($0) })?.id
+        _selectedSpaceID = State(initialValue: defaultSpace)
+        _selectedRecordIDs = State(initialValue: Set(records.map(\.compoundID)))
+    }
+
+    public var body: some View {
+        NavigationStack {
+            Form {
+                if let discoveryErrorMessage {
+                    Section {
+                        Text(discoveryErrorMessage)
+                            .foregroundStyle(CrestColor.danger)
+                            .font(CrestTypography.controlTitle)
+                    }
+                }
+                if let importErrorMessage {
+                    Section {
+                        Text(importErrorMessage)
+                            .foregroundStyle(CrestColor.danger)
+                            .font(CrestTypography.controlTitle)
+                    }
+                }
+                Section {
+                    CrestSpaceMenuPicker(
+                        "Destination Space",
+                        selection: $selectedSpaceID,
+                        spaces: CrestSpaceIdentity.list(eligibleSpaces)
+                    )
+                } header: {
+                    Text("Destination")
+                } footer: {
+                    Text("Addresses will be saved exclusively inside this Space.")
+                        .crestFormFootnote()
+                }
+
+                Section("Discovered Arc Profiles (\(records.count))") {
+                    ForEach(records, id: \.compoundID) { record in
+                        HStack(spacing: CrestSpacing.medium) {
+                            Toggle("", isOn: Binding(
+                                get: { selectedRecordIDs.contains(record.compoundID) },
+                                set: { isSelected in
+                                    if isSelected {
+                                        selectedRecordIDs.insert(record.compoundID)
+                                    } else {
+                                        selectedRecordIDs.remove(record.compoundID)
+                                    }
+                                }
+                            ))
+                            .labelsHidden()
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(record.fullName.isEmpty ? "Unnamed Profile" : record.fullName)
+                                        .font(CrestTypography.controlTitle)
+                                    Text("(\(record.profileName))")
+                                        .font(CrestTypography.compactMetadata)
+                                        .foregroundStyle(CrestColor.textSecondary)
+                                }
+
+                                if !record.email.isEmpty {
+                                    Text(record.email)
+                                        .font(CrestTypography.metadata)
+                                        .foregroundStyle(CrestColor.textSecondary)
+                                }
+
+                                let addressParts = [record.streetAddress, record.addressLine2, record.city, record.state, record.zipcode, record.countryCode]
+                                    .filter { !$0.isEmpty }
+                                if !addressParts.isEmpty {
+                                    Text(addressParts.joined(separator: ", "))
+                                        .font(CrestTypography.compactMetadata)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Import Arc Addresses")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import") {
+                        guard let spaceID = selectedSpaceID else { return }
+                        let identities = records.filter { selectedRecordIDs.contains($0.compoundID) }.map { record in
+                            let nameTokens = record.fullName.split(separator: " ").map(String.init)
+                            let givenName = nameTokens.first ?? ""
+                            let familyName = nameTokens.count > 1 ? nameTokens.dropFirst().joined(separator: " ") : ""
+
+                            return AutofillIdentity(
+                                spaceID: spaceID,
+                                label: record.fullName.isEmpty ? "Arc Address (\(record.profileName))" : record.fullName,
+                                fullName: record.fullName,
+                                givenName: givenName,
+                                familyName: familyName,
+                                organization: record.companyName,
+                                email: record.email,
+                                phoneNumber: record.phoneNumber,
+                                streetAddress: record.streetAddress,
+                                addressLine2: record.addressLine2,
+                                city: record.city,
+                                stateOrProvince: record.state,
+                                postalCode: record.zipcode,
+                                countryOrRegion: record.countryCode
+                            )
+                        }
+                        do {
+                            try onImport(spaceID, identities)
+                            dismiss()
+                        } catch {
+                            importErrorMessage = "Destination Space is locked or unavailable: \(error.localizedDescription)"
+                        }
+                    }
+                    .disabled(selectedSpaceID == nil || selectedRecordIDs.isEmpty || discoveryErrorMessage != nil)
+                }
+            }
+        }
+        .frame(minWidth: 440, minHeight: 480)
+    }
+}
+
+#endif
