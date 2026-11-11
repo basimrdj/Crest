@@ -151,15 +151,17 @@ public final class BrowserAutofillStore {
             throw AutofillImportAuthorizationError.destinationLocked
         }
 
-        let current = identities(in: destinationSpaceID)
+        var existingInSpace = identities(in: destinationSpaceID)
         var duplicates = 0
         var imported = 0
+        var staged: [AutofillIdentity] = []
 
         for candidate in incoming {
             var item = candidate
             item.spaceID = destinationSpaceID
 
-            let isDuplicate = current.contains { existing in
+            // Check duplicate against existing Space records AND newly staged intra-batch records
+            let isDuplicate = existingInSpace.contains { existing in
                 let emailMatch = !item.email.isEmpty && existing.email.caseInsensitiveCompare(item.email) == .orderedSame
                 let addressMatch = !item.streetAddress.isEmpty && existing.streetAddress.caseInsensitiveCompare(item.streetAddress) == .orderedSame
                 let nameMatch = !item.fullName.isEmpty && existing.fullName.caseInsensitiveCompare(item.fullName) == .orderedSame
@@ -169,10 +171,21 @@ public final class BrowserAutofillStore {
             if isDuplicate {
                 duplicates += 1
             } else {
-                save(item)
+                item.updatedAt = Date()
+                if existingInSpace.isEmpty && staged.isEmpty {
+                    item.isDefault = true
+                }
+                staged.append(item)
+                existingInSpace.append(item)
                 imported += 1
             }
         }
+
+        if !staged.isEmpty {
+            identities.append(contentsOf: staged)
+            persist()
+        }
+
         return (imported, duplicates)
     }
 

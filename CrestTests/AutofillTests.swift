@@ -1000,4 +1000,22 @@ struct AutofillTests {
         let compoundIDs = Set(aggregated.map(\.compoundID))
         #expect(compoundIDs.count == 2, "Identical GUIDs from distinct profiles must produce unique compoundIDs")
     }
+
+    @Test("BrowserAutofillStore deduplicates redundant records within the same incoming import batch")
+    @MainActor
+    func testIntraBatchDeduplication() throws {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let id1 = AutofillIdentity(spaceID: spaceID, label: "First", fullName: "Same Name", email: "same@example.com")
+        let id2 = AutofillIdentity(spaceID: spaceID, label: "Second", fullName: "Same Name", email: "same@example.com")
+        let id3 = AutofillIdentity(spaceID: spaceID, label: "Unique", fullName: "Unique User", email: "unique@example.com")
+
+        let token = BrowserAutofillStore.DestinationAuthorizationToken(spaceID: spaceID) { true }
+        let result = try store.importIdentities([id1, id2, id3], into: spaceID, authorization: token)
+
+        #expect(result.importedCount == 2)
+        #expect(result.duplicateCount == 1, "Must deduplicate identical items inside the incoming batch")
+        #expect(store.identities(in: spaceID).count == 2)
+    }
 }

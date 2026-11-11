@@ -5265,6 +5265,10 @@
     "autofill-multi-profile-namespacing": {
       "category": "improved",
       "message": "Namespaces imported Arc Browser profiles to prevent GUID collisions across multiple profile directories."
+    },
+    "autofill-import-selection-and-intra-batch-dedup": {
+      "category": "improved",
+      "message": "Enables individual record selection in Arc migration and ensures atomic intra-batch deduplication."
     }
   }
 }

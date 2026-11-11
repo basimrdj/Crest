@@ -12,6 +12,7 @@ public struct BrowserArcAutofillImportSheet: View {
 
     @State private var selectedSpaceID: UUID?
     @State private var importErrorMessage: String?
+    @State private var selectedRecordIDs: Set<String> = []
 
     /// Filters available destination Spaces to only those that are unlocked and persistent.
     private var eligibleSpaces: [SpaceModel] {
@@ -35,6 +36,7 @@ public struct BrowserArcAutofillImportSheet: View {
         let defaultSpace = browser.shownSpace.flatMap { !spaceAccess.isLocked($0) ? $0.id : nil }
             ?? browser.spaceModels.first(where: { !spaceAccess.isLocked($0) })?.id
         _selectedSpaceID = State(initialValue: defaultSpace)
+        _selectedRecordIDs = State(initialValue: Set(records.map(\.compoundID)))
     }
 
     public var body: some View {
@@ -69,22 +71,41 @@ public struct BrowserArcAutofillImportSheet: View {
 
                 Section("Discovered Arc Profiles (\(records.count))") {
                     ForEach(records, id: \.compoundID) { record in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(record.fullName.isEmpty ? "Unnamed Profile" : record.fullName)
-                                .font(CrestTypography.controlTitle)
+                        HStack(spacing: CrestSpacing.medium) {
+                            Toggle("", isOn: Binding(
+                                get: { selectedRecordIDs.contains(record.compoundID) },
+                                set: { isSelected in
+                                    if isSelected {
+                                        selectedRecordIDs.insert(record.compoundID)
+                                    } else {
+                                        selectedRecordIDs.remove(record.compoundID)
+                                    }
+                                }
+                            ))
+                            .labelsHidden()
 
-                            if !record.email.isEmpty {
-                                Text(record.email)
-                                    .font(CrestTypography.metadata)
-                                    .foregroundStyle(CrestColor.textSecondary)
-                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(record.fullName.isEmpty ? "Unnamed Profile" : record.fullName)
+                                        .font(CrestTypography.controlTitle)
+                                    Text("(\(record.profileName))")
+                                        .font(CrestTypography.compactMetadata)
+                                        .foregroundStyle(CrestColor.textSecondary)
+                                }
 
-                            let addressParts = [record.streetAddress, record.city, record.state, record.zipcode, record.countryCode]
-                                .filter { !$0.isEmpty }
-                            if !addressParts.isEmpty {
-                                Text(addressParts.joined(separator: ", "))
-                                    .font(CrestTypography.compactMetadata)
-                                    .foregroundStyle(.tertiary)
+                                if !record.email.isEmpty {
+                                    Text(record.email)
+                                        .font(CrestTypography.metadata)
+                                        .foregroundStyle(CrestColor.textSecondary)
+                                }
+
+                                let addressParts = [record.streetAddress, record.addressLine2, record.city, record.state, record.zipcode, record.countryCode]
+                                    .filter { !$0.isEmpty }
+                                if !addressParts.isEmpty {
+                                    Text(addressParts.joined(separator: ", "))
+                                        .font(CrestTypography.compactMetadata)
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
                         }
                         .padding(.vertical, 2)
@@ -100,7 +121,7 @@ public struct BrowserArcAutofillImportSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Import") {
                         guard let spaceID = selectedSpaceID else { return }
-                        let identities = records.map { record in
+                        let identities = records.filter { selectedRecordIDs.contains($0.compoundID) }.map { record in
                             let nameTokens = record.fullName.split(separator: " ").map(String.init)
                             let givenName = nameTokens.first ?? ""
                             let familyName = nameTokens.count > 1 ? nameTokens.dropFirst().joined(separator: " ") : ""
@@ -129,7 +150,7 @@ public struct BrowserArcAutofillImportSheet: View {
                             importErrorMessage = "Destination Space is locked or unavailable: \(error.localizedDescription)"
                         }
                     }
-                    .disabled(selectedSpaceID == nil || records.isEmpty || discoveryErrorMessage != nil)
+                    .disabled(selectedSpaceID == nil || selectedRecordIDs.isEmpty || discoveryErrorMessage != nil)
                 }
             }
         }
