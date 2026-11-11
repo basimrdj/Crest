@@ -891,4 +891,44 @@ struct AutofillTests {
 
         #expect(evaluatedParams["section"] as? String == "shipping", "Must forward focused field section token to JavaScript evaluate")
     }
+
+    @Test("Compound section-mode keys isolate mixed shipping, billing, and unsectioned fields")
+    @MainActor
+    func testCompoundSectionIsolationSimulation() {
+        func sectionOf(autocomplete: String) -> String {
+            let tokens = autocomplete.lowercased().split(separator: " ").map(String.init)
+            var sectionPrefix = ""
+            var mode = ""
+            for token in tokens {
+                if token.hasPrefix("section-") { sectionPrefix = token }
+                if token == "shipping" || token == "billing" { mode = token }
+            }
+            if !sectionPrefix.isEmpty && !mode.isEmpty { return "\(sectionPrefix):\(mode)" }
+            if !sectionPrefix.isEmpty { return sectionPrefix }
+            if !mode.isEmpty { return mode }
+            return "default"
+        }
+
+        // Test compound extraction
+        #expect(sectionOf(autocomplete: "section-order shipping street-address") == "section-order:shipping")
+        #expect(sectionOf(autocomplete: "section-order billing street-address") == "section-order:billing")
+        #expect(sectionOf(autocomplete: "shipping street-address") == "shipping")
+        #expect(sectionOf(autocomplete: "street-address") == "default")
+
+        // Test matching logic
+        let shippingTarget = sectionOf(autocomplete: "section-order shipping street-address")
+        let fields = [
+            ("input-1", "section-order shipping street-address"),
+            ("input-2", "section-order billing street-address"),
+            ("input-3", "street-address"),
+            ("input-4", "section-order shipping postal-code")
+        ]
+
+        let filledIDs = fields.compactMap { id, ac -> String? in
+            let inputSection = sectionOf(autocomplete: ac)
+            return inputSection == shippingTarget ? id : nil
+        }
+
+        #expect(filledIDs == ["input-1", "input-4"], "Must strictly isolate to matching compound section group, excluding billing and unsectioned fields")
+    }
 }

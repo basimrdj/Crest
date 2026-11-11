@@ -303,3 +303,23 @@ public final class BrowserAutofillImportReader {
         return String(decoding: UnsafeBufferPointer(start: bytes, count: count), as: UTF8.self)
     }
 }
+
+extension BrowserAutofillImportReader {
+    /// Discovers all available Web Data database profiles within an Arc/Chromium User Data directory.
+    public static func discoverProfileDatabases(in userDataDirectory: URL) -> [(profileName: String, databaseURL: URL)] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: userDataDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles]
+        ) else { return [] }
+
+        var results: [(String, URL)] = []
+        for case let url as URL in enumerator {
+            let webDataURL = url.appendingPathComponent("Web Data")
+            if FileManager.default.fileExists(atPath: webDataURL.path) {
+                results.append((url.lastPathComponent, webDataURL))
+            }
+        }
+        return results
+    }
+}
