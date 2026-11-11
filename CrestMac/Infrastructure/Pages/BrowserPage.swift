@@ -419,6 +419,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                     if let event = dict["event"] as? String {
                         if event == "blur" {
                             if self.autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                                self.activeChromiumTargetFrame = nil
                                 session.dismiss()
                             }
                         } else if event == "focus" {
@@ -949,6 +950,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             return
         }
 
+        defer { activeChromiumTargetFrame = nil }
         guard let targetFrame = activeChromiumTargetFrame else {
             session.dismiss()
             return
@@ -963,7 +965,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             guard let self else { return nil }
             return try await scripting.callAsyncJavaScript(body, arguments: arguments, in: targetFrame)
         }
-        activeChromiumTargetFrame = nil
     }
 
     /// Fills go back through the channel the credential bridge came in on.
@@ -1255,6 +1256,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // The picker belongs to the document the page leaves.
         elementPicker.cancel()
         navigationGeneration &+= 1
+        activeChromiumTargetFrame = nil
         #if os(macOS)
         invalidateAutofillFocusTarget()
         #else
