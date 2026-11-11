@@ -105,7 +105,7 @@ public final class BrowserAutofillImportReader {
         return sqlite3_step(statement) == SQLITE_ROW
     }
 
-    public static func readProfiles(from databaseURL: URL) throws -> [ArcAutofillProfileRecord] {
+    public static func readProfiles(from databaseURL: URL, profileName: String = "Default") throws -> [ArcAutofillProfileRecord] {
         guard FileManager.default.fileExists(atPath: databaseURL.path) else {
             throw BrowserAutofillImportError.fileNotFound
         }
@@ -136,22 +136,22 @@ public final class BrowserAutofillImportReader {
 
         // Check which schema tables actually exist in sqlite_master
         if tableExists("addresses", in: database) && tableExists("address_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database)
+            return try readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database, profileName: profileName)
         }
 
         if tableExists("local_addresses", in: database) && tableExists("local_addresses_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database)
+            return try readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database, profileName: profileName)
         }
 
         if tableExists("contact_info", in: database) && tableExists("contact_info_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database)
+            return try readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database, profileName: profileName)
         }
 
         if tableExists("autofill_profiles", in: database) {
             if tableExists("autofill_profile_names", in: database) {
-                return try readStandardProfiles(from: database)
+                return try readStandardProfiles(from: database, profileName: profileName)
             } else {
-                return try readLegacyProfiles(from: database)
+                return try readLegacyProfiles(from: database, profileName: profileName)
             }
         }
 
@@ -161,7 +161,8 @@ public final class BrowserAutofillImportReader {
     private static func readAddressTokenTable(
         mainTable: String,
         tokenTable: String,
-        from database: OpaquePointer
+        from database: OpaquePointer,
+        profileName: String
     ) throws -> [ArcAutofillProfileRecord] {
         let sql = "SELECT a.guid, t.type, t.value FROM \(mainTable) a JOIN \(tokenTable) t ON a.guid = t.guid"
         var statement: OpaquePointer?
@@ -195,6 +196,7 @@ public final class BrowserAutofillImportReader {
 
             return ArcAutofillProfileRecord(
                 guid: guid,
+                profileName: profileName,
                 fullName: fullName,
                 companyName: fields[ChromiumFieldType.companyName.rawValue] ?? "",
                 streetAddress: line1,
@@ -209,7 +211,7 @@ public final class BrowserAutofillImportReader {
         }
     }
 
-    private static func readStandardProfiles(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
+    private static func readStandardProfiles(from database: OpaquePointer, profileName: String) throws -> [ArcAutofillProfileRecord] {
         let sql = """
             SELECT p.guid,
                    COALESCE(n.full_name, ''),
@@ -251,6 +253,7 @@ public final class BrowserAutofillImportReader {
             records.append(
                 ArcAutofillProfileRecord(
                     guid: guid,
+                    profileName: profileName,
                     fullName: fullName,
                     companyName: companyName,
                     streetAddress: streetAddress,
@@ -266,7 +269,7 @@ public final class BrowserAutofillImportReader {
         return records
     }
 
-    private static func readLegacyProfiles(from database: OpaquePointer) throws -> [ArcAutofillProfileRecord] {
+    private static func readLegacyProfiles(from database: OpaquePointer, profileName: String) throws -> [ArcAutofillProfileRecord] {
         let legacySql = "SELECT guid, company_name, street_address, city, state, zipcode, country_code FROM autofill_profiles"
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, legacySql, -1, &statement, nil) == SQLITE_OK,
@@ -289,6 +292,7 @@ public final class BrowserAutofillImportReader {
             records.append(
                 ArcAutofillProfileRecord(
                     guid: guid,
+                    profileName: profileName,
                     companyName: companyName,
                     streetAddress: streetAddress,
                     city: city,

@@ -957,4 +957,47 @@ struct AutofillTests {
         #expect(records[0].streetAddress == "742 Evergreen Terrace")
         #expect(records[0].addressLine2 == "Apt 4B", "Address line 2 must be preserved separately")
     }
+
+    @Test("Arc reader namespaces identical GUIDs across distinct profiles without collision")
+    @MainActor
+    func testArcMultiProfileGuidNamespacing() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let profile1Dir = tempDir.appendingPathComponent("Profile 1")
+        let profile2Dir = tempDir.appendingPathComponent("Profile 2")
+        try FileManager.default.createDirectory(at: profile1Dir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: profile2Dir, withIntermediateDirectories: true)
+
+        let db1URL = profile1Dir.appendingPathComponent("Web Data")
+        let db2URL = profile2Dir.appendingPathComponent("Web Data")
+
+        // In both databases, insert a record with identical guid 'shared-guid'
+        for (url, name) in [(db1URL, "User In Profile 1"), (db2URL, "User In Profile 2")] {
+            var db: OpaquePointer?
+            guard sqlite3_open(url.path, &db) == SQLITE_OK, let db else {
+                Issue.record("Failed to create SQLite db")
+                continue
+            }
+            sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
+            sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+            sqlite3_exec(db, "INSERT INTO addresses VALUES ('shared-guid');", nil, nil, nil)
+            sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('shared-guid', 7, '\(name)');", nil, nil, nil)
+            sqlite3_close(db)
+        }
+
+        let discovered = BrowserAutofillImportReader.discoverProfileDatabases(in: tempDir)
+        #expect(discovered.count == 2)
+
+        var aggregated: [ArcAutofillProfileRecord] = []
+        for profile in discovered {
+            let records = try BrowserAutofillImportReader.readProfiles(from: profile.databaseURL, profileName: profile.profileName)
+            aggregated.append(contentsOf: records)
+        }
+
+        #expect(aggregated.count == 2)
+        let compoundIDs = Set(aggregated.map(\.compoundID))
+        #expect(compoundIDs.count == 2, "Identical GUIDs from distinct profiles must produce unique compoundIDs")
+    }
 }

@@ -41,7 +41,7 @@ struct BrowserDataPortabilityContent: View {
                 } else {
                     var allRecords: [ArcAutofillProfileRecord] = []
                     for profile in profiles {
-                        if let records = try? BrowserAutofillImportReader.readProfiles(from: profile.databaseURL) {
+                        if let records = try? BrowserAutofillImportReader.readProfiles(from: profile.databaseURL, profileName: profile.profileName) {
                             allRecords.append(contentsOf: records)
                         }
                     }
