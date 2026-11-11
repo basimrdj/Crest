@@ -119,7 +119,7 @@ public enum BrowserAutofillContentBridge {
 
 
           globalThis.__crestAutofillBridge = Object.freeze({
-            fill(formID, values) {
+            fill(formID, values, targetSection) {
               const root = formsByID.get(formID)?.deref();
               if (!root || !root.isConnected) return false;
 
@@ -135,6 +135,12 @@ public enum BrowserAutofillContentBridge {
                 const autocomplete = (input.getAttribute("autocomplete") || "").toLowerCase().trim();
                 if (autocomplete === "off" || input.disabled || input.readOnly) continue;
 
+                // Section isolation: if focused input belonged to a specific section, only fill matching section
+                if (targetSection) {
+                  const inputSection = sectionOf(input);
+                  if (inputSection && inputSection !== targetSection) continue;
+                }
+
                 const kind = classifyField(input);
                 if (kind && values[kind] !== undefined && values[kind] !== "") {
                   setElementValue(input, values[kind]);
@@ -145,6 +151,16 @@ public enum BrowserAutofillContentBridge {
             }
           });
 
+          const sectionOf = (element) => {
+            const autocomplete = (element.getAttribute("autocomplete") || "").toLowerCase().trim();
+            const tokens = autocomplete.split(/\s+/);
+            for (const token of tokens) {
+              if (token.startsWith("section-")) return token;
+              if (token === "shipping" || token === "billing") return token;
+            }
+            return null;
+          };
+
           const handleFocus = (element) => {
             if (!isVisible(element)) return false;
             const fieldType = classifyField(element);
@@ -153,12 +169,14 @@ public enum BrowserAutofillContentBridge {
             const root = formRootFor(element);
             const formID = idForForm(root);
             const rect = rectOf(element);
+            const section = sectionOf(element);
             currentFocusToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("focus-" + Math.random().toString(36).slice(2));
 
             post({
               event: "focus",
               fieldType,
               formID,
+              section: section || undefined,
               focusToken: currentFocusToken,
               fieldRect: rect || undefined
             });

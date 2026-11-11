@@ -844,4 +844,51 @@ struct AutofillTests {
             try BrowserAutofillImportReader.readProfiles(from: malformedDB)
         }
     }
+
+    @Test("BrowserAutofillSession passes section token to evaluate to enforce shipping and billing isolation")
+    @MainActor
+    func testSessionSectionIsolation() async throws {
+        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Shipping Identity",
+            fullName: "Shipping Receiver",
+            streetAddress: "500 Logistics Way"
+        )
+        store.save(identity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        // Receive focus with explicit section: "shipping"
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "checkout-form",
+                "fieldType": "streetAddress",
+                "section": "shipping"
+            ],
+            frameSecurityOrigin: "https://shop.example.com:443",
+            isMainFrame: true,
+            navigationGeneration: 1
+        )
+
+        #expect(session.isSuggestionPresented)
+        #expect(session.activeField?.section == "shipping")
+
+        var evaluatedParams: [String: Any] = [:]
+        let handle = session.activeField?.frameHandleID ?? UUID()
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 1,
+            expectedOrigin: "https://shop.example.com:443",
+            expectedFrameHandleID: handle
+        ) { _, params in
+            evaluatedParams = params
+            return true
+        }
+
+        #expect(evaluatedParams["section"] as? String == "shipping", "Must forward focused field section token to JavaScript evaluate")
+    }
 }

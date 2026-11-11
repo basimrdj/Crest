@@ -10,6 +10,7 @@ public final class BrowserAutofillSession {
     public struct FocusedFieldInfo: Equatable, Sendable {
         public let formID: String
         public let fieldType: String
+        public let section: String?
         public let rect: CGRect?
         public let frameSecurityOrigin: String
         public let isMainFrame: Bool
@@ -19,6 +20,7 @@ public final class BrowserAutofillSession {
         public init(
             formID: String,
             fieldType: String,
+            section: String? = nil,
             rect: CGRect? = nil,
             frameSecurityOrigin: String,
             isMainFrame: Bool = true,
@@ -27,6 +29,7 @@ public final class BrowserAutofillSession {
         ) {
             self.formID = formID
             self.fieldType = fieldType
+            self.section = section
             self.rect = rect
             self.frameSecurityOrigin = frameSecurityOrigin
             self.isMainFrame = isMainFrame
@@ -88,9 +91,11 @@ public final class BrowserAutofillSession {
                 fieldRect = CGRect(x: x, y: y, width: w, height: h)
             }
 
+            let section = body["section"] as? String
             activeField = FocusedFieldInfo(
                 formID: formID,
                 fieldType: fieldType,
+                section: section,
                 rect: fieldRect,
                 frameSecurityOrigin: frameSecurityOrigin,
                 isMainFrame: isMainFrame,
@@ -162,10 +167,11 @@ public final class BrowserAutofillSession {
             "countryOrRegion": identity.countryOrRegion,
         ]
 
-        let script = "return globalThis.__crestAutofillBridge?.fill(formID, values) === true;"
+        let script = "return globalThis.__crestAutofillBridge?.fill(formID, values, section) === true;"
         _ = try await evaluate(script, [
             "formID": field.formID,
             "values": payload,
+            "section": field.section ?? "",
         ])
         activeField = nil
     }
