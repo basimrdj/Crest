@@ -24,12 +24,24 @@ public final class BrowserAutofillStore {
 
     // MARK: - Initializers
 
-    public init(isPrivate: Bool = false, customDirectory: URL? = nil) {
+    convenience init(isPrivate: Bool = false, customDirectory: URL? = nil) {
+        self.init(isPrivate: isPrivate, customDirectory: customDirectory, launchEnvironment: nil)
+    }
+
+    init(isPrivate: Bool = false, customDirectory: URL? = nil, launchEnvironment: BrowserLaunchEnvironment?) {
         self.isPrivate = isPrivate
         if isPrivate {
             storageDirectory = nil
         } else if let customDirectory {
+            // A caller that names its own directory owns the isolation too
+            // (tests and the import reader seed one).
             storageDirectory = customDirectory
+        } else if let isolatedDirectory = BrowserStore.autofillDirectory(
+            for: launchEnvironment ?? BrowserLaunchEnvironment.current)
+        {
+            // An isolated launch keeps its identities beside its own session,
+            // never in the installed release's store.
+            storageDirectory = isolatedDirectory
         } else {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             storageDirectory = appSupport?.appendingPathComponent("Crest/Autofill", isDirectory: true)

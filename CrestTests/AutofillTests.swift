@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SQLite3
 import Testing
@@ -1153,5 +1154,41 @@ struct AutofillTests {
         let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
         #expect(store.identities.isEmpty)
         #expect(store.loadFailureMessage != nil, "An unreadable Space file must be visible, not silently ignored")
+    }
+
+    @Test("An isolated launch keeps its identities in its own profile, never the installed release's store")
+    @MainActor
+    func testIsolatedLaunchUsesNamespacedStorage() throws {
+        let isolationID = String(UUID().uuidString.lowercased().prefix(24))
+        let environment = BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1", "CREST_ISOLATED_PERSISTENCE_ID": isolationID],
+            isXCTestRuntime: true)
+        let store = BrowserAutofillStore(isPrivate: false, launchEnvironment: environment)
+        let spaceID = UUID()
+
+        try store.save(
+            AutofillIdentity(
+                spaceID: spaceID, label: "Isolated", fullName: "Review Build",
+                email: "review@example.com", city: "Cupertino"))
+
+        // The independently derived isolated profile directory names the file,
+        // hashed the way `Store+Composition.sessionDirectory` addresses it.
+        let namespace = SHA256.hash(data: Data(isolationID.utf8)).map { String(format: "%02x", $0) }.joined()
+        let expectedFile = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!
+            .appendingPathComponent("Crest/ControlPlane/Isolated/\(namespace)")
+            .appendingPathComponent("Autofill/Spaces/\(spaceID.uuidString)/identities.json")
+        #expect(
+            FileManager.default.fileExists(atPath: expectedFile.path),
+            "An isolated launch's identities must persist into that profile's own directory")
+        #expect(store.identities(in: spaceID).count == 1)
+
+        defer {
+            try? FileManager.default.removeItem(
+                at: expectedFile.deletingLastPathComponent().deletingLastPathComponent())
+        }
+        let reloaded = BrowserAutofillStore(isPrivate: false, launchEnvironment: environment)
+        #expect(
+            reloaded.identities(in: spaceID).count == 1, "A relaunch of the same isolated profile finds its identities")
     }
 }

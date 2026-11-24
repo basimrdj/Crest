@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "isolated-launch-autofill-storage",
+      "category": "internal",
+      "platforms": ["mac"],
+      "message": "A named isolated launch keeps its autofill identities in its own profile directory instead of reading or writing the installed release's store."
+    }
+  ]
+}
