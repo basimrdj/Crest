@@ -9,6 +9,12 @@
       "id": "autofill-arc-migration",
       "category": "new",
       "message": "Bring your addresses and contacts from Arc: Data Portability reads Arc's autofill database read-only, lists every profile it finds, lets you choose exactly which records to move, and imports them into the Space you pick."
+    },
+    {
+      "id": "chromium-upstream-158-0-8127-89-bd1501dcdda5",
+      "category": "fixed",
+      "message": "Chromium is updated to 158.0.8127.89 with upstream security and compatibility fixes.",
+      "platforms": ["mac"]
     }
   ]
 }
