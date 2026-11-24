@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-ios-passthrough-conformance",
+      "category": "internal",
+      "message": "iPhone and iPad pages know how to pass an autofill bridge message from a popup along to the popup's own page, completing the page-hosting interface both platforms share."
+    }
+  ]
+}

@@ -1116,6 +1116,14 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         credentialSession.receive(scriptMessage, in: webView)
     }
 
+    /// Hands the autofill bridge's message, which only arrives through this
+    /// page's controller when a popup shares it, to the popup's own page.
+    func receiveAutofillMessage(_ scriptMessage: WKScriptMessage) {
+        if let source = scriptMessage.webView, source !== webView {
+            webKitPage.binding?.page(showing: source)?.host?.receiveAutofillMessage(scriptMessage)
+        }
+    }
+
     /// Answers the cosmetic bridge of this page's web view, or hands a popup's
     /// message, which arrives through this page's controller, to the popup's
     /// own page.
