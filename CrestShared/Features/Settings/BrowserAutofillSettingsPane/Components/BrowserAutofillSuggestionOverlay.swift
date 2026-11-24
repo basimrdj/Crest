@@ -125,27 +125,29 @@ public struct BrowserAutofillSuggestionOverlay: View {
             } action: { size in
                 containerSize = size
             }
-            .onExitCommand(perform: onDismiss)
-            .onKeyPress(.downArrow) {
-                if selectedIndex < identities.count - 1 {
-                    selectedIndex += 1
-                    hoveredID = identities[selectedIndex].id
+            #if os(macOS)
+                .onExitCommand(perform: onDismiss)
+                .onKeyPress(.downArrow) {
+                    if selectedIndex < identities.count - 1 {
+                        selectedIndex += 1
+                        hoveredID = identities[selectedIndex].id
+                    }
+                    return .handled
                 }
-                return .handled
-            }
-            .onKeyPress(.upArrow) {
-                if selectedIndex > 0 {
-                    selectedIndex -= 1
-                    hoveredID = identities[selectedIndex].id
+                .onKeyPress(.upArrow) {
+                    if selectedIndex > 0 {
+                        selectedIndex -= 1
+                        hoveredID = identities[selectedIndex].id
+                    }
+                    return .handled
                 }
-                return .handled
-            }
-            .onKeyPress(.return) {
-                if selectedIndex >= 0 && selectedIndex < identities.count {
-                    onSelect(identities[selectedIndex])
+                .onKeyPress(.return) {
+                    if selectedIndex >= 0 && selectedIndex < identities.count {
+                        onSelect(identities[selectedIndex])
+                    }
+                    return .handled
                 }
-                return .handled
-            }
+            #endif
         }
     }
 
