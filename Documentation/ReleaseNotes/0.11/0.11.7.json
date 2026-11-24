@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-tests-module-import",
+      "category": "internal",
+      "message": "The autofill test suite imports the app's single Crest module like every other test in the project, so the macOS test build resolves it."
+    }
+  ]
+}

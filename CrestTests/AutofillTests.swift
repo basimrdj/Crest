@@ -2,8 +2,7 @@ import Foundation
 import SQLite3
 import Testing
 
-@testable import CrestMac
-@testable import CrestShared
+@testable import Crest
 
 @Suite("Autofill and Arc Migration Tests")
 struct AutofillTests {
