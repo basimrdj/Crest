@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-host-conformance-test-fixtures",
+      "category": "internal",
+      "message": "Test hosts that stand in for a WebKit page also answer the autofill bridge's callbacks, keeping the shared hosting interface's tests whole on every platform."
+    }
+  ]
+}
