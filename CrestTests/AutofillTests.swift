@@ -1118,6 +1118,9 @@ struct AutofillTests {
         try FileManager.default.createDirectory(
             at: tempDir.appendingPathComponent("Spaces/\(survivorSpaceID.uuidString)"),
             withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Spaces/\(spaceID.uuidString)"),
+            withIntermediateDirectories: true)
         try JSONEncoder().encode([legacyIdentity]).write(
             to: tempDir.appendingPathComponent("Spaces/\(spaceID.uuidString)/identities.json"))
         let legacyURL = tempDir.appendingPathComponent("identities.json")
