@@ -961,10 +961,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     /// Evaluates autofill identity fill across engines (WebKit or Chromium content scripting).
-    func fillAutofillIdentityOnCurrentEngine(_ identity: AutofillIdentity) async throws {
+    func fillAutofillIdentityOnCurrentEngine(
+        _ identity: AutofillIdentity,
+        scope: BrowserAutofillSession.FillScope = .allFields
+    ) async throws {
         #if os(macOS)
             if webKitAdapter != nil {
-                try await fillAutofillIdentity(identity)
+                try await fillAutofillIdentity(identity, scope: scope)
                 return
             }
         #endif
@@ -985,7 +988,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             identity,
             expectedNavigationGeneration: navigationGeneration,
             expectedOrigin: activeFocus.securityOrigin,
-            expectedFrameHandleID: activeFocus.handleID
+            expectedFrameHandleID: activeFocus.handleID,
+            scope: scope
         ) { [weak self] body, arguments in
             guard let self else { return nil }
             return try await scripting.callAsyncJavaScript(body, arguments: arguments, in: targetFrame)

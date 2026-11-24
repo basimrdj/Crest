@@ -17,6 +17,7 @@ public enum BrowserAutofillContentBridge {
           const frameToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("frame-" + Math.random().toString(36).slice(2));
           let currentFocusToken = null;
           let blurTimeout = null;
+          let lastFocusedAutofill = null;
 
           const post = (body) => {
             try { handler.postMessage({ version: 1, frameToken, ...body }); } catch (_) {}
@@ -127,7 +128,7 @@ public enum BrowserAutofillContentBridge {
 
 
           globalThis.__crestAutofillBridge = Object.freeze({
-            fill(formID, values, targetSection) {
+            fill(formID, values, targetSection, scope) {
               const root = formsByID.get(formID)?.deref();
               if (!root || !root.isConnected) return false;
 
@@ -136,9 +137,18 @@ public enum BrowserAutofillContentBridge {
                 ? Array.from(root.elements).filter(isVisible)
                 : Array.from(root.querySelectorAll("input, select, textarea")).filter(isVisible);
 
+              let targets = inputs;
+              // Field scope: fill only the element the user was last focused on,
+              // kept here so the fill survives the focus the overlay click took.
+              if (scope === "field") {
+                const focused = lastFocusedAutofill?.deref();
+                if (!focused || !focused.isConnected) return false;
+                targets = [focused];
+              }
+
               let filledCount = 0;
 
-              for (const input of inputs) {
+              for (const input of targets) {
                 // Respect explicit field or form autocomplete=off
                 const autocomplete = (input.getAttribute("autocomplete") || "").toLowerCase().trim();
                 if (autocomplete === "off" || input.disabled || input.readOnly) continue;
@@ -182,6 +192,7 @@ public enum BrowserAutofillContentBridge {
             const formID = idForForm(root);
             const rect = rectOf(element);
             const section = sectionOf(element);
+            lastFocusedAutofill = new WeakRef(element);
             currentFocusToken = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : ("focus-" + Math.random().toString(36).slice(2));
 
             post({

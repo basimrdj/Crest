@@ -251,7 +251,11 @@ extension BrowserPage {
         )
     }
 
-    func fillAutofillIdentity(_ identity: AutofillIdentity, targetFrame: WKFrameInfo? = nil) async throws {
+    func fillAutofillIdentity(
+        _ identity: AutofillIdentity,
+        scope: BrowserAutofillSession.FillScope = .allFields,
+        targetFrame: WKFrameInfo? = nil
+    ) async throws {
         guard let session = autofillSession, let webView = webKitView else { return }
         autofillFocusRouter.beginSelection()
         defer { autofillFocusRouter.endSelection() }
@@ -277,7 +281,8 @@ extension BrowserPage {
             identity,
             expectedNavigationGeneration: navigationGeneration,
             expectedOrigin: expectedOrigin,
-            expectedFrameHandleID: activeFocus.handleID
+            expectedFrameHandleID: activeFocus.handleID,
+            scope: scope
         ) { body, arguments in
             return try await webView.callAsyncJavaScript(
                 body,

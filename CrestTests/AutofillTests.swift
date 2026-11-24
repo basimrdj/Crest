@@ -178,6 +178,77 @@ struct AutofillTests {
         try store.deleteIdentities(for: spaceID)
     }
 
+    @Test("Autofill fill carries the requested scope into the bridge")
+    @MainActor
+    func testFillScopeThreading() async throws {
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let identity = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Scoped",
+            fullName: "Ada Lovelace",
+            email: "ada@analytical.engines"
+        )
+        try store.save(identity)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-scope",
+                "fieldType": "email",
+            ],
+            frameSecurityOrigin: "https://engines.test:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
+
+        let activeHandleID = session.activeField?.frameHandleID ?? UUID()
+
+        // The default fills the whole section: the bridge is told "allFields".
+        var seenScope: String?
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 0,
+            expectedOrigin: "https://engines.test:443",
+            expectedFrameHandleID: activeHandleID
+        ) { _, params in
+            seenScope = params["scope"] as? String
+            return true
+        }
+        #expect(seenScope == "allFields")
+
+        #expect(session.activeField == nil)
+
+        // Field-scope fill addresses only the field the user was last in.
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-scope",
+                "fieldType": "email",
+            ],
+            frameSecurityOrigin: "https://engines.test:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
+        let refocusedHandleID = session.activeField?.frameHandleID ?? UUID()
+        try await session.fill(
+            identity,
+            expectedNavigationGeneration: 0,
+            expectedOrigin: "https://engines.test:443",
+            expectedFrameHandleID: refocusedHandleID,
+            scope: .focusedField
+        ) { _, params in
+            seenScope = params["scope"] as? String
+            return true
+        }
+        #expect(seenScope == "focusedField")
+
+        try store.deleteIdentities(for: spaceID)
+    }
+
     @Test("BrowserAutofillSuggestionOverlay handles empty identities safely")
     @MainActor
     func testOverlayEmptyIdentities() {

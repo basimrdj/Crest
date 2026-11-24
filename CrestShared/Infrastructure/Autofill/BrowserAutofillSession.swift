@@ -40,6 +40,15 @@ public final class BrowserAutofillSession {
 
     public typealias Evaluate = @MainActor (String, [String: Any]) async throws -> Any?
 
+    /// How much of the focused form a fill covers: every visible field in the
+    /// section the focused field belongs to, or the one field the user was in.
+    public enum FillScope: String, Sendable {
+        /// Fill every visible, eligible field of the focused field's section.
+        case allFields
+        /// Fill only the field the user was last focused on.
+        case focusedField
+    }
+
     // MARK: - Variables
 
     public let spaceID: UUID
@@ -123,6 +132,7 @@ public final class BrowserAutofillSession {
         expectedNavigationGeneration: UInt64,
         expectedOrigin: String,
         expectedFrameHandleID: UUID,
+        scope: FillScope = .allFields,
         evaluate: Evaluate
     ) async throws {
         guard let field = activeField else { return }
@@ -167,13 +177,15 @@ public final class BrowserAutofillSession {
             "countryOrRegion": identity.countryOrRegion,
         ]
 
-        let script = "return globalThis.__crestAutofillBridge?.fill(formID, values, section) === true;"
+        let script =
+            "return globalThis.__crestAutofillBridge?.fill(formID, values, section, scope) === true;"
         _ = try await evaluate(
             script,
             [
                 "formID": field.formID,
                 "values": payload,
                 "section": field.section ?? "",
+                "scope": scope.rawValue,
             ])
         activeField = nil
     }
