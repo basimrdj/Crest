@@ -3,71 +3,80 @@ import SwiftUI
 /// The native suggestion panel floating under the focused form field.
 ///
 /// It carries Crest's own flyout surface, sits against the field the page
-/// reported — zoom-corrected by the shell that hosts it — and asks two
-/// questions: put the whole identity in, or only the field being typed in.
+/// reported — zoom-corrected by the shell that hosts it — and shows the values
+/// the focused field can take: a name field lists names, an email field lists
+/// emails. Choosing one fills that field; the footer can fill the identity's
+/// whole section instead.
 public struct BrowserAutofillSuggestionOverlay: View {
     /// Where the focused field sits over the page, in this shell's points.
     public let fieldRect: CGRect
-    public let identities: [AutofillIdentity]
+    /// The values the focused field can take, one per identity.
+    public let suggestions: [(identity: AutofillIdentity, value: String)]
+    /// What the focused field is called, for the header: "Full name".
+    public let fieldLabel: String?
     public let spaceAccent: Color
     public let onSelectionBegan: () -> Void
+    /// Puts the selected value into the one field the user was last focused on.
+    public let onFillFieldOnly: (AutofillIdentity) -> Void
     /// Puts the whole identity into every visible, eligible field of the section.
     public let onFillAll: (AutofillIdentity) -> Void
-    /// Puts the identity into the one field the user was last focused on.
-    public let onFillFieldOnly: (AutofillIdentity) -> Void
     public let onDismiss: () -> Void
-
-    /// The gap the panel keeps under the field it anchors to, and the page
-    /// inset it never crosses on its way back into view.
-    private static let fieldAnchorGap: CGFloat = 4
-    private static let edgeInset: CGFloat = 12
 
     @State private var hoveredID: UUID?
     @State private var selectedIndex: Int = 0
     @State private var containerSize = CGSize.zero
     @State private var promptSize = CGSize.zero
 
+    /// The gap the panel keeps under the field it anchors to, and the page
+    /// inset it never crosses on its way back into view.
+    private static let fieldAnchorGap: CGFloat = 4
+    private static let edgeInset: CGFloat = 12
+
     public init(
         fieldRect: CGRect,
-        identities: [AutofillIdentity],
+        suggestions: [(identity: AutofillIdentity, value: String)],
+        fieldLabel: String? = nil,
         spaceAccent: Color,
         onSelectionBegan: @escaping () -> Void = {},
+        onFillFieldOnly: @escaping (AutofillIdentity) -> Void,
         onFillAll: @escaping (AutofillIdentity) -> Void,
-        onFillFieldOnly: @escaping (AutofillIdentity) -> Void = { _ in },
         onDismiss: @escaping () -> Void = {}
     ) {
         self.fieldRect = fieldRect
-        self.identities = identities
+        self.suggestions = suggestions
+        self.fieldLabel = fieldLabel
         self.spaceAccent = spaceAccent
         self.onSelectionBegan = onSelectionBegan
-        self.onFillAll = onFillAll
         self.onFillFieldOnly = onFillFieldOnly
+        self.onFillAll = onFillAll
         self.onDismiss = onDismiss
     }
 
-    /// Kept for the shell call sites that predate fill scopes: selecting an
-    /// identity fills all the section's fields.
+    /// Kept for the call sites and tests that predate per-field suggestions:
+    /// one row per identity, showing the identity itself.
     public init(
         fieldRect: CGRect,
         identities: [AutofillIdentity],
         spaceAccent: Color,
         onSelectionBegan: @escaping () -> Void = {},
         onSelect: @escaping (AutofillIdentity) -> Void,
+        onFillFieldOnly: @escaping (AutofillIdentity) -> Void = { _ in },
         onDismiss: @escaping () -> Void = {}
     ) {
         self.init(
             fieldRect: fieldRect,
-            identities: identities,
+            suggestions: identities.map { ($0, $0.resolvedFullName) },
+            fieldLabel: nil,
             spaceAccent: spaceAccent,
             onSelectionBegan: onSelectionBegan,
+            onFillFieldOnly: onFillFieldOnly,
             onFillAll: onSelect,
-            onFillFieldOnly: { _ in },
             onDismiss: onDismiss
         )
     }
 
     public var body: some View {
-        if identities.isEmpty {
+        if suggestions.isEmpty {
             EmptyView()
         } else {
             panel
@@ -86,6 +95,14 @@ public struct BrowserAutofillSuggestionOverlay: View {
             inset: BrowserAutofillSuggestionOverlay.edgeInset
         )
         return VStack(alignment: .leading, spacing: 0) {
+            if let fieldLabel {
+                Text("Fill \(fieldLabel)…")
+                    .font(CrestTypography.compactMetadata)
+                    .foregroundStyle(CrestColor.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 4)
+                    .padding(.bottom, 2)
+            }
             rows
             Divider().padding(.vertical, 2)
             footer(index: selectedIndex)
@@ -118,27 +135,21 @@ public struct BrowserAutofillSuggestionOverlay: View {
         #if os(macOS)
             .onExitCommand(perform: onDismiss)
             .onKeyPress(.downArrow) {
-                if selectedIndex < identities.count - 1 {
+                if selectedIndex < suggestions.count - 1 {
                     selectedIndex += 1
-                    hoveredID = identities[selectedIndex].id
+                    hoveredID = suggestions[selectedIndex].identity.id
                 }
                 return .handled
             }
             .onKeyPress(.upArrow) {
                 if selectedIndex > 0 {
                     selectedIndex -= 1
-                    hoveredID = identities[selectedIndex].id
+                    hoveredID = suggestions[selectedIndex].identity.id
                 }
                 return .handled
             }
             .onKeyPress(.return) {
-                fillSelected(.allFields)
-                return .handled
-            }
-            .onKeyPress(.tab) {
-                if selectedIndex >= 0 && selectedIndex < identities.count {
-                    fillSelected(.focusedField)
-                }
+                fillSelected(.focusedField)
                 return .handled
             }
         #endif
@@ -146,28 +157,39 @@ public struct BrowserAutofillSuggestionOverlay: View {
 
     private var rows: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(Array(identities.enumerated()), id: \.element.id) { index, identity in
-                row(for: identity, index: index)
+            ForEach(
+                Array(suggestions.enumerated()),
+                id: \.element.identity.id
+            ) { index, suggestion in
+                row(for: suggestion, index: index)
             }
         }
     }
 
-    private func row(for identity: AutofillIdentity, index: Int) -> some View {
+    private func row(
+        for suggestion: (identity: AutofillIdentity, value: String),
+        index: Int
+    ) -> some View {
         Button {
-            fillSelected(.allFields)
+            fillSelected(.focusedField)
         } label: {
             HStack(spacing: CrestSpacing.small) {
-                Image(systemName: "person.crop.circle.fill")
+                Image(systemName: "character.cursor.ibeam")
                     .font(.subheadline)
                     .foregroundStyle(spaceAccent)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 1) {
+                    Text(suggestion.value)
+                        .font(CrestTypography.controlTitle)
+                        .foregroundStyle(CrestColor.textPrimary)
+                        .lineLimit(1)
                     HStack(spacing: 4) {
-                        Text(identity.displayName)
-                            .font(CrestTypography.controlTitle)
-                            .foregroundStyle(CrestColor.textPrimary)
-                        if identity.isDefault {
+                        Text(suggestion.identity.displayName)
+                            .font(CrestTypography.compactMetadata)
+                            .foregroundStyle(CrestColor.textSecondary)
+                            .lineLimit(1)
+                        if suggestion.identity.isDefault {
                             Text("Default")
                                 .font(CrestTypography.compactMetadata)
                                 .padding(.horizontal, 4)
@@ -175,10 +197,6 @@ public struct BrowserAutofillSuggestionOverlay: View {
                                 .clipShape(Capsule())
                         }
                     }
-                    Text(identity.addressSummary)
-                        .font(CrestTypography.compactMetadata)
-                        .foregroundStyle(CrestColor.textSecondary)
-                        .lineLimit(1)
                 }
                 Spacer()
             }
@@ -203,28 +221,28 @@ public struct BrowserAutofillSuggestionOverlay: View {
                 }
         )
         .background(
-            (hoveredID == identity.id || selectedIndex == index)
+            (hoveredID == suggestion.identity.id || selectedIndex == index)
                 ? CrestColor.selection
                 : Color.clear
         )
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(identity.displayName), \(identity.addressSummary)")
-        .accessibilityHint("Fills this address into the form")
+        .accessibilityLabel("\(suggestion.value), from \(suggestion.identity.displayName)")
+        .accessibilityHint("Fills this value into the field")
         .onHover { isHovered in
-            hoveredID = isHovered ? identity.id : nil
+            hoveredID = isHovered ? suggestion.identity.id : nil
             if isHovered { selectedIndex = index }
         }
     }
 
-    /// The two fill scopes, on the identity the selection rests on.
+    /// The two fill scopes, on the suggestion the selection rests on.
     private func footer(index: Int) -> some View {
-        let identity = identities.indices.contains(index) ? identities[index] : identities[0]
+        let selected = suggestions.indices.contains(index) ? suggestions[index] : suggestions[0]
         return HStack(spacing: CrestSpacing.small) {
             Button {
-                onFillFieldOnly(identity)
+                onFillFieldOnly(selected.identity)
             } label: {
-                Label("This field only", systemImage: "text.cursor")
+                Label("This field only", systemImage: "character.cursor.ibeam")
                     .font(CrestTypography.compactMetadata)
             }
             .buttonStyle(.crestSecondary)
@@ -233,7 +251,7 @@ public struct BrowserAutofillSuggestionOverlay: View {
             Spacer()
 
             Button {
-                onFillAll(identity)
+                onFillAll(selected.identity)
             } label: {
                 Label("Autofill all", systemImage: "arrow.down.doc.fill")
                     .font(CrestTypography.compactMetadata)
@@ -246,8 +264,8 @@ public struct BrowserAutofillSuggestionOverlay: View {
     }
 
     private func fillSelected(_ scope: BrowserAutofillSession.FillScope) {
-        guard identities.indices.contains(selectedIndex) else { return }
-        let identity = identities[selectedIndex]
+        guard suggestions.indices.contains(selectedIndex) else { return }
+        let identity = suggestions[selectedIndex].identity
         switch scope {
         case .allFields:
             onFillAll(identity)

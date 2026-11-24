@@ -249,6 +249,77 @@ struct AutofillTests {
         try store.deleteIdentities(for: spaceID)
     }
 
+    @Test("Autofill suggestions follow the focused field's kind, not the whole identity")
+    @MainActor
+    func testFieldScopedSuggestions() {
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let spaceID = UUID()
+
+        let alex = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Home",
+            isDefault: true,
+            fullName: "Alex Carter",
+            email: "alex@carter.dev"
+        )
+        let sam = AutofillIdentity(
+            spaceID: spaceID,
+            label: "Variant",
+            fullName: "Sam Rivera",
+            email: "sam@rivera.dev"
+        )
+        try? store.save(alex)
+        try? store.save(sam)
+
+        let session = BrowserAutofillSession(spaceID: spaceID, store: store)
+
+        // Focusing a name field lists names.
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-kinds",
+                "fieldType": "fullName",
+            ],
+            frameSecurityOrigin: "https://kinds.test:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
+        #expect(session.activeFieldLabel == "Full name")
+        #expect(session.fieldSuggestions.map(\.value) == ["Alex Carter", "Sam Rivera"])
+        #expect(session.isSuggestionPresented)
+
+        // Focusing an email field lists only the identities that have an email.
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-kinds",
+                "fieldType": "email",
+            ],
+            frameSecurityOrigin: "https://kinds.test:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
+        #expect(session.activeFieldLabel == "Email")
+        #expect(session.fieldSuggestions.map(\.value) == ["alex@carter.dev", "sam@rivera.dev"])
+
+        // A kind nobody saved leaves the panel closed.
+        session.receiveMessage(
+            [
+                "event": "focus",
+                "formID": "test-form-kinds",
+                "fieldType": "countryOrRegion",
+            ],
+            frameSecurityOrigin: "https://kinds.test:443",
+            isMainFrame: true,
+            navigationGeneration: 0
+        )
+        #expect(session.fieldSuggestions.isEmpty)
+        #expect(!session.isSuggestionPresented)
+
+        try? store.deleteIdentities(for: spaceID)
+    }
+
     @Test("BrowserAutofillSuggestionOverlay handles empty identities safely")
     @MainActor
     func testOverlayEmptyIdentities() {
@@ -260,7 +331,7 @@ struct AutofillTests {
             onSelect: { _ in },
             onDismiss: { dismissed = true }
         )
-        #expect(overlay.identities.isEmpty)
+        #expect(overlay.suggestions.isEmpty)
         overlay.onDismiss()
         #expect(dismissed)
     }

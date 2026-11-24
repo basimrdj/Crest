@@ -140,7 +140,7 @@ public enum BrowserAutofillContentBridge {
               let targets = inputs;
               // Field scope: fill only the element the user was last focused on,
               // kept here so the fill survives the focus the overlay click took.
-              if (scope === "field") {
+              if (scope === "focusedField") {
                 const focused = lastFocusedAutofill?.deref();
                 if (!focused || !focused.isConnected) return false;
                 targets = [focused];

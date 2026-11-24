@@ -118,22 +118,26 @@ struct BrowserWebPageSurface: View {
             if let autofillSession = page.autofillSession, autofillSession.isSuggestionPresented,
                 let field = autofillSession.activeField
             {
+                let suggestions = autofillSession.fieldSuggestions
                 BrowserAutofillSuggestionOverlay(
                     fieldRect: anchoredAutofillFieldRect(field),
-                    identities: autofillSession.matchingIdentities,
+                    suggestions: suggestions.map { suggestion in
+                        (suggestion.identity, suggestion.value)
+                    },
+                    fieldLabel: autofillSession.activeFieldLabel,
                     spaceAccent: browser.spaceModel(page.spaceID)?.settings.look.colors.first?.color ?? .accentColor,
                     onSelectionBegan: {
                         page.autofillFocusRouter.beginSelection()
-                    },
-                    onFillAll: { identity in
-                        Task { @MainActor in
-                            try? await page.fillAutofillIdentityOnCurrentEngine(identity)
-                        }
                     },
                     onFillFieldOnly: { identity in
                         Task { @MainActor in
                             try? await page.fillAutofillIdentityOnCurrentEngine(
                                 identity, scope: .focusedField)
+                        }
+                    },
+                    onFillAll: { identity in
+                        Task { @MainActor in
+                            try? await page.fillAutofillIdentityOnCurrentEngine(identity)
                         }
                     },
                     onDismiss: {

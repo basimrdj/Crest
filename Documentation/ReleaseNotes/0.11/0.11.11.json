@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-per-field-suggestions",
+      "category": "internal",
+      "message": "The autofill suggestion panel now shows the focused field's own options, one value per saved identity, fills the field or the whole section from the chosen one, and its field-only fill actually reaches the page."
+    }
+  ]
+}

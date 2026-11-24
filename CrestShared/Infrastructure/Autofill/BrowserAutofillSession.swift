@@ -55,7 +55,14 @@ public final class BrowserAutofillSession {
     public let store: BrowserAutofillStore
     public private(set) var activeField: FocusedFieldInfo?
     public var isSuggestionPresented: Bool {
-        activeField != nil && !matchingIdentities.isEmpty
+        activeField != nil && !fieldSuggestions.isEmpty
+    }
+
+    /// One value the focused field can take: an identity with that field saved,
+    /// and what would be put in it.
+    public struct FieldSuggestion: Equatable, Sendable {
+        public let identity: AutofillIdentity
+        public let value: String
     }
 
     // MARK: - Initializers
@@ -69,6 +76,69 @@ public final class BrowserAutofillSession {
 
     public var matchingIdentities: [AutofillIdentity] {
         store.identities(in: spaceID)
+    }
+
+    /// What the focused field's options are: one row per identity that has the
+    /// field's kind saved, deduplicated on the value, so a name field shows
+    /// names and an email field shows emails.
+    public var fieldSuggestions: [FieldSuggestion] {
+        guard let field = activeField else { return [] }
+        var suggestions: [FieldSuggestion] = []
+        var seenValues = Set<String>()
+        for identity in matchingIdentities {
+            guard let value = Self.value(forKind: field.fieldType, of: identity),
+                !value.isEmpty
+            else { continue }
+            guard seenValues.insert(value).inserted else { continue }
+            suggestions.append(FieldSuggestion(identity: identity, value: value))
+        }
+        return suggestions
+    }
+
+    /// The focused field's kind, in words a person reads: "Full name",
+    /// "Email", "Postal code".
+    public var activeFieldLabel: String? {
+        Self.label(forKind: activeField?.fieldType ?? "")
+    }
+
+    /// The identity property a bridge field kind fills, or `nil` where the
+    /// field is not one the identity store covers.
+    public static func value(forKind kind: String, of identity: AutofillIdentity) -> String? {
+        switch kind {
+        case "fullName": return identity.resolvedFullName
+        case "givenName": return identity.givenName
+        case "middleName": return identity.middleName
+        case "familyName": return identity.familyName
+        case "organization": return identity.organization
+        case "email": return identity.email
+        case "phoneNumber": return identity.phoneNumber
+        case "streetAddress": return identity.streetAddress
+        case "addressLine2": return identity.addressLine2
+        case "city": return identity.city
+        case "stateOrProvince": return identity.stateOrProvince
+        case "postalCode": return identity.postalCode
+        case "countryOrRegion": return identity.countryOrRegion
+        default: return nil
+        }
+    }
+
+    private static func label(forKind kind: String) -> String? {
+        switch kind {
+        case "fullName": return "Full name"
+        case "givenName": return "First name"
+        case "middleName": return "Middle name"
+        case "familyName": return "Last name"
+        case "organization": return "Organization"
+        case "email": return "Email"
+        case "phoneNumber": return "Phone"
+        case "streetAddress": return "Street address"
+        case "addressLine2": return "Address line 2"
+        case "city": return "City"
+        case "stateOrProvince": return "State or province"
+        case "postalCode": return "Postal code"
+        case "countryOrRegion": return "Country"
+        default: return nil
+        }
     }
 
     public func receiveMessage(
