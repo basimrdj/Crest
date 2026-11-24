@@ -1,0 +1,266 @@
+import Foundation
+import Observation
+
+/// Coordinates in-page autofill suggestions and actions for a tab/page session.
+@Observable
+@MainActor
+public final class BrowserAutofillSession {
+    // MARK: - Types
+
+    public struct FocusedFieldInfo: Equatable, Sendable {
+        public let formID: String
+        public let fieldType: String
+        public let section: String?
+        public let rect: CGRect?
+        public let frameSecurityOrigin: String
+        public let isMainFrame: Bool
+        public let navigationGeneration: UInt64
+        public let frameHandleID: UUID
+
+        public init(
+            formID: String,
+            fieldType: String,
+            section: String? = nil,
+            rect: CGRect? = nil,
+            frameSecurityOrigin: String,
+            isMainFrame: Bool = true,
+            navigationGeneration: UInt64 = 0,
+            frameHandleID: UUID = UUID()
+        ) {
+            self.formID = formID
+            self.fieldType = fieldType
+            self.section = section
+            self.rect = rect
+            self.frameSecurityOrigin = frameSecurityOrigin
+            self.isMainFrame = isMainFrame
+            self.navigationGeneration = navigationGeneration
+            self.frameHandleID = frameHandleID
+        }
+    }
+
+    public typealias Evaluate = @MainActor (String, [String: Any]) async throws -> Any?
+
+    /// How much of the focused form a fill covers: every visible field in the
+    /// section the focused field belongs to, or the one field the user was in.
+    public enum FillScope: String, Sendable {
+        /// Fill every visible, eligible field of the focused field's section.
+        case allFields
+        /// Fill only the field the user was last focused on.
+        case focusedField
+    }
+
+    // MARK: - Variables
+
+    public let spaceID: UUID
+    public let store: BrowserAutofillStore
+    public private(set) var activeField: FocusedFieldInfo?
+    public var isSuggestionPresented: Bool {
+        activeField != nil && !fieldSuggestions.isEmpty
+    }
+
+    /// One value the focused field can take: an identity with that field saved,
+    /// and what would be put in it.
+    public struct FieldSuggestion: Equatable, Sendable {
+        public let identity: AutofillIdentity
+        public let value: String
+    }
+
+    // MARK: - Initializers
+
+    public init(spaceID: UUID, store: BrowserAutofillStore) {
+        self.spaceID = spaceID
+        self.store = store
+    }
+
+    // MARK: - Actions
+
+    public var matchingIdentities: [AutofillIdentity] {
+        store.identities(in: spaceID)
+    }
+
+    /// What the focused field's options are: one row per identity that has the
+    /// field's kind saved, deduplicated on the value, so a name field shows
+    /// names and an email field shows emails.
+    public var fieldSuggestions: [FieldSuggestion] {
+        guard let field = activeField else { return [] }
+        var suggestions: [FieldSuggestion] = []
+        var seenValues = Set<String>()
+        for identity in matchingIdentities {
+            guard let value = Self.value(forKind: field.fieldType, of: identity),
+                !value.isEmpty
+            else { continue }
+            guard seenValues.insert(value).inserted else { continue }
+            suggestions.append(FieldSuggestion(identity: identity, value: value))
+        }
+        return suggestions
+    }
+
+    /// The focused field's kind, in words a person reads: "Full name",
+    /// "Email", "Postal code".
+    public var activeFieldLabel: String? {
+        Self.label(forKind: activeField?.fieldType ?? "")
+    }
+
+    /// The identity property a bridge field kind fills, or `nil` where the
+    /// field is not one the identity store covers.
+    public static func value(forKind kind: String, of identity: AutofillIdentity) -> String? {
+        switch kind {
+        case "fullName": return identity.resolvedFullName
+        case "givenName": return identity.givenName
+        case "middleName": return identity.middleName
+        case "familyName": return identity.familyName
+        case "organization": return identity.organization
+        case "email": return identity.email
+        case "phoneNumber": return identity.phoneNumber
+        case "streetAddress": return identity.streetAddress
+        case "addressLine2": return identity.addressLine2
+        case "city": return identity.city
+        case "stateOrProvince": return identity.stateOrProvince
+        case "postalCode": return identity.postalCode
+        case "countryOrRegion": return identity.countryOrRegion
+        default: return nil
+        }
+    }
+
+    private static func label(forKind kind: String) -> String? {
+        switch kind {
+        case "fullName": return "Full name"
+        case "givenName": return "First name"
+        case "middleName": return "Middle name"
+        case "familyName": return "Last name"
+        case "organization": return "Organization"
+        case "email": return "Email"
+        case "phoneNumber": return "Phone"
+        case "streetAddress": return "Street address"
+        case "addressLine2": return "Address line 2"
+        case "city": return "City"
+        case "stateOrProvince": return "State or province"
+        case "postalCode": return "Postal code"
+        case "countryOrRegion": return "Country"
+        default: return nil
+        }
+    }
+
+    public func receiveMessage(
+        _ body: [String: Any],
+        frameSecurityOrigin: String,
+        isMainFrame: Bool = true,
+        navigationGeneration: UInt64 = 0,
+        frameHandleID: UUID = UUID()
+    ) {
+        guard !frameSecurityOrigin.isEmpty, frameSecurityOrigin != "null" else {
+            // Fail closed on opaque, null, or empty security origins
+            activeField = nil
+            return
+        }
+
+        guard let event = body["event"] as? String else { return }
+
+        switch event {
+        case "focus":
+            guard let formID = body["formID"] as? String,
+                let fieldType = body["fieldType"] as? String
+            else { return }
+
+            var fieldRect: CGRect? = nil
+            if let rectDict = body["fieldRect"] as? [String: Double],
+                let x = rectDict["x"], let y = rectDict["y"],
+                let w = rectDict["width"], let h = rectDict["height"]
+            {
+                fieldRect = CGRect(x: x, y: y, width: w, height: h)
+            }
+
+            let section = body["section"] as? String
+            activeField = FocusedFieldInfo(
+                formID: formID,
+                fieldType: fieldType,
+                section: section,
+                rect: fieldRect,
+                frameSecurityOrigin: frameSecurityOrigin,
+                isMainFrame: isMainFrame,
+                navigationGeneration: navigationGeneration,
+                frameHandleID: frameHandleID
+            )
+
+        case "blur":
+            // Only dismiss active field if the blur event matches the focused form and frame
+            if let formID = body["formID"] as? String {
+                if activeField?.formID == formID && activeField?.frameHandleID == frameHandleID {
+                    activeField = nil
+                }
+            } else if activeField?.frameHandleID == frameHandleID {
+                activeField = nil
+            }
+
+        default:
+            break
+        }
+    }
+
+    public func fill(
+        _ identity: AutofillIdentity,
+        expectedNavigationGeneration: UInt64,
+        expectedOrigin: String,
+        expectedFrameHandleID: UUID,
+        scope: FillScope = .allFields,
+        evaluate: Evaluate
+    ) async throws {
+        guard let field = activeField else { return }
+
+        // Strict Space isolation check (fail closed)
+        guard identity.spaceID == spaceID else {
+            activeField = nil
+            return
+        }
+
+        // Strict generation staleness check (fail closed)
+        guard field.navigationGeneration == expectedNavigationGeneration else {
+            activeField = nil
+            return
+        }
+
+        // Strict security origin validation (fail closed)
+        guard !expectedOrigin.isEmpty, field.frameSecurityOrigin == expectedOrigin else {
+            activeField = nil
+            return
+        }
+
+        // Strict frame handle match (fail closed)
+        guard field.frameHandleID == expectedFrameHandleID else {
+            activeField = nil
+            return
+        }
+
+        let payload: [String: String] = [
+            "fullName": identity.resolvedFullName,
+            "givenName": identity.givenName,
+            "middleName": identity.middleName,
+            "familyName": identity.familyName,
+            "organization": identity.organization,
+            "email": identity.email,
+            "phoneNumber": identity.phoneNumber,
+            "streetAddress": identity.streetAddress,
+            "addressLine2": identity.addressLine2,
+            "city": identity.city,
+            "stateOrProvince": identity.stateOrProvince,
+            "postalCode": identity.postalCode,
+            "countryOrRegion": identity.countryOrRegion,
+        ]
+
+        let script =
+            "return globalThis.__crestAutofillBridge?.fill(formID, values, section, scope) === true;"
+        _ = try await evaluate(
+            script,
+            [
+                "formID": field.formID,
+                "values": payload,
+                "section": field.section ?? "",
+                "scope": scope.rawValue,
+            ])
+        activeField = nil
+    }
+
+    public func dismiss() {
+        activeField = nil
+    }
+}

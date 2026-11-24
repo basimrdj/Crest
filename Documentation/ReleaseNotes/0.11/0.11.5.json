@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-suggestion-keyboard-macos-only",
+      "category": "internal",
+      "message": "The autofill suggestion list's keyboard handling compiles only where it runs, keeping iPhone and iPad builds free of Mac-only controls it never shows."
+    }
+  ]
+}

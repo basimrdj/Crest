@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "autofill-suggestion-anchor-and-fill-scope",
+      "category": "internal",
+      "message": "The autofill suggestion panel anchors against the focused field at the page's zoom, rides Crest's flyout surface with an entrance followed by the field, and offers to fill all of the section's fields or only the one being typed in."
+    }
+  ]
+}

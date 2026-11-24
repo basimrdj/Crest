@@ -111,6 +111,18 @@ extension BrowserStore {
         return directory
     }
 
+    /// Where this launch keeps its per-Space autofill identities. An isolated
+    /// launch keeps its own directory beside its session, so a review launch
+    /// neither reads nor writes the installed release's identities. The
+    /// installed launch's store keeps its default location instead, so nil
+    /// means no change.
+    static func autofillDirectory(for launchEnvironment: BrowserLaunchEnvironment) -> URL? {
+        guard launchEnvironment.requiresIsolation, launchEnvironment.persistentIsolationID != nil,
+            let sessionHome = try? sessionDirectory(for: launchEnvironment)
+        else { return nil }
+        return sessionHome.appendingPathComponent("Autofill", isDirectory: true)
+    }
+
     /// The one core this launch creates, keeping its session in
     /// `sessionDirectory(for:)`. A file the core cannot use is a startup
     /// failure the recovery screen answers.

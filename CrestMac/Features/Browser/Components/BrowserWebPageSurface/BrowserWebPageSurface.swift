@@ -115,6 +115,39 @@ struct BrowserWebPageSurface: View {
                 capabilities: capabilities
             )
 
+            if let autofillSession = page.autofillSession, autofillSession.isSuggestionPresented,
+                let field = autofillSession.activeField
+            {
+                let suggestions = autofillSession.fieldSuggestions
+                BrowserAutofillSuggestionOverlay(
+                    fieldRect: anchoredAutofillFieldRect(field),
+                    suggestions: suggestions.map { suggestion in
+                        (suggestion.identity, suggestion.value)
+                    },
+                    fieldLabel: autofillSession.activeFieldLabel,
+                    spaceAccent: browser.spaceModel(page.spaceID)?.settings.look.colors.first?.color ?? .accentColor,
+                    onSelectionBegan: {
+                        page.autofillFocusRouter.beginSelection()
+                    },
+                    onFillFieldOnly: { identity in
+                        Task { @MainActor in
+                            try? await page.fillAutofillIdentityOnCurrentEngine(
+                                identity, scope: .focusedField)
+                        }
+                    },
+                    onFillAll: { identity in
+                        Task { @MainActor in
+                            try? await page.fillAutofillIdentityOnCurrentEngine(identity)
+                        }
+                    },
+                    onDismiss: {
+                        page.autofillFocusRouter.endSelection()
+                        autofillSession.dismiss()
+                    }
+                )
+                .zIndex(BrowserWebPageSurfaceMetrics.feedbackZIndex + 10)
+            }
+
             if page.isRegionCapturePresented {
                 BrowserRegionCaptureOverlay(page: page)
                     .zIndex(BrowserWebPageSurfaceMetrics.regionCaptureZIndex)
@@ -137,6 +170,29 @@ struct BrowserWebPageSurface: View {
             }
         }
         .animation(reduceMotion ? nil : CrestMotion.step, value: page.elementPicker.isActive)
+        .animation(
+            reduceMotion ? nil : CrestMotion.step,
+            value: page.autofillSession?.isSuggestionPresented ?? false
+        )
+    }
+
+    /// Where the field the autofill suggestions point at sits over the page,
+    /// in this shell's points. The page reports CSS pixels from its own
+    /// viewport, and the page's zoom is the whole of the difference between
+    /// those and what is on screen — the panel is a sibling of the web view
+    /// inside one box, so the zoom is the only thing between the two.
+    private func anchoredAutofillFieldRect(_ field: BrowserAutofillSession.FocusedFieldInfo)
+        -> CGRect
+    {
+        let measured = field.rect ?? CGRect(x: 20, y: 20, width: 200, height: 32)
+        let scale = page.renderedPageZoom
+        guard scale.isFinite, scale > 0 else { return measured }
+        return CGRect(
+            x: measured.origin.x * scale,
+            y: measured.origin.y * scale,
+            width: measured.width * scale,
+            height: measured.height * scale
+        )
     }
 
     /// The questions the find bar asks, bound to this surface's page.

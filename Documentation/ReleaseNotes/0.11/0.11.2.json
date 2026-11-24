@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "native-address-and-identity-autofill",
+      "category": "new",
+      "message": "Crest fills names, emails, phone numbers and addresses from the identities you keep in each Space, with a native anchored suggestion list on WebKit and Chromium pages that never auto-submits a form and never touches password, payment or one-time code fields."
+    },
+    {
+      "id": "autofill-arc-migration",
+      "category": "new",
+      "message": "Bring your addresses and contacts from Arc: Data Portability reads Arc's autofill database read-only, lists every profile it finds, lets you choose exactly which records to move, and imports them into the Space you pick."
+    },
+    {
+      "id": "chromium-upstream-158-0-8127-89-bd1501dcdda5",
+      "category": "fixed",
+      "message": "Chromium is updated to 158.0.8127.89 with upstream security and compatibility fixes.",
+      "platforms": ["mac"]
+    }
+  ]
+}

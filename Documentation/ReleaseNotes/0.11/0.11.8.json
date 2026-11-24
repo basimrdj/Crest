@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "mac-test-suite-reconciliation",
+      "category": "internal",
+      "message": "The macOS hosted test suite runs end to end locally: the legacy autofill migration fixture creates its per-Space directory and the private-page bridge inventory names the current bridges."
+    }
+  ]
+}

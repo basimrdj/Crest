@@ -362,4 +362,6 @@ private final class MediaActivityHost: WebKitPageHosting {
     func receiveCredentialMessage(_ message: WKScriptMessage) {}
 
     func receiveCosmeticFilterMessage(_ message: WKScriptMessage) {}
+
+    func receiveAutofillMessage(_ message: WKScriptMessage) {}
 }
