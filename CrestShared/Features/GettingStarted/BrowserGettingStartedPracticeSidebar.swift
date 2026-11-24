@@ -8,10 +8,10 @@ struct BrowserGettingStartedPracticeSidebar: View {
     var body: some View {
         let space = practice.space
         return ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                 HStack(spacing: 9) {
                     BrowserSpaceCrestIcon(branding: space.settings.look, size: 30)
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                         Text("Practice").font(CrestTypography.sans(14, weight: .semibold))
                         Text("Your example Space").font(CrestTypography.sans(10)).foregroundStyle(.secondary)
                     }
@@ -23,8 +23,11 @@ struct BrowserGettingStartedPracticeSidebar: View {
                                 Button("New Folder", systemImage: "folder.badge.plus") {
                                     practice.addFolder(nested: false)
                                 }
-                                Button("Clean Up Current Tabs", systemImage: "sparkles") {
-                                    _ = practice.tabActions.clearCurrentTabs()
+                                Button(ShortcutCommand.clearOtherTabs) {
+                                    _ = practice.tabActions.clearCurrentTabs(keepingShownTab: true)
+                                }
+                                Button(ShortcutCommand.clearAllTabs) {
+                                    _ = practice.tabActions.clearCurrentTabs(keepingShownTab: false)
                                 }
                             }
                             .crestMenuActionLabelStyle()
@@ -33,7 +36,7 @@ struct BrowserGettingStartedPracticeSidebar: View {
                         }
                         .accessibilityLabel("Practice Space actions")
                     }
-                }.padding(.horizontal, 10).padding(.top, 12)
+                }.padding(.horizontal, 10).padding(.top, CrestSpacing.medium)
                 if let context = practice.listContext(capabilities: capabilities) {
                     BrowserPinnedTabsDropSection(context: context)
                     Text("Saved").font(.caption.weight(.semibold)).foregroundStyle(.secondary).padding(
@@ -42,7 +45,7 @@ struct BrowserGettingStartedPracticeSidebar: View {
                         context: context, alwaysShowsSavedTabs: true, showsClearAction: true,
                         openNewTab: practice.openExampleTab)
                 }
-            }.padding(8)
+            }.padding(CrestSpacing.small)
         }
         .environment(practice.sidebarInteraction)
         .browserNativeScrollState(practice.sidebarScroll)

@@ -26,6 +26,12 @@ final class ChromiumExtensionStore {
     /// redraws the Space's rows on the main thread that also carries the
     /// page's scroll input.
     private static let refreshInterval = Duration.milliseconds(250)
+    /// How often an import looks again for the Spaces setup holds back, and
+    /// how many looks a Space that never appears gets: half a minute.
+    private static let importedSpaceInterval = Duration.milliseconds(500)
+    private static let importedSpaceLooks = 60
+    /// How often an install's caller looks again at how the install stands.
+    private static let installCheckInterval = Duration.milliseconds(250)
 
     // MARK: - Types
 
@@ -203,12 +209,13 @@ final class ChromiumExtensionStore {
         observeChanges(of: page.profileID)
         return page.extensions
     }
-    /// The pinned actions of a Space's own toolbar row.
+    /// The pinned actions of a Space's own toolbar row, in the order the
+    /// person left them.
     ///
     /// The row belongs to the Space, so the pinned list comes from the Space's
     /// profile and is present whether or not a page is open. Where a page is
-    /// open its per-tab state — badge, dynamic icon, whether a page action has
-    /// anything to act on — is overlaid on top of it.
+    /// open its per-tab state — badge, dynamic icon, whether the action can run
+    /// on the page and whether it opens a popup — is overlaid on top of it.
     func pinnedActions(
         for space: BrowserSpaceIdentity, page: ChromiumNativePage?
     ) -> [BrowserExtensionActionPresentation] {
@@ -223,12 +230,19 @@ final class ChromiumExtensionStore {
             .map { action -> BrowserExtensionActionPresentation in
                 if let tab = live[action.id] {
                     return BrowserExtensionActionPresentation(
-                        id: tab.id, displayName: tab.displayName,
-                        badgeText: tab.badgeText, icon: tab.icon, isPinned: true)
+                        id: tab.id, displayName: tab.displayName, badgeText: tab.badgeText, icon: tab.icon,
+                        isEnabled: tab.isEnabled, isPinned: true, isLoading: tab.isLoading, hasPopup: tab.hasPopup)
                 }
                 return BrowserExtensionActionPresentation(action)
             }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+    /// Moves the pinned action `extensionID` to just before the pinned action
+    /// `beforeID`, or to the end with none, in every Space of `space`'s
+    /// profile.
+    func movePin(_ extensionID: String, before beforeID: String?, space: BrowserSpaceIdentity) {
+        send(
+            MovePinnedExtension(
+                spaceID: space.id, engine: .chromium, extensionID: extensionID, beforeExtensionID: beforeID))
     }
     /// Runs a pinned action from a Space with no page open. Only an action with
     /// its own popup can run without one, so anything else states itself as
@@ -245,7 +259,7 @@ final class ChromiumExtensionStore {
                 sourceWindow: fallback)
         guard let host = ChromiumComposition.engineHost,
             let source = anchor.presentationSource(fallbackWindow: fallback),
-            let windowID = source.view.window?.identifier.flatMap({ UUID(uuidString: $0.rawValue) }),
+            let windowID = (source.view.window as? BrowserMacWindow)?.windowID,
             host.runExtension(
                 action.id, profile: space.profileID, window: windowID,
                 anchorView: source.view, anchorRect: source.rect)
@@ -254,6 +268,51 @@ final class ChromiumExtensionStore {
                 String(localized: "This extension action needs an open page."),
                 icon: "puzzlepiece.extension")
             return
+        }
+    }
+
+    // MARK: - Actions - Popup Cycle
+
+    /// The extensions Open Next Extension steps through in `space` with
+    /// `page` in front: the pinned ones in the strip's order, then the others
+    /// the page offers, each only while running it opens its popup. A pin a
+    /// policy keeps is not in the strip, so it comes with the others.
+    func popupCycle(for space: BrowserSpaceIdentity, page: ChromiumNativePage?) -> BrowserExtensionPopupCycle {
+        let opensPopup: (BrowserExtensionActionPresentation) -> Bool = { $0.isEnabled && $0.hasPopup && !$0.isLoading }
+        return BrowserExtensionPopupCycle(
+            pinned: pinnedActions(for: space, page: page).filter(opensPopup).map(\.id),
+            others: page.map { actions(for: $0).filter(opensPopup).map(\.id) } ?? [])
+    }
+
+    /// Opens the popup of the action after the one whose popup shows in
+    /// `window`, or of the first when none shows, from its pinned tile or the
+    /// control that lists the window's extensions. After the last, it closes
+    /// the popup.
+    ///
+    /// It runs a turn later: a key the popup's document left reaches Crest
+    /// from inside the popup, which must not go while it hands the key on.
+    func openNextPopup(in space: BrowserSpaceIdentity, page: ChromiumNativePage?, window: NSWindow) {
+        DispatchQueue.main.async { [weak self, weak window] in
+            MainActor.assumeIsolated {
+                guard let self, let window, let host = ChromiumComposition.engineHost,
+                    let windowID = (window as? BrowserMacWindow)?.windowID
+                else { return }
+                switch self.popupCycle(for: space, page: page).step(showing: host.extensionPopup(inWindow: windowID)) {
+                case nil:
+                    return
+                case .close:
+                    host.closeExtensionPopup(inWindow: windowID)
+                case .open(let extensionID):
+                    let anchor = BrowserExtensionToolbarAnchorRegistry.anchor(for: extensionID, in: window)
+                    if let page {
+                        page.runExtension(extensionID, anchor: anchor)
+                    } else if let action = self.pinnedActions(for: space, page: nil).first(where: {
+                        $0.id == extensionID
+                    }) {
+                        self.runPinned(action, space: space, anchor: anchor)
+                    }
+                }
+            }
         }
     }
 
@@ -334,12 +393,13 @@ final class ChromiumExtensionStore {
         let opensSettings = spaceChanges && (record.map { !$0.options.isEmpty && $0.enabled } ?? true)
         let changeable = spaceChanges && (record?.changeable ?? true)
         if let openSidePanel {
-            menu.addItem(handler.item(String(localized: "Open Side Panel")) { openSidePanel() })
+            menu.addItem(
+                handler.item(String(localized: "Open Side Panel"), symbol: "sidebar.right") { openSidePanel() })
             menu.addItem(.separator())
         }
         if opensSettings {
             menu.addItem(
-                handler.item(String(localized: "Extension Settings…")) { [weak self] in
+                handler.item(String(localized: "Extension Settings…"), symbol: "gearshape") { [weak self] in
                     self?.command(.options, extensionID: action.id, space: space)
                 })
         }
@@ -348,6 +408,7 @@ final class ChromiumExtensionStore {
                 handler.item(
                     action.isPinned
                         ? String(localized: "Unpin from Toolbar") : String(localized: "Pin to Toolbar"),
+                    symbol: action.isPinned ? "pin.slash" : "pin",
                     keepsSource: true
                 ) { [weak self] in
                     self?.togglePin(action, space: space)
@@ -356,7 +417,8 @@ final class ChromiumExtensionStore {
                 menu.addItem(
                     handler.item(
                         record.enabled
-                            ? String(localized: "Disable Extension") : String(localized: "Enable Extension")
+                            ? String(localized: "Disable Extension") : String(localized: "Enable Extension"),
+                        symbol: record.enabled ? "nosign" : "checkmark.circle"
                     ) { [weak self] in
                         self?.command(record.enabled ? .disable : .enable, extensionID: action.id, space: space)
                     })
@@ -364,23 +426,23 @@ final class ChromiumExtensionStore {
         }
         if opensSettings || changeable { menu.addItem(.separator()) }
         menu.addItem(
-            handler.item(String(localized: "Manage Extension…")) { [weak self] in
+            handler.item(String(localized: "Manage Extension…"), symbol: "slider.horizontal.3") { [weak self] in
                 self?.command(.details, extensionID: action.id, space: space)
             })
         menu.addItem(
-            handler.item(String(localized: "Manage Extensions…")) { [weak self] in
+            handler.item(String(localized: "Manage Extensions…"), symbol: "puzzlepiece.extension") { [weak self] in
                 self?.command(.manage, space: space)
             })
         if record?.webStore ?? false {
             menu.addItem(
-                handler.item(String(localized: "View on Chrome Web Store")) { [weak self] in
+                handler.item(String(localized: "View on Chrome Web Store"), symbol: "bag") { [weak self] in
                     self?.command(.store, extensionID: action.id, space: space)
                 })
         }
         if changeable, let record {
             menu.addItem(.separator())
             menu.addItem(
-                handler.item(String(localized: "Remove Extension…")) { [weak self] in
+                handler.item(String(localized: "Remove Extension…"), symbol: "trash") { [weak self] in
                     self?.confirmRemoval(record, space: space)
                 })
         }
@@ -543,9 +605,9 @@ final class ChromiumExtensionStore {
     /// that never appears.
     private func importedSpaces(_ spaceIDs: [UUID]) async -> [UUID] {
         var missing = 0
-        while !Task.isCancelled, spaceIDs.contains(where: { space($0) == nil }), missing < 60 {
+        while !Task.isCancelled, spaceIDs.contains(where: { space($0) == nil }), missing < Self.importedSpaceLooks {
             missing += 1
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: Self.importedSpaceInterval)
         }
         return spaceIDs.filter { space($0) != nil }
     }
@@ -553,7 +615,7 @@ final class ChromiumExtensionStore {
     private func ending(of installID: UUID) async -> ExtensionInstallState? {
         while !Task.isCancelled {
             if let state = core?.state.extensionInstalls[installID], state.stage.hasEnded { return state }
-            try? await Task.sleep(for: .milliseconds(250))
+            try? await Task.sleep(for: Self.installCheckInterval)
         }
         return nil
     }
@@ -664,10 +726,14 @@ extension ChromiumExtensionStore: BrowserImportedExtensionInstalling {}
         self.closeSource = closeSource
     }
 
+    /// - Parameter symbol: The SF Symbol the row shows beside its title.
     /// - Parameter keepsSource: The item changes something the source surface
     ///   shows, so the surface stays open after it runs.
-    func item(_ title: String, keepsSource: Bool = false, perform: @escaping () -> Void) -> NSMenuItem {
+    func item(
+        _ title: String, symbol: String, keepsSource: Bool = false, perform: @escaping () -> Void
+    ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(invoke(_:)), keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         item.target = self
         item.isEnabled = true
         item.tag = handlers.count

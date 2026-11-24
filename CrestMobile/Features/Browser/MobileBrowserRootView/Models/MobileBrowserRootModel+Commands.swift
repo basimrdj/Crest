@@ -10,6 +10,7 @@ extension MobileBrowserRootModel {
         layoutDirection: LayoutDirection,
         usesPageToolbars: Bool,
         togglePrivateBrowsing: @escaping () -> Void,
+        openInPrivateBrowsing: @escaping (URL) -> Void,
         openNewTab: @escaping () -> Void,
         openLocation: @escaping () -> Void,
         prepareForSelectionSynchronization: @escaping () -> Void,
@@ -24,7 +25,7 @@ extension MobileBrowserRootModel {
             MobileContentBlockingAction(browser: browser, pages: $0)
         }
         let blockedElements = pageActions.map {
-            BrowserBlockedElements(core: browser.core, pageURL: $0.activePage?.webView.url)
+            BrowserBlockedElements(core: browser.core, pageURL: $0.activePage?.live.documentURL)
         }
         return MobileBrowserCommandContext(
             isPrivateBrowsing: browser.isPrivateBrowsing,
@@ -42,6 +43,7 @@ extension MobileBrowserRootModel {
                 && transientBrowsing.quickWindowRequest == nil,
             canDuplicateSelectedTab: controller.canDuplicateSelectedTab,
             canReopenClosedTab: controller.canReopenClosedTab,
+            canCollapseAllFolders: controller.canCollapseAllFolders,
             tabCount: controller.tabCount,
             canJumpToRecentTab: controller.canJumpToRecentTab,
             spaceCount: browser.spaceModels.count,
@@ -79,11 +81,19 @@ extension MobileBrowserRootModel {
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
-            clearCurrentTabs: {
+            clearOtherTabs: {
                 _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: true,
                     beforeSynchronization: prepareForSelectionSynchronization
                 )
             },
+            clearAllTabs: {
+                _ = self.clearCurrentTabsFromCommand(
+                    keepingShownTab: false,
+                    beforeSynchronization: prepareForSelectionSynchronization
+                )
+            },
+            collapseAllFolders: { controller.collapseAllFolders() },
             dismissSelectedTab: {
                 _ = self.dismissSelectedTabFromCommand(
                     beforeSynchronization: prepareForSelectionSynchronization
@@ -206,8 +216,47 @@ extension MobileBrowserRootModel {
             toggleSidebar: toggleSidebar,
             presentHistory: presentHistory,
             presentArchive: presentArchive,
-            presentDownloads: presentDownloads
+            presentDownloads: presentDownloads,
+            canSaveSelectedTab: browser.shownTab.map { !$0.isStartPage } ?? false,
+            toggleSelectedTabSaved: {
+                _ = self.toggleSelectedTabSavedFromCommand(beforeSynchronization: prepareForSelectionSynchronization)
+            },
+            copyPageTitle: { _ = pageActions?.copyPageTitle() },
+            openPageInPrivateBrowsing: {
+                guard let url = pageActions?.activePage?.live.documentURL, ExternalWebLink.accepts(url) else { return }
+                openInPrivateBrowsing(url)
+            },
+            openPageInSpace: { spaceID in
+                self.openPage(pageActions?.activePage?.live.documentURL, inSpace: spaceID)
+            },
+            openSettings: { destination in self.settings.open(at: destination) }
         )
+    }
+
+    /// Moves the shown tab into Saved Tabs, or a saved one back to Current
+    /// Tabs, as the sidebar's Save and Move to Current Tabs do.
+    @discardableResult
+    func toggleSelectedTabSavedFromCommand(beforeSynchronization: () -> Void = {}) -> Bool {
+        guard let tab = browser.shownTab, !tab.isStartPage,
+            browser.moveTab(tab.id, to: tab.placement == .saved ? .current : .saved)
+        else { return false }
+        beforeSynchronization()
+        synchronizeAfterCommandSelection()
+        return true
+    }
+
+    /// Opens `url` as a new tab in the Space `spaceID`, unlocking the Space
+    /// first, and shows it there.
+    func openPage(_ url: URL?, inSpace spaceID: UUID) {
+        guard let url, ExternalWebLink.accepts(url), let space = browser.spaceModel(spaceID) else { return }
+        Task {
+            guard await spaceAccess.unlock(space) else { return }
+            guard browser.openNewTab(url: url, matching: BrowserSpaceRuntimeAssignment(space: space)) != nil else {
+                return
+            }
+            pages.selectAndNavigate(to: url.absoluteString)
+            navigation.selectTab()
+        }
     }
 
     @discardableResult
@@ -242,9 +291,10 @@ extension MobileBrowserRootModel {
 
     @discardableResult
     func clearCurrentTabsFromCommand(
+        keepingShownTab: Bool,
         beforeSynchronization: () -> Void = {}
     ) -> Bool {
-        guard commandController.clearCurrentTabs() else { return false }
+        guard commandController.clearCurrentTabs(keepingShownTab: keepingShownTab) else { return false }
         beforeSynchronization()
         synchronizeAfterCommandSelection()
         return true

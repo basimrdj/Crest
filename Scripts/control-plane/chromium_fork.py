@@ -2,25 +2,34 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import fcntl
 import hashlib
+import html
+import http.server
+import io
+import importlib.util
 import json
 import os
 from pathlib import Path
+import platform
 import plistlib
 import re
 import selectors
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
+import chromium_artifact
 import chromium_engine
 
 REPO = Path(__file__).resolve().parents[2]
@@ -31,6 +40,40 @@ VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")
 # A prepared source directory is named by its preparation key's first 20 hex digits.
 SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
 PREPARATION_FIELDS = ("chromium", "dependencies", "cipd", "crestPatches")
+# Where the architectures' browsers merge into the one universal engine a
+# release packages.
+UNIVERSAL_OUTPUT = "out/CrestUniversal"
+# The macOS name of each architecture the lock names by its GN `target_cpu`.
+MACHINES = {"arm64": "arm64", "x64": "x86_64"}
+# The first bytes of a universal, 64-bit or 32-bit Mach-O file.
+MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
+# The marker Crest's entry point, Overlay/chrome/app/crest_exe_main_mac.cc,
+# leaves in the browser executable. Keep the two spellings identical.
+LAUNCH_SENTINEL = b"crest-browser-launch"
+# The resources Crest's entry point reads to decide how a launch starts: a
+# product names its own profile folder, an experiment requires one.
+PRODUCT_HOST = "Crest-Native-Host"
+EXPERIMENT_HOST = "Crest-Isolated-Experiment"
+HOST_MARKERS = ("Crest-App-Owned-Host", PRODUCT_HOST, EXPERIMENT_HOST)
+# The status Crest's entry point exits with when an experiment names no profile folder.
+EXPERIMENT_REFUSED = 64
+# Under a home folder: where a product keeps its engine profiles, and Chromium's
+# default folder, which every other Chromium also opens.
+PRODUCT_PROFILES = "Library/Application Support/Crest/Chromium"
+DEFAULT_PROFILES = "Library/Application Support/Chromium"
+# The profile the upgrade check makes with the previous engine.
+UPGRADE_PROFILE = "Crest-Upgrade-Check"
+# A stable app release's tag. Its engine made most people's profiles.
+STABLE_RELEASE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+# How long a launch check waits, long enough for Rosetta's first translation
+# of a fresh framework.
+LAUNCH_TIMEOUT = 180
+LSREGISTER = ("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework"
+              "/Support/lsregister")
+# Present while a tree is being moved to a new release in place.
+ADVANCING = "advancing.json"
+# The free space a fresh source preparation requires.
+PREPARE_FREE_GIB = 50
 ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
 CIPD = "https://chrome-infra-packages.appspot.com/prpc/cipd.Repository/ResolveVersion"
 # What gclient sets for a source-archive checkout on this host, as
@@ -40,6 +83,26 @@ DEPS_HOST = {"host_os": "mac", "host_cpu": "arm64", "checkout_mac": True, "check
              "non_git_source": True}
 DEPS_EMBEDDED = {"build_with_chromium": True, "dawn_standalone": False}
 CIPD_PLATFORM = {"platform": "mac-arm64", "os": "mac", "arch": "arm64"}
+# Google's release notes, which say what each release fixes and whether it is an
+# early stable build that reaches only a small share of people first.
+RELEASE_NOTES = "https://chromereleases.googleblog.com/feeds/posts/default?alt=json&max-results=80"
+# The title of the note that promotes a desktop release to everyone on the
+# Stable channel. Early and Extended Stable notes have titles of their own.
+FULL_STABLE = "Stable Channel Update for Desktop"
+NOTED_VERSIONS = re.compile(r"\b(\d+\.\d+\.\d+\.)(\d+)((?:/\.\d+)*)")
+SEVERITY = re.compile(r"\b(Critical|High|Medium|Low)\s+(CVE-\d{4}-\d+)")
+# Upstream files an update reads to find what changed under Crest's overlay and packaging.
+HELPER_LIST = "chrome/installer/mac/signing/parts.py"
+HELPER_APP = re.compile(r"Helpers/\{0\.product\} Helper( \([^)]+\))?\.app")
+ANNOTATIONS = "tools/traffic_annotation/summary/annotations.xml"
+ANNOTATION = re.compile(r'<item id="([^"]+)"')
+PURE_VIRTUAL = re.compile(r"\bvirtual\s[^;{}]*?=\s*0\s*;")
+INCLUDE = re.compile(r'^\s*#\s*(?:include|import)\s+"([^"]+)"', re.MULTILINE)
+COMPILED = (".c", ".cc", ".cpp", ".m", ".mm")
+
+
+class ArchiveNotPublished(ValueError):
+    """Google publishes a release's source archive a few hours after the release."""
 
 
 def run(*args, cwd=None, capture=False):
@@ -69,19 +132,60 @@ def release_version(version):
     return tuple(map(int, version.split(".")))
 
 
-def select_update(current, releases, allow_major=False):
-    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed."""
+def select_update(current, releases, allow_major=False, stable_milestone=None):
+    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed.
+
+    chromiumdash lists early stable builds among stable releases. A release
+    past `stable_milestone`, the newest milestone Google's notes promote to
+    full stable, is one of those: never a candidate, and the newest is
+    reported as `earlyStable`. Without that milestone, only the pinned one is
+    eligible and no release is called early stable.
+    """
     current_version = release_version(current)
-    candidates = [version for version in releases
-                  if VERSION.fullmatch(version) and release_version(version) > current_version]
-    eligible = [version for version in candidates
-                if allow_major or release_version(version)[0] == current_version[0]]
+    newer = [version for version in releases
+             if VERSION.fullmatch(version) and release_version(version) > current_version]
+    checked = stable_milestone is not None
+    ceiling = stable_milestone if checked else current_version[0]
+    stable = [version for version in newer if release_version(version)[0] <= ceiling]
+    early = [version for version in newer if release_version(version)[0] > ceiling]
+    eligible = [version for version in stable if allow_major or release_version(version)[0] == current_version[0]]
+
+    def newest(versions):
+        return max(versions, key=release_version) if versions else None
+
     return {
         "current": current,
-        "candidate": max(eligible, key=release_version) if eligible else None,
-        "latest": max(candidates, key=release_version) if candidates else current,
-        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in candidates),
+        "candidate": newest(eligible),
+        "latest": newest(stable) or current,
+        "earlyStable": newest(early) if checked else None,
+        "stableMilestone": stable_milestone,
+        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in stable),
     }
+
+
+def release_feed():
+    """Google's release notes feed, or None when it can't be read."""
+    try:
+        with urllib.request.urlopen(RELEASE_NOTES, timeout=60) as response:
+            return json.load(response)
+    except (OSError, ValueError):
+        return None
+
+
+def stable_milestone(feed):
+    """The newest milestone Google's release notes promote to full stable on desktop, or None without notes.
+
+    Only a note titled "Stable Channel Update for Desktop" counts, and it names
+    its own release before any other version.
+    """
+    milestones = []
+    for entry in (feed or {}).get("feed", {}).get("entry", []):
+        if entry.get("title", {}).get("$t", "").strip() != FULL_STABLE:
+            continue
+        text = html.unescape(re.sub(r"<[^>]+>", " ", entry.get("content", {}).get("$t", "")))
+        if found := NOTED_VERSIONS.search(text):
+            milestones.append(release_version(found[1] + found[2])[0])
+    return max(milestones, default=None)
 
 
 def upstream_releases(policy):
@@ -110,6 +214,50 @@ def validate_workspace(root, repo):
     return root
 
 
+def remove_path(path):
+    """Remove whatever is at `path`: a file, a link, or a directory and everything in it."""
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    elif path.exists() or path.is_symlink():
+        path.unlink()
+
+
+def within_directories(root, path):
+    """Whether every directory between `root` and `path` is a real directory rather than a link."""
+    current = root
+    for part in path.relative_to(root).parts[:-1]:
+        current = current / part
+        if current.is_symlink() or not current.is_dir():
+            return False
+    return True
+
+
+def make_directory(root, path):
+    """Make `path` a directory, replacing any file or link at it or above it within `root`."""
+    current = root
+    for part in path.relative_to(root).parts:
+        current = current / part
+        if current.is_symlink() or (current.exists() and not current.is_dir()):
+            current.unlink()
+        current.mkdir(exist_ok=True)
+
+
+def building():
+    """Whether a Ninja build of a Chromium tree is running, managed or not."""
+    processes = run("ps", "-axo", "comm=,args=", capture=True)
+    return any("ninja" in line.split()[0] and "CrestBaseline" in line for line in processes.splitlines() if line.split())
+
+
+@contextlib.contextmanager
+def timed(timings, step):
+    """Record how many seconds `step` took in `timings`."""
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[step] = round(time.monotonic() - start)
+
+
 @contextlib.contextmanager
 def exclusive_workspace(root):
     root.mkdir(parents=True, exist_ok=True)
@@ -124,18 +272,34 @@ def exclusive_workspace(root):
             fcntl.flock(stream, fcntl.LOCK_UN)
 
 
+def prune_downloads(root, lock):
+    """Remove cached source archives and PGO profiles that `lock` doesn't name, returning their names."""
+    keep = {Path(lock["chromium"]["sourceArchive"]).name}
+    keep |= {architecture["pgoProfile"] for architecture in lock["architectures"].values()}
+    stale = [path for pattern in ("downloads/chromium-*-lite.tar.xz", "profiles/*.profdata")
+             for path in sorted(root.glob(pattern)) if path.name not in keep]
+    # A running build reads its PGO profile in every compile command.
+    if stale and building():
+        raise ValueError("A Chromium build is running; remove cached archives and profiles after it finishes")
+    for path in stale:
+        path.unlink()
+    return [path.name for path in stale]
+
+
 def prune_sources(root, keep):
     """Remove prepared sources not named in `keep`; each is a full checkout and build."""
     sources = root / "sources"
     if not sources.is_dir():
         return []
-    removed = []
-    for directory in sorted(sources.iterdir()):
-        if (SOURCE_NAME.fullmatch(directory.name) and directory.name not in keep
-                and directory.is_dir() and not directory.is_symlink()):
-            shutil.rmtree(directory)
-            removed.append(directory.name)
-    return removed
+    stale = [directory for directory in sorted(sources.iterdir())
+             if SOURCE_NAME.fullmatch(directory.name) and directory.name not in keep
+             and directory.is_dir() and not directory.is_symlink()]
+    # A build started without the workspace lock may be compiling in one of them.
+    if stale and building():
+        raise ValueError("A Chromium build is running; remove superseded sources after it finishes")
+    for directory in stale:
+        shutil.rmtree(directory)
+    return [directory.name for directory in stale]
 
 
 def restore_host_base(source, previous, desired):
@@ -170,6 +334,8 @@ class Workspace:
     def prepare(self):
         self.directory.mkdir(parents=True, exist_ok=True)
         marker = self.directory / "prepared.json"
+        if (self.directory / ADVANCING).exists():
+            raise ValueError(f"An advance to a new release stopped partway at {self.directory}. Inspect it before building.")
         if marker.exists():
             if read_json(marker)["preparationKey"] != self.key or not (self.source / "out/CrestBaseline/gn").is_file():
                 raise ValueError("Prepared workspace is incomplete or has different inputs")
@@ -177,15 +343,14 @@ class Workspace:
         elif self.source.exists() or self.source.with_name("src.partial").exists():
             raise ValueError(f"Incomplete preparation at {self.directory}. Inspect it before removing or resuming it.")
         else:
-            if shutil.disk_usage(self.directory).free < 50 * 1024**3:
-                raise ValueError("A fresh Chromium source preparation needs at least 50 GiB free; existing builds are retained")
+            if (free := shutil.disk_usage(self.directory).free) < PREPARE_FREE_GIB * 1024**3:
+                raise ValueError(f"A fresh Chromium source preparation needs at least {PREPARE_FREE_GIB} GiB free and "
+                                 f"{free // 1024**3} GiB is free; existing builds are retained")
             self.script("prepare-chromium.py", "--source", self.source, "--downloads", self.downloads)
             write_json(marker, {"preparationKey": self.key})
 
     def apply_host(self):
-        processes = run("ps", "-axo", "comm=,args=", capture=True)
-        if any("ninja" in line.split()[0] and "CrestBaseline" in line
-               for line in processes.splitlines() if line.split()):
+        if building():
             raise ValueError("Wait for the active Chromium build before changing the host")
         installed = self.directory / "host.json"
         patch = chromium_engine.host_patch(self.repo)
@@ -207,41 +372,536 @@ class Workspace:
                    for p in (self.repo / ENGINE / "Overlay").rglob("*") if p.is_file()}
         write_json(installed, {"patch": patch, "inputs": inputs, "overlay": overlay})
 
-    def build(self, sdk, ninja, jobs, reserve):
-        self.prepare()
-        self.apply_host()
-        profile = download_profile(self.root, self.lock["performanceInputs"])
-        if performance_configuration_matches(self.source, self.lock, sdk):
-            # Preserve equivalent absolute paths in an adopted build. Rewriting its
-            # PGO path alone invalidates every compile command in Ninja.
-            run(self.source / "out/CrestBaseline/gn", "gen", "out/CrestBaseline", "--fail-on-unused-args", cwd=self.source)
-        else:
-            self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
-                        "--sdk", sdk, "--pgo-profile", profile)
-        if not performance_configuration_matches(self.source, self.lock, sdk):
-            raise ValueError("GN arguments contain unpinned overrides; review args.gn before building a published engine")
-        self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
-                    "--jobs", jobs, "--min-free-gib", reserve)
-        smoke_engine(self.source, self.root, self.lock["chromium"]["version"])
+    def build(self, sdk, ninja, jobs, reserve, timings=None):
+        timings = {} if timings is None else timings
+        with timed(timings, "prepare"):
+            self.prepare()
+        with timed(timings, "host"):
+            self.apply_host()
+        # Each architecture builds in its own output of the one prepared source.
+        architectures = self.lock["architectures"]
+        with timed(timings, "configure"):
+            for cpu, architecture in architectures.items():
+                profile = download_profile(self.root, architecture)
+                if performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    # Preserve equivalent absolute paths in an adopted build. Rewriting its
+                    # PGO path alone invalidates every compile command in Ninja.
+                    run(self.source / "buildtools/mac/gn", "gen", architecture["output"], "--fail-on-unused-args",
+                        cwd=self.source)
+                else:
+                    self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
+                                "--cpu", cpu, "--sdk", sdk, "--pgo-profile", profile)
+                if not performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    raise ValueError(f"{architecture['output']}/args.gn contains unpinned overrides; review it before "
+                                     "building a published engine")
+                require_overlay_compiled(self.repo, self.source, ninja, architecture["output"])
+        for cpu, architecture in architectures.items():
+            with timed(timings, f"compile-{cpu}"):
+                self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
+                            "--jobs", jobs, "--min-free-gib", reserve, "--output", architecture["output"])
+        with timed(timings, "universal"):
+            browser = universal_engine(self.source, self.lock)
+            require_crest_launch(browser)
+        with timed(timings, "smoke"):
+            smoke_engine(browser, self.root, self.lock, previous_engine(self.root, self.repo))
+        return timings
+
+    def advance(self, target, previous_archive):
+        """Move this built tree in place to `target`'s release, rewriting only the files that release changes.
+
+        For a release on the same milestone whose toolchains and tools are
+        unchanged, which `plan_update` decides. Files the new archive leaves as
+        they were keep their timestamps, so Ninja recompiles only what the release
+        changed. The tree takes the target's directory; Crest's host is reversed
+        here and installed again by the next build.
+        """
+        if building():
+            raise ValueError("Wait for the active Chromium build before advancing its source")
+        installed = read_json(self.directory / "host.json")
+        for name, hashes in installed["inputs"].items():
+            if sha256(self.source / name) != hashes["after"]:
+                raise ValueError(f"Locally modified host source: {name}")
+        if target.directory.exists():
+            raise ValueError(f"A source for {target.lock['chromium']['version']} already exists at {target.directory}")
+        archive = self.downloads / Path(target.lock["chromium"]["sourceArchive"]).name
+        if sha256(archive) != target.lock["chromium"]["sourceArchiveSha256"]:
+            raise ValueError("The new source archive does not match the lock")
+        write_json(self.directory / ADVANCING, {"from": self.lock["chromium"]["version"],
+                                                "to": target.lock["chromium"]["version"]})
+        subprocess.run(["patch", "--batch", "--fuzz=0", "-R", "-p1", "-s"], cwd=self.source, text=True, check=True,
+                       input=chromium_engine.reversed_patch(installed["patch"]))
+        # Preparation puts the Mac toolchains and pinned tools at these paths; the
+        # archive's own copies there are for the Linux host that exported it.
+        tools = tuple(path.removeprefix("src/") + "/" for path in [*target.lock["dependencies"], *target.lock["cipd"]])
+        build_patched = {}
+        for relative in target.lock["crestPatches"]:
+            for path, _ in chromium_engine.patch_sections((self.repo / ENGINE / relative).read_text()):
+                build_patched.setdefault(path, []).append(relative)
+        changed, names, originals = [], set(), {}
+        for name, member, stream in archive_members(archive):
+            names.add(name)
+            path = self.source / name
+            if name.startswith(tools):
+                continue
+            # A release can turn a file into a directory or the reverse; whatever
+            # is in the way of the member's own type goes first.
+            if member.isdir():
+                if not path.is_dir() or path.is_symlink():
+                    make_directory(self.source, path)
+                    changed.append(name)
+                continue
+            if not path.parent.is_dir():
+                make_directory(self.source, path.parent)
+            if member.issym():
+                if path.is_symlink() and os.readlink(path) == member.linkname:
+                    continue
+                remove_path(path)
+                path.symlink_to(member.linkname)
+                changed.append(name)
+            elif member.isfile():
+                data = stream.extractfile(member).read()
+                # The mode preparation's "tar" extraction filter leaves a file.
+                mode = stat.S_IMODE(member.mode) & 0o755
+                if name in build_patched:
+                    originals[name] = data
+                    continue
+                if not path.is_symlink() and path.is_file() and path.stat().st_size == len(data) and path.read_bytes() == data:
+                    # Same contents: a new mode is applied, and the timestamp is kept.
+                    if stat.S_IMODE(path.stat().st_mode) != mode:
+                        path.chmod(mode)
+                        changed.append(name)
+                    continue
+                if path.is_symlink() or path.is_dir():
+                    remove_path(path)
+                path.write_bytes(data)
+                path.chmod(mode)
+                changed.append(name)
+        # Crest's build adjustments, applied to the new release's copies of the files they change.
+        with tempfile.TemporaryDirectory(prefix="crest-advance-") as temporary:
+            scratch = Path(temporary)
+            for name, data in originals.items():
+                (scratch / name).parent.mkdir(parents=True, exist_ok=True)
+                (scratch / name).write_bytes(data)
+            for relative in target.lock["crestPatches"]:
+                run("patch", "--batch", "-p1", "--forward", "--fuzz=0", "-s", "--input", self.repo / ENGINE / relative,
+                    cwd=scratch)
+            for name in originals:
+                if (self.source / name).read_bytes() != (scratch / name).read_bytes():
+                    shutil.copyfile(scratch / name, self.source / name)
+                    changed.append(name)
+        removed = []
+        for name, member, _ in archive_members(previous_archive):
+            path = self.source / name
+            # A directory the release replaced with a link leads elsewhere in the tree,
+            # possibly to a file the release just installed; nothing is removed through it.
+            if (name not in names and not name.startswith(tools) and not member.isdir()
+                    and within_directories(self.source, path) and (path.exists() or path.is_symlink())):
+                path.unlink()
+                removed.append(name)
+        # Directories the release no longer has, as a fresh source wouldn't have
+        # them, deepest first so a parent is looked at after its children.
+        parents = {parent for name in removed for parent in Path(name).parents if parent != Path(".")}
+        for parent in sorted(parents, key=lambda parent: len(parent.parts), reverse=True):
+            directory = self.source / parent
+            if (parent.as_posix() not in names and within_directories(self.source, directory) and directory.is_dir()
+                    and not directory.is_symlink() and not any(directory.iterdir())):
+                directory.rmdir()
+        if any(name.startswith("tools/gn/") for name in changed + removed):
+            output = self.source / "out/CrestBaseline"
+            run(sys.executable, self.source / "tools/gn/bootstrap/bootstrap.py", "-o", output / "gn",
+                "--skip-generate-buildfiles", cwd=self.source)
+            shutil.copy2(output / "gn", self.source / "buildtools/mac/gn")
+        (self.directory / "host.json").rename(self.directory / "host-previous.json")
+        self.directory.rename(target.directory)
+        write_json(target.directory / "prepared.json", {"preparationKey": target.key})
+        write_json(target.directory / "advanced.json", {"from": self.lock["chromium"]["version"],
+            "to": target.lock["chromium"]["version"], "changed": sorted(changed), "removed": sorted(removed)})
+        (target.directory / ADVANCING).unlink()
+        return {"changed": len(changed), "removed": len(removed)}
 
 
-def smoke_engine(source, workspace, version):
-    browser = source / "out/CrestBaseline/Chromium.app/Contents/MacOS/Chromium"
-    with (browser.parent.parent / "Info.plist").open("rb") as stream:
+def universal_engine(source, lock):
+    """Merge each architecture's browser into one universal `Chromium.app`,
+    with the universalizer Chromium ships for its own universal builds, and
+    answer it. Every executable must then hold every architecture."""
+    browsers = [source / architecture["output"] / "Chromium.app" for architecture in lock["architectures"].values()]
+    merged = source / UNIVERSAL_OUTPUT / "Chromium.app"
+    if merged.exists():
+        shutil.rmtree(merged)
+    merged.parent.mkdir(parents=True, exist_ok=True)
+    run(sys.executable, source / "chrome/installer/mac/universalizer.py", *browsers, merged, cwd=source)
+    require_universal(merged, lock)
+    return merged
+
+
+def require_universal(browser, lock):
+    """Refuse a browser in which any executable or library lacks one of the
+    lock's architectures."""
+    machines = {MACHINES[cpu] for cpu in lock["architectures"]}
+    for path in sorted(browser.rglob("*")):
+        if path.is_file() and not path.is_symlink() and is_mach_o(path):
+            held = set(subprocess.run(["lipo", "-archs", str(path)], capture_output=True, text=True).stdout.split())
+            if missing := machines - held:
+                raise ValueError(f"{path.relative_to(browser)} lacks {', '.join(sorted(missing))}")
+
+
+def require_crest_launch(browser):
+    """Refuse a browser whose own executable lacks Crest's entry point.
+
+    That entry point names the product's engine profile folder, refuses an
+    experiment without one and runs Crest's native host before it opens the
+    framework. Upstream's links the framework and calls `ChromeMain` at once;
+    a host patch can still apply cleanly to a file the browser target no
+    longer builds, so check the executable itself, in every architecture."""
+    executable = browser / "Contents/MacOS/Chromium"
+    machines = subprocess.run(["lipo", "-archs", str(executable)], capture_output=True, text=True,
+                              check=True).stdout.split()
+    universal = "Non-fat" not in subprocess.run(["lipo", "-info", str(executable)], capture_output=True,
+                                                 text=True, check=True).stdout
+    for machine in machines:
+        linked = subprocess.run(["otool", "-arch", machine, "-L", str(executable)], capture_output=True,
+                                text=True, check=True).stdout
+        if " Framework.framework/" in linked:
+            raise ValueError(f"The browser executable links the Chromium framework ({machine}); Crest's entry "
+                             "point must open it only when Chromium is needed")
+        with tempfile.TemporaryDirectory(prefix="crest-launch-") as temporary:
+            image = executable
+            if universal:
+                image = Path(temporary) / executable.name
+                subprocess.run(["lipo", "-thin", machine, "-output", str(image), str(executable)], check=True)
+            if LAUNCH_SENTINEL not in image.read_bytes():
+                raise ValueError(f"The browser executable lacks Crest's entry point ({machine}); check the "
+                                 "source the chrome_app target builds")
+
+
+def is_mach_o(path):
+    """Whether `path` is a Mach-O file, thin or universal."""
+    with path.open("rb") as stream:
+        return stream.read(4) in MACH_O_MAGIC
+
+
+def smoke_engine(browser, workspace, lock, previous=None):
+    """Require the universal `browser` to report the pinned version, and, as
+    each of the lock's architectures, the others through Rosetta, to render a
+    page, to open Crest's own profile folder when a launch names none, and to
+    open unchanged the profiles the `previous` engine made there."""
+    with (browser / "Contents/Info.plist").open("rb") as stream:
         actual = plistlib.load(stream)["CFBundleShortVersionString"]
-    if version != actual:
+    if lock["chromium"]["version"] != actual:
         raise ValueError(f"Built engine reports an unexpected version: {actual}")
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
+    native = platform.machine()
+    machines = [MACHINES[cpu] for cpu in lock["architectures"]]
+    with launch_directory("hosts-", scratch) as temporary:
+        product = host_copy(browser, temporary / "Product.app", PRODUCT_HOST)
+        experiment = host_copy(browser, temporary / "Experiment.app", EXPERIMENT_HOST)
+        for machine in machines:
+            # Rosetta translates the whole framework on a fresh build's first
+            # launch, about 35 s on the build Mac, before the page runs.
+            timeout = 30 if machine == native else LAUNCH_TIMEOUT
+            check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
+            check_launches_without_profile_folder(product, experiment, scratch, machine)
+    if previous:
+        check_profile_upgrade(browser / "Contents/MacOS/Chromium", previous / "Contents/MacOS/Chromium", scratch,
+                              machines)
+
+
+@contextlib.contextmanager
+def launch_directory(prefix, parent=None):
+    """A temporary directory for the app copies a check launches. Launch
+    Services records each launched app, and the helper apps inside it, a moment
+    after it starts; once the directory is gone, every app that was in it is
+    unregistered, so no record outlives its copy."""
+    apps = []
+    try:
+        with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as temporary:
+            root = Path(temporary).resolve()
+            try:
+                yield root
+            finally:
+                apps = [path for path in root.rglob("*.app") if path.is_dir() and not path.is_symlink()]
+    finally:
+        for app in apps:
+            subprocess.run([LSREGISTER, "-u", str(app)], capture_output=True)
+
+
+def host_copy(browser, copy, marker):
+    """Clone `browser` to `copy` carrying only the host resource `marker`, so a
+    check can launch it as that composition starts. Its executable and
+    framework are the built ones."""
+    run("cp", "-cR", browser, copy)
+    resources = copy / "Contents/Resources"
+    for name in HOST_MARKERS:
+        (resources / name).unlink(missing_ok=True)
+    (resources / marker).write_text("Launch check.\n")
+    return copy
+
+
+def launch_without_profile_folder(app, home, machine=None):
+    """Run `app` as `machine` in a new `home`, naming no profile folder and
+    asking only for the folder its browser settles on, which it prints before
+    any profile is read. Answers the finished launch."""
+    home.mkdir(parents=True)
+    launcher = ["arch", f"-{machine}"] if machine else []
+    # Only the switch that reports the folder, and the mock keychain, so the
+    # launch never reaches a real keychain item.
+    process = subprocess.Popen([*launcher, str(app / "Contents/MacOS/Chromium"), "--crest-print-user-data-dir",
+                                "--use-mock-keychain"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                               start_new_session=True,
+                               env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+    try:
+        output, errors = process.communicate(timeout=LAUNCH_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise ValueError(f"{app.name} kept running instead of reporting its profile folder; the engine lacks "
+                         "Crest's launch checks") from None
+    finally:
+        stop_process_group(process)
+    return subprocess.CompletedProcess(process.args, process.returncode, output, errors)
+
+
+def check_launches_without_profile_folder(product, experiment, scratch, machine=None):
+    """Require Crest's launch to decide the profile folder when nothing names one.
+
+    Finder, the Dock, a login item, the default-browser role and an update's
+    relaunch start Crest with no switches, while every harness and review
+    launch names a `--user-data-dir`. Without the folder Crest's entry point
+    names, Chromium opens its default one, which every other Chromium shares,
+    and every Space starts empty. `product` and `experiment` carry only that
+    composition's host resource: the product must settle on Crest's own folder
+    and the experiment must refuse to start."""
+    with tempfile.TemporaryDirectory(prefix="launch-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        home = root / "product"
+        launch = launch_without_profile_folder(product, home, machine)
+        expected = str(home / PRODUCT_PROFILES)
+        reported = launch.stdout.strip().rpartition("\n")[2] if launch.returncode == 0 else "nothing"
+        if reported != expected:
+            raise ValueError(f"A product launch without a profile folder opened {reported} instead of {expected} "
+                             f"(exit {launch.returncode}): {launch.stderr[-2000:]}")
+        require_no_default_profiles(home)
+        home = root / "experiment"
+        launch = launch_without_profile_folder(experiment, home, machine)
+        if (launch.returncode != EXPERIMENT_REFUSED or (home / DEFAULT_PROFILES).exists()
+                or (home / PRODUCT_PROFILES).exists()):
+            raise ValueError(f"An experiment started without a profile folder (exit {launch.returncode}): "
+                             f"{launch.stderr[-2000:]}")
+
+
+def require_no_default_profiles(home):
+    if strays := sorted(path.name for path in (home / DEFAULT_PROFILES).glob("Crest-*")):
+        raise ValueError("A launch made engine profiles in Chromium's default folder: " + ", ".join(strays))
+
+
+def stop_process_group(process):
+    """End a check's browser and every helper it started, and wait until all
+    are gone: a helper can outlive the browser and write into its folders."""
+    for stop, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
+        deadline = time.monotonic() + grace
+        try:
+            os.killpg(process.pid, stop)
+            while time.monotonic() < deadline:
+                process.poll()
+                os.killpg(process.pid, 0)
+                time.sleep(0.1)
+        except (ProcessLookupError, PermissionError):  # The whole group has exited.
+            break
+    process.wait()
+
+
+def stop_helpers(folder, grace=30):
+    """Wait for every process whose command line names `folder` to exit, and
+    end any still running after `grace` seconds. Some helpers run outside the
+    browser's process group and keep writing its profile for a moment after it
+    exits, longer under Rosetta."""
+    deadline = time.monotonic() + grace
+    while True:
+        listing = run("ps", "-axww", "-o", "pid=,command=", capture=True)
+        helpers = [int(pid) for pid, _, command in (line.strip().partition(" ") for line in listing.splitlines())
+                   if folder in command and pid.isdigit()]
+        if not helpers:
+            return
+        if time.monotonic() > deadline:
+            for pid in helpers:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGKILL)
+        time.sleep(0.2)
+
+
+class FixtureSite:
+    """A local site for the upgrade check. `/signin` sets a persistent session
+    cookie; every page's title says whether the browser still sends it."""
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/signin":
+                self.send_response(302)
+                self.send_header("Set-Cookie", "session=upgrade-check; Max-Age=31536000; Path=/; SameSite=Lax")
+                self.send_header("Location", "/")
+                self.end_headers()
+                return
+            signed_in = "session=upgrade-check" in self.headers.get("Cookie", "")
+            body = f"<title>{'Signed in' if signed_in else 'Signed out'}</title>".encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    def __enter__(self):
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), self.Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        return self
+
+    def __exit__(self, *exception):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def url(self, path):
+        return f"http://127.0.0.1:{self.server.server_address[1]}/{path}"
+
+
+def open_in_product_profile(executable, home, url, machine=None):
+    """Load `url` with `executable`, as `machine`, in the upgrade check's
+    profile in Crest's folder under `home`, and answer the page's title once
+    the browser exits by itself, which is when it has written the profile."""
+    data = home / PRODUCT_PROFILES
+    launcher = ["arch", f"-{machine}"] if machine else []
+    with tempfile.TemporaryFile() as output:
+        process = subprocess.Popen([*launcher, str(executable), "--headless", "--disable-gpu",
+                                    "--disable-background-networking", "--no-first-run", "--no-default-browser-check",
+                                    "--use-mock-keychain", f"--user-data-dir={data}",
+                                    f"--profile-directory={UPGRADE_PROFILE}", "--dump-dom", url],
+                                   stdout=output, stderr=subprocess.DEVNULL, start_new_session=True,
+                                   env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+        try:
+            process.wait(timeout=LAUNCH_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise ValueError(f"{executable.name} did not finish loading {url}") from None
+        finally:
+            stop_process_group(process)
+            stop_helpers(str(data))
+        if process.returncode != 0:
+            raise ValueError(f"{executable.name} exited with status {process.returncode} after loading {url}")
+        output.seek(0)
+        title = re.search(r"<title>([^<]*)</title>", output.read().decode(errors="replace"))
+    return title[1] if title else None
+
+
+def require_settings_kept(profile, engine):
+    """Chromium records when it resets tracked settings, the extensions Crest
+    installs among them, because it could not trust what was stored."""
+    for name in ("Secure Preferences", "Preferences"):
+        path = profile / name
+        if path.is_file() and read_json(path).get("prefs", {}).get("preference_reset_time"):
+            raise ValueError(f"{engine} reset the tracked settings of a profile it opened, extensions among them")
+
+
+def check_profile_upgrade(executable, previous, scratch, machines=(None,)):
+    """Require `executable` to open, unchanged, a profile the engine
+    `previous` made in Crest's folder.
+
+    The previous engine signs in to a local site in that profile. The new one
+    opens a copy of the folder as each of `machines`, then again, and must
+    still send the cookie and keep every tracked setting. A milestone that
+    stops reading what an earlier engine wrote, for example by changing the
+    keychain key for Crest's folder, signs every Space out and uninstalls its
+    extensions."""
+    with FixtureSite() as site, tempfile.TemporaryDirectory(prefix="upgrade-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        made = root / "previous"
+        if open_in_product_profile(previous, made, site.url("signin")) != "Signed in":
+            raise ValueError("The previous engine could not sign in to the upgrade check's local site")
+        for machine in machines:
+            home = root / f"upgraded-{machine or 'native'}"
+            run("ditto", made, home)
+            for launch in ("launch", "relaunch"):
+                if (title := open_in_product_profile(executable, home, site.url(""), machine)) != "Signed in":
+                    raise ValueError(f"On its {launch} as {machine or 'native'}, the engine found the previous "
+                                     f"engine's profile {title or 'unreadable'}: its cookies are lost")
+                require_settings_kept(home / PRODUCT_PROFILES / UPGRADE_PROFILE, "The engine")
+
+
+def stable_engine_key(repo, repository):
+    """The key of the engine the newest stable release was built with, which
+    made most people's profiles. Its tag is fetched if the checkout lacks it."""
+    releases = json.loads(run("gh", "release", "list", "--repo", repository, "--exclude-drafts",
+                              "--exclude-pre-releases", "--limit", "100", "--json", "tagName", capture=True))
+    tags = [release["tagName"] for release in releases if STABLE_RELEASE.fullmatch(release["tagName"])]
+    if not tags:
+        raise ValueError(f"{repository} has no stable release to check profile upgrades from")
+    ref = "refs/tags/" + max(tags, key=lambda tag: tuple(int(part) for part in tag[1:].split(".")))
+    if subprocess.run(["git", "-C", repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                      capture_output=True).returncode:
+        run("git", "-C", repo, "fetch", "--quiet", "--depth=1", "--no-tags", f"https://github.com/{repository}.git",
+            f"{ref}:{ref}")
+    archive = subprocess.run(["git", "-C", repo, "archive", "--format=tar", ref, "--", *chromium_engine.INPUTS],
+                             capture_output=True, check=True).stdout
+    with tempfile.TemporaryDirectory(prefix="stable-inputs-") as temporary:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as inputs:
+            inputs.extractall(temporary, filter="data")
+        return chromium_engine.engine_key(Path(temporary))
+
+
+def published_engine(key, directory, repository):
+    """The published engine `key` as a `Chromium.app` in `directory`,
+    downloaded once and checked against its published checksum."""
+    browser = directory / "Chromium.app"
+    if browser.is_dir():
+        return browser
+    tag = chromium_engine.release_tag(key)
+    release = chromium_artifact.published_release(repository, key)
+    if release is None or release.get("draft") or key not in (release.get("body") or ""):
+        raise ValueError(f"{tag}, the engine to check profile upgrades from, is not published")
+    # Engines published before universal builds name their architecture.
+    names = {item["name"] for item in release.get("assets", []) if item.get("state") == "uploaded"}
+    archives = sorted(name for name in names if name.startswith(f"Crest-Chromium-Engine-{key[:16]}-")
+                      and name.endswith(".zip") and f"{name}.sha256" in names)
+    if not archives:
+        raise ValueError(f"{tag} has no zipped engine with a checksum")
+    asset = archives[0]
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="download-", dir=directory) as temporary:
+        download = Path(temporary)
+        run("gh", "release", "download", tag, "--repo", repository, "--pattern", asset, "--pattern",
+            f"{asset}.sha256", "--dir", download)
+        if sha256(download / asset) != (download / f"{asset}.sha256").read_text().split()[0]:
+            raise ValueError(f"{asset} does not match its published checksum")
+        run("ditto", "-x", "-k", download / asset, download / "unpacked")
+        (download / "unpacked/Chromium.app").rename(browser)
+    return browser
+
+
+def previous_engine(root, repo):
+    """The published engine whose profiles a new engine must open: the newest
+    stable release's, kept in the workspace. None when that is this engine."""
+    repository = os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    key = stable_engine_key(repo, repository)
+    if key == chromium_engine.engine_key(repo):
+        return None
+    engines = root / "engines"
+    for stale in engines.glob("*"):
+        if stale.name != key[:16]:
+            remove_path(stale)
+    return published_engine(key, engines / key[:16], repository)
+
+
+def check_renders_page(browser, scratch, timeout=30, machine=None):
+    """Require `browser`, run headless in a throwaway profile, to run a page's
+    JavaScript, as `machine` (an `arch` name) where one is given."""
     with tempfile.TemporaryDirectory(prefix="smoke-", dir=scratch) as profile:
         page = "data:text/html,<script>document.title='crest-'+(6*7)</script>"
-        process = subprocess.Popen([str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
-            "--no-first-run", "--no-default-browser-check", "--timeout=10000",
+        launcher = ["arch", f"-{machine}"] if machine else []
+        process = subprocess.Popen([*launcher, str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
+            "--no-first-run", "--no-default-browser-check", "--use-mock-keychain", "--timeout=10000",
             f"--user-data-dir={profile}", "--dump-dom", page], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True)
         output, errors = bytearray(), bytearray()
         try:
-            deadline = time.monotonic() + 30
+            deadline = time.monotonic() + timeout
             with selectors.DefaultSelector() as selector:
                 selector.register(process.stdout, selectors.EVENT_READ, output)
                 selector.register(process.stderr, selectors.EVENT_READ, errors)
@@ -260,19 +920,30 @@ def smoke_engine(source, workspace, version):
         finally:
             # macOS helpers can keep output pipes open after dump-dom completes.
             # This checks rendering, then explicitly closes only its own process group.
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            if process.poll() is None:
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+            stop_process_group(process)
 
 
-def performance_configuration_matches(source, lock, sdk=None):
+def require_overlay_compiled(repo, source, ninja, output="out/CrestBaseline"):
+    """Refuse a build whose browser target compiles none of an overlay source.
+
+    Chromium sometimes folds the target Crest's host sources sit in into
+    another one, and a list GN accepts can still compile nothing. Every
+    overlay source must be an input of the `chrome` target the build makes,
+    not merely of some target in the graph, before hours are spent compiling.
+    """
+    listing = run(ninja, "-C", source / output, "-t", "inputs", "chrome", capture=True)
+    inputs = {os.path.normpath(os.path.join(output, line)) for line in listing.splitlines() if line}
+    overlay = repo / ENGINE / "Overlay"
+    missing = sorted(relative for path in overlay.rglob("*")
+                     if path.suffix in COMPILED and (relative := path.relative_to(overlay).as_posix()) not in inputs)
+    if missing:
+        raise ValueError("The browser target compiles none of these overlay sources; check the target that lists them: "
+                         + ", ".join(missing))
+
+
+def performance_configuration_matches(source, lock, sdk=None, cpu="arm64"):
+    """Whether `cpu`'s output is configured exactly as the lock pins it: its
+    arguments, the SDK and its architecture's PGO profile."""
     def assignments(text):
         values = {}
         for line in text.splitlines():
@@ -284,11 +955,12 @@ def performance_configuration_matches(source, lock, sdk=None):
             values[match[1]] = json.loads(match[2])
         return values
 
+    architecture = lock["architectures"][cpu]
     try:
-        values = assignments((source / "out/CrestBaseline/args.gn").read_text())
+        values = assignments((source / architecture["output"] / "args.gn").read_text())
     except (ValueError, OSError):
         return False
-    expected_flags = {**lock["buildArguments"], **lock["performanceBuildArguments"]}
+    expected_flags = {"target_cpu": cpu, **lock["buildArguments"], **lock["performanceBuildArguments"]}
     actual_flags = {name: value for name, value in values.items() if name not in ("mac_sdk_path", "pgo_data_path")}
     if actual_flags != expected_flags:
         return False
@@ -302,16 +974,19 @@ def performance_configuration_matches(source, lock, sdk=None):
     if not (sdk_path / "SDKSettings.json").is_file() or read_json(sdk_path / "SDKSettings.json")["Version"] != expected["macSDKVersion"]:
         return False
     profile = Path(values.get("pgo_data_path", ""))
-    return (profile.is_file() and profile.name == expected["pgoProfile"]
-            and sha256(profile) == expected["pgoSHA256"]
-            and (source / "chrome/build/mac-arm.pgo.txt").read_text().strip() == profile.name)
+    return (profile.is_file() and profile.name == architecture["pgoProfile"]
+            and sha256(profile) == architecture["pgoSHA256"]
+            and (source / architecture["pgoProfileFile"]).read_text().strip() == profile.name)
 
 
 def download(url, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".partial")
+    # Planning downloads without the workspace lock, so each download writes
+    # its own file and installs it whole.
+    descriptor, name = tempfile.mkstemp(dir=destination.parent, prefix=destination.name + ".", suffix=".partial")
+    partial = Path(name)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
+        with os.fdopen(descriptor, "wb") as output, urllib.request.urlopen(url, timeout=120) as response:
             shutil.copyfileobj(response, output)
         partial.replace(destination)
     finally:
@@ -419,19 +1094,44 @@ def deps_cipd(deps_text, directory):
     return packages
 
 
+def archive_members(archive):
+    """Each (path below the top directory, member, stream) of a source archive, decompressed on every core."""
+    process = subprocess.Popen(["xz", "-dc", "-T0", str(archive)], stdout=subprocess.PIPE)
+    try:
+        with tarfile.open(fileobj=process.stdout, mode="r|") as stream:
+            for member in stream:
+                name = member.name.split("/", 1)[1] if "/" in member.name else ""
+                if name:
+                    yield name, member, stream
+        # The archive's trailing padding follows its last member.
+        while process.stdout.read(1 << 20):
+            pass
+        if process.wait():
+            raise ValueError(f"Could not decompress {archive.name}")
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        process.stdout.close()
+
+
+def read_archive(archive, names):
+    """{path: bytes} for the regular files at `names` below the archive's top directory; absent ones are left out."""
+    wanted, found = set(names), {}
+    for name, member, stream in archive_members(archive):
+        if name in wanted and member.isfile():
+            found[name] = stream.extractfile(member).read()
+            if len(found) == len(wanted):
+                break
+    return found
+
+
 def archive_files(archive, version, paths):
     """{checkout path: text} for files under src in the Chromium source archive."""
-    wanted = {f"chromium-{version}/{path.removeprefix('src/')}": path for path in paths}
-    found = {}
-    with tarfile.open(archive) as stream:
-        for member in stream:
-            if member.name in wanted and member.isfile():
-                found[wanted[member.name]] = stream.extractfile(member).read().decode()
-                if len(found) == len(wanted):
-                    break
-    if missing := sorted(set(paths) - set(found)):
+    found = read_archive(archive, [path.removeprefix("src/") for path in paths])
+    if missing := sorted(path for path in paths if path.removeprefix("src/") not in found):
         raise ValueError(f"The source archive is missing {', '.join(missing)}")
-    return found
+    return {path: found[path.removeprefix("src/")].decode() for path in paths}
 
 
 def candidate_lock(repo, root, version):
@@ -444,7 +1144,7 @@ def candidate_lock(repo, root, version):
         with urllib.request.urlopen(url + ".hashes", timeout=120) as response:
             manifest = response.read().decode()
     except urllib.error.HTTPError as error:
-        raise ValueError(f"Chromium has not published the {version} source archive yet") from error
+        raise ArchiveNotPublished(f"Chromium has not published the {version} source archive yet") from error
     checksums = re.findall(r"^sha256\s+([a-f0-9]{64})\s+(\S+)\s*$", manifest, re.MULTILINE)
     if len(checksums) != 1 or checksums[0][1] != url.rsplit("/", 1)[1]:
         raise ValueError("Source manifest does not identify the requested archive")
@@ -457,8 +1157,8 @@ def candidate_lock(repo, root, version):
             raise ValueError("Chromium source archive does not match its published manifest")
     # The archive's own DEPS names the CIPD tool versions and the PGO profile.
     deps = ("src/", "src/third_party/dawn/", "src/third_party/devtools-frontend/src/")
-    profile_file = "src/chrome/build/mac-arm.pgo.txt"
-    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + [profile_file])
+    profile_files = {cpu: "src/" + architecture["pgoProfileFile"] for cpu, architecture in lock["architectures"].items()}
+    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + list(profile_files.values()))
     packages = {}
     for directory in deps:
         for path, entries in deps_cipd(found[directory + "DEPS"], directory).items():
@@ -478,26 +1178,327 @@ def candidate_lock(repo, root, version):
         if (package, package_version) != (pinned["package"], pinned["version"]):
             lock["cipd"][path] = {"package": package, "version": package_version,
                                   "sha256": resolve_cipd(package, package_version)}
-    profile_name = found[profile_file].strip()
-    profile = download_profile(root, {"pgoProfile": profile_name})
-    lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
+    for cpu, profile_file in profile_files.items():
+        profile_name = found[profile_file].strip()
+        profile = download_profile(root, {"pgoProfile": profile_name})
+        lock["architectures"][cpu].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
     return lock
 
 
-def prepare_update(repo, root, version):
+def noted_versions(text):
+    """Every full version a release note names, expanding "157.0.8103.78/.79" to both."""
+    versions = set()
+    for prefix, last, more in NOTED_VERSIONS.findall(text):
+        versions |= {prefix + last} | {prefix + extra for extra in re.findall(r"\d+", more)}
+    return versions
+
+
+def release_notes(version, feed=None):
+    """What Google's release notes say about `version`, or the closest earlier noted release on its milestone.
+
+    Some releases, such as a respin that only changes the version, have no note
+    of their own; the summary then names the release it describes. Notes are
+    advisory, so a failure to read them is reported rather than raised.
+    """
+    try:
+        if feed is None:
+            with urllib.request.urlopen(RELEASE_NOTES, timeout=60) as response:
+                feed = json.load(response)
+        entries = feed["feed"]["entry"]
+    except (OSError, ValueError, KeyError) as error:
+        return {"error": f"Release notes unavailable: {error}"}
+    wanted = release_version(version)
+    best = None
+    for entry in entries:
+        title = entry["title"]["$t"]
+        if "Desktop" not in title or "Stable" not in title or "Extended" in title:
+            continue
+        text = html.unescape(re.sub(r"<[^>]+>", " ", entry["content"]["$t"]))
+        noted = [release_version(item) for item in noted_versions(text)]
+        eligible = [item for item in noted if item[0] == wanted[0] and item <= wanted]
+        if eligible and (best is None or max(eligible) > best[0]):
+            best = (max(eligible), title, entry["published"]["$t"], text)
+    if best is None:
+        return {"error": f"No release note covers {version}"}
+    noted, title, published, text = best
+    severities = {cve: severity for severity, cve in SEVERITY.findall(text)}
+    return {"notedVersion": ".".join(map(str, noted)), "exact": noted == wanted, "title": title, "published": published,
+            "earlyStable": "Early Stable" in title,
+            "securityFixes": len(set(re.findall(r"CVE-\d{4}-\d+", text))),
+            "critical": sum(1 for severity in severities.values() if severity == "Critical"),
+            "high": sum(1 for severity in severities.values() if severity == "High"),
+            "exploited": bool(re.search(r"exists in the wild", text))}
+
+
+def apply_section(text, path, section):
+    """`text`, the file at `path`, with one patch section applied without fuzz, or None when it does not apply."""
+    with tempfile.TemporaryDirectory(prefix="crest-section-") as temporary:
+        target = Path(temporary) / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+        # --forward: a patch whose change the file already has must not pass by applying in reverse.
+        result = subprocess.run(["patch", "--batch", "--forward", "--fuzz=0", "-p1", "-s", "--no-backup-if-mismatch"],
+                                input=section, cwd=temporary, text=True, capture_output=True)
+        return target.read_text() if result.returncode == 0 else None
+
+
+def merge_three_way(ours, base, theirs):
+    """(merged text, whether it conflicts) for Crest's change from `base` to `ours` carried onto `theirs`."""
+    with tempfile.TemporaryDirectory(prefix="crest-merge-") as temporary:
+        files = [Path(temporary) / name for name in ("ours", "base", "theirs")]
+        for file, text in zip(files, (ours, base, theirs)):
+            file.write_text(text)
+        result = subprocess.run(["git", "merge-file", "-p", "--diff3", "-L", "crest", "-L", "pinned", "-L", "release",
+                                 *map(str, files)], capture_output=True, text=True)
+    if result.returncode < 0 or result.returncode > 127:
+        raise ValueError("git merge-file failed")
+    return result.stdout, result.returncode > 0
+
+
+def rebase_patches(repo, pinned, release, report):
+    """Carry each host patch from the pinned upstream files to a new release's, in series order.
+
+    `pinned` and `release` map each patched path to its upstream text; a path
+    the release lacks maps to None. A section that applies to the release's file
+    without fuzz is kept, including one already rebased for that release.
+    Otherwise Crest's change is merged three ways onto the release's file: a
+    clean merge gives a rebased section, and a conflicting one is written with
+    diff3 markers; a merge that leaves the release's file as it is means the
+    release already has Crest's change, and the section is dropped. Writes the
+    rebased patch files, conflicts and `report.json` below `report`, and returns
+    {patch: {path: status}}, where each status is unchanged, applies, rebased,
+    upstream, conflict or missing.
+    """
+    patches = repo / ENGINE / "Patches"
+    series = [line.split("#", 1)[0].strip() for line in (patches / "series").read_text().splitlines()]
+    shutil.rmtree(report / "Patches", ignore_errors=True)
+    shutil.rmtree(report / "conflicts", ignore_errors=True)
+    (report / "Patches").mkdir(parents=True)
+    before, after = dict(pinned), dict(release)
+    results = {}
+    for name in filter(None, series):
+        text = (patches / name).read_text()
+        header, sections = text[:text.index("--- a/")], []
+        for path, section in chromium_engine.patch_sections(text):
+            base, theirs = before[path], after[path]
+            # A section rebased for the release no longer applies to the pinned file,
+            # which then has no known state for the patches after it.
+            ours = apply_section(base, path, section) if base is not None else None
+            before[path] = ours
+            if theirs is None:
+                status = "missing"
+            elif (applied := apply_section(theirs, path, section)) is not None:
+                status, after[path] = ("unchanged" if base == theirs else "applies"), applied
+            else:
+                merged, conflicted = merge_three_way(ours, base, theirs) if ours is not None else (section, True)
+                if conflicted:
+                    status = "conflict"
+                    conflict = report / "conflicts" / name / path
+                    conflict.parent.mkdir(parents=True, exist_ok=True)
+                    conflict.write_text(merged)
+                elif merged == theirs:
+                    results.setdefault(name, {})[path] = "upstream"
+                    continue
+                else:
+                    status = "rebased"
+                    section = "".join(difflib.unified_diff(theirs.splitlines(keepends=True),
+                                                           merged.splitlines(keepends=True), f"a/{path}", f"b/{path}"))
+                    after[path] = merged
+            results.setdefault(name, {})[path] = status
+            sections.append(section)
+        (report / "Patches" / name).write_text(header + "".join(sections))
+    write_json(report / "report.json", results)
+    return results
+
+
+def check_build_patches(repo, lock, release):
+    """{patch: "applies" or "fails"} for the lock's build adjustments, applied in order to the release's files.
+
+    Preparation and an advance both apply them without fuzz, so a release they
+    no longer fit must stop before either touches a source.
+    """
+    results = {}
+    with tempfile.TemporaryDirectory(prefix="crest-build-patches-") as temporary:
+        scratch = Path(temporary)
+        for path, data in release.items():
+            if data is not None:
+                (scratch / path).parent.mkdir(parents=True, exist_ok=True)
+                (scratch / path).write_bytes(data)
+        for relative in lock["crestPatches"]:
+            result = subprocess.run(["patch", "--batch", "--forward", "--fuzz=0", "-p1", "-s", "--no-backup-if-mismatch",
+                                     "--input", str(repo / ENGINE / relative)], cwd=scratch, capture_output=True, text=True)
+            results[relative] = "applies" if result.returncode == 0 else "fails"
+    return results
+
+
+def interface_changes(pinned, release):
+    """{header: {"added": [...], "removed": [...]}} for the pure virtual methods that changed in each header."""
+    changes = {}
+    for header in sorted(set(pinned) | set(release)):
+        old, new = ({" ".join(item.split()) for item in PURE_VIRTUAL.findall((files.get(header) or b"").decode(errors="replace"))}
+                    for files in (pinned, release))
+        if old != new:
+            changes[header] = {"added": sorted(new - old), "removed": sorted(old - new)}
+    return changes
+
+
+def advance_obstacles(lock, candidate, pinned_toolchains, release_toolchains):
+    """Why the built tree can't move to `candidate`'s release in place; none when only the source changes.
+
+    A new milestone, a toolchain its DEPS fetches or a tool the lock pins would
+    leave stale compilers or tools in an advanced tree.
+    """
+    version = candidate["chromium"]["version"]
+    reasons = []
+    if release_version(version)[0] != release_version(lock["chromium"]["version"])[0]:
+        reasons.append(f"{version} starts milestone {release_version(version)[0]}")
+    reasons += [f"DEPS changes the toolchain at {path}" for path in lock["dependencies"]
+                if pinned_toolchains.get(path) != release_toolchains.get(path)]
+    reasons += [f"The pinned tool at {path} changes" for path in sorted(set(lock["cipd"]) | set(candidate["cipd"]))
+                if candidate["cipd"].get(path) != lock["cipd"].get(path)]
+    return reasons
+
+
+def plan_update(repo, root, version, allow_major=False, report=None):
+    """Decide how to move the pinned engine to `version` and check Crest's patches against it, changing nothing.
+
+    The path is "advance" when the release keeps the milestone, every toolchain
+    DEPS fetches and every pinned tool: the built tree then moves in place and
+    Ninja recompiles only what changed. Anything else needs a "fresh" source.
+    The plan also reports whether the PGO profile rolled, which recompiles
+    everything; how each host patch carries over; the pure virtual methods that
+    changed in the headers the overlay includes; helper apps packaging doesn't
+    know; and the network traffic annotations the request review must look at.
+    """
+    lock = read_json(repo / ENGINE / "source.lock.json")
+    current = lock["chromium"]["version"]
+    milestone = release_version(version)[0] != release_version(current)[0]
+    if milestone and not allow_major:
+        raise ValueError(f"{version} is a new milestone; pass --allow-major to plan it")
+    report = report or root / "reports" / version
+    report.mkdir(parents=True, exist_ok=True)
+    candidate = candidate_lock(repo, root, version)
+    pinned_archive = root / "downloads" / Path(lock["chromium"]["sourceArchive"]).name
+    if not pinned_archive.is_file() or sha256(pinned_archive) != lock["chromium"]["sourceArchiveSha256"]:
+        download(lock["chromium"]["sourceArchive"], pinned_archive)
+        if sha256(pinned_archive) != lock["chromium"]["sourceArchiveSha256"]:
+            raise ValueError("The pinned source archive does not match the lock")
+    release_archive = root / "downloads" / Path(candidate["chromium"]["sourceArchive"]).name
+    patched = list(dict.fromkeys(path for path, _ in chromium_engine.patch_sections(chromium_engine.host_patch(repo))))
+    overlay = repo / ENGINE / "Overlay"
+    headers = sorted({name for path in overlay.rglob("*") if path.is_file() and path.suffix in (".h", *COMPILED)
+                      for name in INCLUDE.findall(path.read_text(errors="replace"))
+                      if not (overlay / name).exists()})
+    build_patched = {path for relative in candidate["crestPatches"]
+                     for path, _ in chromium_engine.patch_sections((repo / ENGINE / relative).read_text())}
+    names = {*patched, *headers, *build_patched, "DEPS", HELPER_LIST, ANNOTATIONS}
+    pinned, release = read_archive(pinned_archive, names), read_archive(release_archive, names)
+    if missing := sorted(set(patched) - set(pinned)):
+        raise ValueError(f"The pinned archive lacks patched files: {', '.join(missing)}")
+
+    reasons = advance_obstacles(lock, candidate, *(deps_dependencies(files["DEPS"]) for files in (pinned, release)))
+    patches = rebase_patches(repo, {path: pinned[path].decode() for path in patched},
+                             {path: release[path].decode() if path in release else None for path in patched}, report)
+    helpers = {kind or "" for kind in HELPER_APP.findall(release.get(HELPER_LIST, b"").decode())}
+    annotations = [set(ANNOTATION.findall(files.get(ANNOTATIONS, b"").decode())) for files in (pinned, release)]
+    plan = {
+        "current": current, "version": version, "milestone": milestone,
+        "path": "fresh" if reasons else "advance", "reasons": reasons,
+        "pgoChanged": any(candidate["architectures"][cpu]["pgoProfile"] != architecture["pgoProfile"]
+                          for cpu, architecture in lock["architectures"].items()),
+        "patches": {status: sorted(f"{name}: {path}" for name, files in patches.items()
+                                   for path, value in files.items() if value == status)
+                    for status in ("applies", "rebased", "upstream", "conflict", "missing")},
+        "buildPatches": check_build_patches(repo, candidate, {path: release.get(path) for path in build_patched}),
+        "unchangedPatchedFiles": sum(value == "unchanged" for files in patches.values() for value in files.values()),
+        "interfaceChanges": interface_changes({name: pinned.get(name) for name in headers},
+                                              {name: release.get(name) for name in headers}),
+        "unknownHelpers": sorted(helpers - set(chromium_engine.ENGINE_HELPER_KINDS)),
+        "annotations": {"added": sorted(annotations[1] - annotations[0]),
+                        "removed": sorted(annotations[0] - annotations[1])},
+        "releaseNotes": release_notes(version),
+        "report": str(report),
+    }
+    plan["blocked"] = (any(plan["patches"][status] for status in ("rebased", "upstream", "conflict", "missing"))
+                       or "fails" in plan["buildPatches"].values())
+    write_json(report / "plan.json", plan)
+    write_json(report / "source.lock.json", candidate)
+    return plan, candidate
+
+
+def deps_dependencies(text):
+    """The toolchains a DEPS file has preparation fetch for this host, read as prepare-chromium.py reads them."""
+    spec = importlib.util.spec_from_file_location("prepare_chromium", REPO / "Scripts/control-plane/prepare-chromium.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with tempfile.TemporaryDirectory(prefix="crest-deps-") as temporary:
+        (Path(temporary) / "DEPS").write_bytes(text)
+        return {"src/" + path.removeprefix("src/"): value for path, value in module.deps_dependencies(Path(temporary)).items()}
+
+
+def make_room_for_milestone(root, pinned, workspace, pinned_key, repository=None):
+    """Remove the pinned source when a new milestone's fresh source doesn't fit beside it.
+
+    Once Google promotes a milestone to full stable, the one before it gets no
+    more stable fixes, so its source only rebuilds an engine that isn't
+    published yet. An unpublished pinned engine keeps its source, and the
+    update stops saying how much space it needs.
+    """
+    free = shutil.disk_usage(root).free
+    if free >= PREPARE_FREE_GIB * 1024**3 or not pinned.directory.is_dir() or pinned.directory == workspace.directory:
+        return []
+    repository = repository or os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    tag = chromium_engine.release_tag(pinned_key)
+    if not chromium_artifact.release_ready(chromium_artifact.published_release(repository, pinned_key), pinned_key):
+        version = workspace.lock["chromium"]["version"]
+        raise ValueError(f"A fresh Chromium {version} source needs {PREPARE_FREE_GIB} GiB free and "
+                         f"{free // 1024**3} GiB is free. The pinned engine {tag} isn't published, so its "
+                         "source stays: publish it or free the space, then run the update again.")
+    return prune_sources(root, {workspace.directory.name})
+
+
+def prepare_update(repo, root, version, allow_major=False, timings=None, replace_published_pinned=False):
+    """Plan the update, then prepare its source: the pinned tree advanced in place, or a fresh one.
+
+    With `replace_published_pinned`, a milestone whose fresh source doesn't fit
+    beside the pinned one removes the pinned source first, when its engine is
+    published.
+    """
+    timings = {} if timings is None else timings
+    with timed(timings, "plan"):
+        plan, candidate = plan_update(repo, root, version, allow_major)
+    print(json.dumps(plan, indent=2), flush=True)
+    if plan["blocked"]:
+        raise ValueError(f"Crest's patches don't apply to {version} as they are; review {plan['report']}")
     lock_path, host_path = repo / ENGINE / "source.lock.json", repo / ENGINE / "host-inputs.json"
     original_lock, original_host = lock_path.read_bytes(), host_path.read_bytes()
-    pinned = Workspace(root, repo).directory.name
+    pinned = Workspace(root, repo)
+    # The pinned engine, whose source a milestone may replace once it is published.
+    replace_pinned = replace_published_pinned and plan.get("milestone")
+    pinned_key = chromium_engine.engine_key(repo) if replace_pinned else None
+    if (pinned.directory / ADVANCING).exists():
+        raise ValueError(f"An advance to a new release stopped partway at {pinned.directory}. Inspect it before updating.")
+    # Only a pinned tree that a build installed Crest's host in can be reversed and advanced.
+    advance = plan["path"] == "advance" and all((pinned.directory / name).is_file() for name in ("prepared.json", "host.json"))
     try:
-        write_json(lock_path, candidate_lock(repo, root, version))
+        write_json(lock_path, candidate)
         workspace = Workspace(root, repo)
-        # Every update needs a new source. Keep only the checkout's own, which its
-        # branch still builds from, and this update's; any other is superseded.
-        for name in prune_sources(root, {pinned, workspace.directory.name}):
-            print(f"Removed superseded Chromium source {name}", flush=True)
-        workspace.prepare()
-        refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
-        return Workspace(root, repo)
+        with timed(timings, "source"):
+            if advance:
+                print(json.dumps(pinned.advance(workspace, root / "downloads" / Path(pinned.lock["chromium"]["sourceArchive"]).name)),
+                      flush=True)
+                refresh_host_inputs(repo, workspace.source)
+            else:
+                # Every fresh source needs its own directory. Keep only the checkout's own,
+                # which its branch still builds from, and this update's; any other is superseded.
+                for name in prune_sources(root, {pinned.directory.name, workspace.directory.name}):
+                    print(f"Removed superseded Chromium source {name}", flush=True)
+                if replace_pinned:
+                    for name in make_room_for_milestone(root, pinned, workspace, pinned_key):
+                        print(f"Removed the pinned Chromium source {name}; its engine is published", flush=True)
+                workspace.prepare()
+                refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
+        return Workspace(root, repo), plan
     except BaseException:
         lock_path.write_bytes(original_lock)
         host_path.write_bytes(original_host)

@@ -13,8 +13,14 @@ struct PinnedTabTile: View {
     let renameTab: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
 
     private var context: BrowserSidebarListContext? { grid.context }
+
+    /// Whether the window shows a card for the tile when the pointer rests on it.
+    private var showsPreviews: Bool {
+        sidebarInteraction?.tabPreview.isHosted == true && BrowserDeviceAppearanceStore.shared.previewsTabsOnHover
+    }
     private var assignment: BrowserSpaceRuntimeAssignment { grid.assignment }
 
     var body: some View {
@@ -62,7 +68,10 @@ struct PinnedTabTile: View {
                 : Text(BrowserChromeAccessibility.tabValue(isLoaded: loaded))
         )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .help(tab.shownTitle)
+        .browserTabPreviewAccessibility(tab)
+        // The tab's preview card names it where the window shows one.
+        .help(showsPreviews ? "" : tab.shownTitle)
+        .browserTabPreviewSource(.tab(tab), in: context)
         .modifier(
             BrowserTabSelectionAccessibility(
                 tabID: tab.id, spaceID: assignment.spaceID, browser: context?.browser,
@@ -91,32 +100,40 @@ struct PinnedTabTile: View {
                 context?.restoreSavedLocation?(tab.id)
             }
         )
-        .browserPinnedTabMiddleClick {
-            guard context?.isLoaded(tab.id) == true, isCurrentAndUnlocked else { return }
-            context?.unload(tab.id)
-        }
+        .modifier(
+            BrowserPlatformRowAuxiliaryClickModifier {
+                guard context?.isLoaded(tab.id) == true, isCurrentAndUnlocked else { return }
+                context?.unload(tab.id)
+            }
+        )
         .modifier(
             PinnedTabDragModifier(
                 tab: tab,
                 favicons: grid.favicons,
                 assignment: assignment,
                 dragState: grid.dragState,
-                reorder: reorder
+                reorder: reorder,
+                isSelected: isSelected
             )
         )
-        .contextMenu {
-            if grid.capabilities.supportsOrganization, let context {
-                PinnedTabOrganizationMenu(
-                    tab: tab,
-                    context: context,
-                    assignment: runtimeAssignment,
-                    isLoaded: loaded,
-                    dragState: grid.dragState,
-                    renameTab: renameTab,
-                    changeIcon: beginChangingIcon
-                )
+        .modifier(
+            BrowserTabContextMenu(
+                tab: tab, context: context, capabilities: grid.capabilities,
+                isEnabled: grid.capabilities.supportsOrganization && context != nil
+            ) {
+                if let context {
+                    PinnedTabOrganizationMenu(
+                        tab: tab,
+                        context: context,
+                        assignment: runtimeAssignment,
+                        isLoaded: loaded,
+                        dragState: grid.dragState,
+                        renameTab: renameTab,
+                        changeIcon: beginChangingIcon
+                    )
+                }
             }
-        }
+        )
         .modifier(BrowserTabStatusBadgeHost(tab: statusSource, anchor: .tile))
         .animation(
             CrestMotion.contentState.unlessReducingMotion(reduceMotion),

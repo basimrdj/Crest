@@ -23,12 +23,12 @@ struct BrowserSettingsCompactPageIdentity: View {
                 .accessibilityIdentifier("settings-page-back")
             }
             Text(destination.title)
-                .font(.title3.weight(.semibold))
+                .font(CrestTypography.display(20))
                 .accessibilityAddTraits(.isHeader)
         }
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
         .padding(.horizontal, CrestSpacing.large)
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .overlay(alignment: .bottom) { Divider() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("settings-page-header")

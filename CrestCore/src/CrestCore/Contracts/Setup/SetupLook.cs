@@ -1,40 +1,19 @@
 namespace CrestCore.Contracts;
 
 /// The look setup gives the Spaces it makes: Crest's own banners and layered
-/// crests, or a modern gradient and a plain icon. A look travels as its index
-/// in `All`, so `All` is append-only.
+/// crests. A look travels as its index in `All`, so `All` is append-only.
 public sealed class SetupLook {
-    #region Types
-
-    /// Each look is offered with a preview of its own, so the page that
-    /// offers them switches over the kind.
-    public enum Kinds { Heraldic, Modern }
-
-    #endregion
-
     #region Static Variables
 
     /// A Space wears a template's banner and its layered crest.
-    public static readonly SetupLook Heraldic = new(Kinds.Heraldic, name: "heraldic", title: "Heraldic", SpaceThemeMode.Banner,
-        SpaceIconStyle.LayeredCrest, gradientAngle: null, newSpaceLook: accent => accent.House);
+    public static readonly SetupLook Heraldic = new(name: "heraldic", title: "Heraldic (Full)", SpaceThemeMode.Banner,
+        SpaceIconStyle.LayeredCrest, newSpaceLook: accent => accent.House);
 
-    /// A Space wears a gradient of its colors, from top to bottom, and a
-    /// plain icon.
-    public static readonly SetupLook Modern = new(Kinds.Modern, name: "modern", title: "Modern", SpaceThemeMode.Gradient,
-        SpaceIconStyle.SimpleSymbol, ModernGradientAngle,
-        newSpaceLook: accent => SpaceBranding.Painted(accent.LegacyColors, SpaceBannerPattern.Diagonal, strength: 1,
-            SpaceBranding.LegacyReadabilityFade, SpaceThemeMode.Gradient, ModernGradientAngle, showsTexture: false));
-
-    public static IReadOnlyList<SetupLook> All { get; } = [Heraldic, Modern];
-
-    /// The angle a modern gradient runs at: straight down the sidebar.
-    private const double ModernGradientAngle = 90;
+    public static IReadOnlyList<SetupLook> All { get; } = [Heraldic];
 
     #endregion
 
     #region Variables
-
-    public Kinds Kind { get; }
 
     public string Name { get; }
 
@@ -48,24 +27,18 @@ public sealed class SetupLook {
     /// The icon style a Space in this look wears.
     public SpaceIconStyle IconStyle { get; }
 
-    /// The angle a Space's gradient runs at in this look, or null for a look
-    /// that keeps the Space's own.
-    public double? GradientAngle { get; }
-
     private readonly Func<SpaceAccent, SpaceBranding> newSpaceLook;
 
     #endregion
 
     #region Constructors
 
-    private SetupLook(Kinds kind, string name, string title, SpaceThemeMode themeMode, SpaceIconStyle iconStyle,
-        double? gradientAngle, Func<SpaceAccent, SpaceBranding> newSpaceLook) {
-        Kind = kind;
+    private SetupLook(string name, string title, SpaceThemeMode themeMode, SpaceIconStyle iconStyle,
+        Func<SpaceAccent, SpaceBranding> newSpaceLook) {
         Name = name;
         Title = title;
         ThemeMode = themeMode;
         IconStyle = iconStyle;
-        GradientAngle = gradientAngle;
         this.newSpaceLook = newSpaceLook;
     }
 
@@ -85,16 +58,12 @@ public sealed class SetupLook {
         return newSpaceLook(accent);
     }
 
-    /// `branding` in this look: its sidebar mode, gradient angle and icon
-    /// style, keeping its colors and crest, within the ranges every device
-    /// draws.
+    /// `branding` in this look: its sidebar mode and icon style, keeping its
+    /// colors, the gradients they run on into, crest and texture, within the
+    /// ranges every device draws.
     public SpaceBranding Applying(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
-        return SpaceBranding.Normalized(branding with {
-            ThemeMode = ThemeMode,
-            GradientAngle = GradientAngle ?? branding.GradientAngle,
-            IconStyle = IconStyle
-        });
+        return SpaceBranding.Normalized(branding with { ThemeMode = ThemeMode, IconStyle = IconStyle });
     }
 
     /// `customization` with its look in this look.

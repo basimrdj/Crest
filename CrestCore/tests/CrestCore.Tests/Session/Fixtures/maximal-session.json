@@ -747,12 +747,16 @@
   "disposableSeedMarker" : "027A55FA-1FCB-48D5-B850-6525D2B18BB9",
   "appPreferences" : {
     "savedTabFaviconReturnsToSavedURL" : true,
+    "unloadedSavedTabsStay" : false,
     "offersTranslation" : false,
     "automaticallyTranslates" : true,
     "splitFocusFollowsMouse" : true,
     "automaticallyShowsDeveloperToolbar" : false,
     "showsRecentTabs" : false,
-    "savedTabClosePolicy" : "returnToSavedURL",
+    "newTabPosition" : "bottom",
+    "newTabsJoinFolder" : true,
+    "pinnedTabsAfterClosing" : "resumeLastLocation",
+    "savedTabsAfterClosing" : "returnToSavedURL",
     "translationRules" : {
       "sources" : {
         "fr" : {

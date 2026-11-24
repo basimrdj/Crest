@@ -51,10 +51,8 @@ struct MobileBrowserSidebarSurface: View {
     let submitAddress: () -> Void
     let openURL: (URL) -> Void
     let openNewTab: () -> Void
-    let showsCompactAddressBar: Bool
     let showsBottomSpaceSwitcher: Bool
     let compactPageIsFullyPresented: Bool
-    let compactTransitionEnded: (CGSize) -> Void
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
@@ -62,9 +60,6 @@ struct MobileBrowserSidebarSurface: View {
     let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
     let utilityPresentation: BrowserUtilityPresentationState
-    /// Puts a floating sidebar away, from the arrow at its bottom corner.
-    /// `nil` where this placement never floats.
-    var hideSidebar: (() -> Void)?
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
@@ -169,16 +164,13 @@ struct MobileBrowserSidebarSurface: View {
             selectTab: selectTab,
             submitAddress: submitAddress,
             openNewTab: openNewTab,
-            showsCompactAddressBar: showsCompactAddressBar,
             showsBottomSpaceSwitcher: showsBottomSpaceSwitcher,
             compactPageIsFullyPresented: compactPageIsFullyPresented,
-            compactTransitionEnded: compactTransitionEnded,
             closePrivateBrowsing: closePrivateBrowsing,
             toggleSidebar: toggleSidebar,
             showsSidebarToggle: showsSidebarToggle,
             sidebarIsPresented: sidebarIsPresented,
-            sidebarIsDocked: sidebarIsDocked,
-            hideSidebar: hideSidebar
+            sidebarIsDocked: sidebarIsDocked
         )
     }
 
@@ -273,10 +265,8 @@ struct MobileBrowserSidebarSurface: View {
         submitAddress: {},
         openURL: { _ in },
         openNewTab: {},
-        showsCompactAddressBar: false,
         showsBottomSpaceSwitcher: true,
         compactPageIsFullyPresented: false,
-        compactTransitionEnded: { _ in },
         togglePrivateBrowsing: {},
         closePrivateBrowsing: {},
         toggleSidebar: {},

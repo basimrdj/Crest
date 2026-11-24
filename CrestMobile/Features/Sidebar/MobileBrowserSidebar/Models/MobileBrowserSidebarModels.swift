@@ -27,17 +27,13 @@ struct MobileBrowserSidebarContentConfiguration {
     let selectTab: (UUID) -> Void
     let submitAddress: () -> Void
     let openNewTab: () -> Void
-    let showsCompactAddressBar: Bool
     let showsBottomSpaceSwitcher: Bool
     let compactPageIsFullyPresented: Bool
-    let compactTransitionEnded: (CGSize) -> Void
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
     let showsSidebarToggle: Bool
     let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
-    /// Puts a floating sidebar away, from the arrow at its bottom corner.
-    let hideSidebar: (() -> Void)?
 }
 
 /// The sidebar's utility sheets and Space foreground.

@@ -28,9 +28,8 @@ enum BrowserEngineRegistration {
             .pages, .navigation, .find, .zoom, .interactionState, .pageResidency,
             .popups, .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .contentBlocking, .downloads, .permissions, .reader, .translation,
-            .selectionTranslation, .localFiles, .protectedMedia, .pdf, .webArchive,
+            .selectionTranslation, .localFiles, .protectedMedia, .pdf, .webArchive, .print,
         ] + desktopWebKit,
-        unavailable: [.extensions],
         archiveFormat: .webArchive)
 
     /// The native macOS Chromium host with Crest's page and profile ports.
@@ -43,10 +42,9 @@ enum BrowserEngineRegistration {
     ///   incomplete.
     /// - Whole-page translation rewrites the main document through the
     ///   engine's content scripting, as WebKit's does through its own.
-    /// - Protected media plays through Widevine once its module has downloaded.
-    ///   A page that asks for a key system the engine lacks moves to WebKit,
-    ///   and the core opens video services that refuse Chromium's Widevine
-    ///   there.
+    /// - Protected media is left to WebKit: the engine carries no Widevine, a
+    ///   page that asks for a key system moves to WebKit, and the core opens
+    ///   known video services there from the start.
     /// - Site permission decisions reach the engine as content settings for the
     ///   page's current site; the host has no command to stop live camera,
     ///   microphone or location use directly, so revocation relies on the engine
@@ -68,12 +66,11 @@ enum BrowserEngineRegistration {
             .extensions, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
             .contentBlocking,
         ],
-        unavailable: [.reader, .protectedMedia],
         archiveFormat: .mhtml)
 
     private static var desktopWebKit: [EngineCapability] {
         #if os(macOS)
-            [.viewportCapture, .fullPageCapture, .print, .inspector, .featureFlags, .beforeUnload]
+            [.viewportCapture, .fullPageCapture, .inspector, .featureFlags, .beforeUnload]
         #else
             []
         #endif

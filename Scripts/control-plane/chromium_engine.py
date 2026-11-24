@@ -15,6 +15,24 @@ import hashlib
 from pathlib import Path
 import re
 
+# Every helper app an engine may contain, by what follows "Chromium Helper" in
+# its name, and whether V8 in it maps executable memory and so needs the JIT
+# entitlement (chrome/installer/mac/signing/parts.py). A helper kind missing here
+# stops packaging and publishing: a new kind needs a decision about its
+# entitlements, and getting that wrong crashes every page in a signed build while
+# passing everything that runs unsigned.
+ENGINE_HELPER_NAME = "Chromium Helper"
+ENGINE_HELPER_KINDS = {
+    "": False,
+    " (Renderer)": True,
+    " (GPU)": True,
+    " (Alerts)": False,
+    " (Aperitif)": False,
+    " (Aperitif Renderer)": True,
+    " (Aperitif GPU)": True,
+    " (Aperitif Alerts)": False,
+}
+
 INPUTS = (
     "CrestEngines/Chromium/source.lock.json",
     "CrestEngines/Chromium/host-inputs.json",
@@ -31,6 +49,12 @@ INPUTS = (
     "Scripts/control-plane/configure-chromium.py",
     "Scripts/control-plane/build-chromium-baseline.py",
 )
+
+
+def unknown_engine_helpers(helpers) -> list:
+    """The names among `helpers`, paths to helper apps, that are no known kind."""
+    return sorted(path.name for path in helpers if path.stem.startswith(ENGINE_HELPER_NAME)
+                  and path.stem.removeprefix(ENGINE_HELPER_NAME) not in ENGINE_HELPER_KINDS)
 
 
 def engine_key(repo: Path) -> str:
@@ -91,8 +115,14 @@ def release_tag(key: str) -> str:
     return f"chromium-engine-{key[:16]}"
 
 
+def candidate_tag(key: str) -> str:
+    """The draft release a built but unpublished engine waits in. Release
+    packaging asks only for `release_tag`, so it never reads one."""
+    return f"chromium-engine-candidate-{key[:16]}"
+
+
 def asset_name(key: str) -> str:
-    return f"Crest-Chromium-Engine-{key[:16]}-arm64.zip"
+    return f"Crest-Chromium-Engine-{key[:16]}-universal.zip"
 
 
 def main():

@@ -8,14 +8,24 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     let dataDeleter: any BrowserSpaceDataDeleting
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let suspendsCompactPagePresentation: Bool
+    /// Whether the browser holds back its launch, opening nothing yet.
+    let holdsStartup: Bool
+    /// Whether the page the browser opens on rises over setup as setup hands
+    /// over to it.
+    let presentsPageOverSetup: Bool
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
 
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) var reduceTransparency
     @Environment(\.layoutDirection) var layoutDirection
+    @Environment(\.mobileOpenInPrivateBrowsing) var openInPrivateBrowsing
     @State private var spacePagerPresentation = SpacePagerPresentation()
+    /// The tab preview of the sidebar that floats over a phone's page.
+    @State private var floatingSidebarPreview = BrowserTabPreviewState()
     @State var isAddressEditing = false
+    /// Whether Site Controls show from the sidebar, which keeps it up.
+    @State private var siteControlsHoldSidebar = false
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
@@ -24,17 +34,19 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var keyboardEndFrame = CGRect.null
     /// The screen the keyboard last reported for, in its own coordinates.
     @State var keyboardScreenBounds = CGRect.null
-    @AppStorage(
-        MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
-    private var allowsFloatingSidebar = false
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
+    /// Whether a narrow window may float its sidebar over the page, as the
+    /// person chose it.
+    private var allowsFloatingSidebar: Bool { BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar }
 
     init(
         model: MobileBrowserRootModel,
         dataDeleter: any BrowserSpaceDataDeleting,
         transientBrowsing: BrowserTransientBrowsingCoordinator,
         suspendsCompactPagePresentation: Bool,
+        holdsStartup: Bool = false,
+        presentsPageOverSetup: Bool = false,
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
     ) {
@@ -42,6 +54,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         self.dataDeleter = dataDeleter
         self.transientBrowsing = transientBrowsing
         self.suspendsCompactPagePresentation = suspendsCompactPagePresentation
+        self.holdsStartup = holdsStartup
+        self.presentsPageOverSetup = presentsPageOverSetup
         self.togglePrivateBrowsing = togglePrivateBrowsing
         self.closePrivateBrowsing = closePrivateBrowsing
         _storedRegularSidebarWidth = State(
@@ -108,13 +122,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
-                    showsCompactAddressBar:
-                        MobileCompactTabViewerLayout.showsTopAddressBar,
                     showsBottomSpaceSwitcher:
                         navigation.compactTabViewerChromeIsVisible,
                     compactPageIsFullyPresented:
                         navigation.compactPageIsFullyPresented,
-                    compactTransitionEnded: finishCompactTransition,
                     togglePrivateBrowsing: togglePrivateBrowsing,
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
@@ -122,7 +133,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsPresented: true,
                     sidebarIsDocked: true,
                     utilityPresentation: navigation.utilityPresentation
-                ),
+                )
+                .overlay {
+                    MobileTabPreviewLayer(
+                        preview: sidebarInteraction.tabPreview, pages: pages, spaceAccess: spaceAccess)
+                },
                 floatingSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
                     pages: pages,
@@ -144,10 +159,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
-                    showsCompactAddressBar: false,
                     showsBottomSpaceSwitcher: true,
                     compactPageIsFullyPresented: false,
-                    compactTransitionEnded: finishCompactTransition,
                     togglePrivateBrowsing: togglePrivateBrowsing,
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
@@ -155,9 +168,14 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebarIsPresented:
                         navigation.compactSidebarPresentation.showsSidebar,
                     sidebarIsDocked: false,
-                    utilityPresentation: navigation.utilityPresentation,
-                    hideSidebar: hideRegularSidebar
+                    utilityPresentation: navigation.utilityPresentation
                 )
+                // The floating sidebar over a phone's page has cards of its
+                // own, so the tab viewer's, under the page, never draws one.
+                .environment(\.browserTabPreviewState, floatingSidebarPreview)
+                .overlay {
+                    MobileTabPreviewLayer(preview: floatingSidebarPreview, pages: pages, spaceAccess: spaceAccess)
+                }
                 .modifier(
                     BrowserPlatformObservedTapModifier(claimsTaps: true) {
                         navigation.handleRegularSidebarInteraction()
@@ -178,6 +196,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     notices: pages.notices,
                     showsNotices: !model.showsSettings,
                     reduceMotion: reduceMotion,
+                    risesOverSetup: presentsPageOverSetup,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
                         navigation.completePagePresentation,
@@ -265,10 +284,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         submitAddress: submitAddress,
                         openURL: openURL,
                         openNewTab: beginNewTab,
-                        showsCompactAddressBar: false,
                         showsBottomSpaceSwitcher: true,
                         compactPageIsFullyPresented: false,
-                        compactTransitionEnded: finishCompactTransition,
                         togglePrivateBrowsing: togglePrivateBrowsing,
                         closePrivateBrowsing: closePrivateBrowsing,
                         toggleSidebar: toggleRegularSidebar,
@@ -278,8 +295,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         sidebarIsDocked:
                             navigation.regularSidebarIsDocked,
                         utilityPresentation:
-                            navigation.utilityPresentation,
-                        hideSidebar: hideRegularSidebar
+                            navigation.utilityPresentation
                     )
                     .environment(
                         \.browserSettingsUsesLiveSidebar,
@@ -331,9 +347,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         isExpanded: navigation.utilityPresentation
                             .isSwitcherExpanded,
                         selectedSurface: navigation.utilityPresentation.surface,
-                        badgeColor: browser.shownSpace.flatMap {
-                            $0.settings.look.colors.first?.color
-                        } ?? .accentColor,
+                        badgeColor: browser.shownSpace?.settings.look.primaryColor.color
+                            ?? CrestBrandTheme.accent,
                         downloads: model.selectedUtilityDownloads,
                         newDownloadCount: model.newUtilityDownloads.count,
                         downloadCenter: pages.downloadCenter,
@@ -341,6 +356,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         spaceID: browser.shownSpace?.id,
                         select: navigation.utilityPresentation.present
                     )
+                }
+                .overlay {
+                    MobileTabPreviewLayer(
+                        preview: sidebarInteraction.tabPreview, pages: pages, spaceAccess: spaceAccess,
+                        sidebarEdge: navigation.regularSidebarIsDocked && layout.reservesSidebarWidth
+                            ? layout.sidebarWidth : BrowserSidebarPresentation.floatingCardInset + layout.sidebarWidth)
                 }
             },
             palette: { contentInsets in
@@ -366,6 +387,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             \.mobileBrowserCommandContext,
             commandContext
         )
+        .environment(\.mobileBrowserCommandContext, commandContext)
         .sheet(isPresented: settingsSheet(overPage: false)) { settingsSheetContent }
         .onChange(of: model.selectionSnapshot, initial: true) { _, _ in
             model.settings.reconcile()
@@ -388,6 +410,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 model: model,
                 presentation: presentation,
                 openNewTab: beginNewTab,
+                holdsStartup: holdsStartup,
                 isAddressEditing: $isAddressEditing,
                 storedSidebarWidth: $storedRegularSidebarWidth
             )
@@ -395,8 +418,13 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: allowsFloatingSidebar, initial: true) { _, allows in
             navigation.allowsCompactFloatingSidebar = allows
         }
+        // A card a sidebar shows keeps that sidebar up while it is read, and
+        // so do Site Controls opened from it.
+        .onPreferenceChange(MobileSiteControlsHoldsSidebarKey.self) { siteControlsHoldSidebar = $0 }
         .onChange(
-            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging,
+            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging
+                || sidebarInteraction.tabPreview.shown != nil || floatingSidebarPreview.shown != nil
+                || siteControlsHoldSidebar,
             initial: true
         ) { _, keepsSidebarVisible in
             navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)

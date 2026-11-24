@@ -13,9 +13,10 @@ internal sealed partial class Device {
 
     /// What the person chose for filtering on this device: the level, the
     /// catalog lists turned on or off against what it turns on, the lists
-    /// added by address, and their own filters.
+    /// added by address, their own filters, and whether copied links leave
+    /// out their tracking.
     internal sealed record FilterPreferences(ContentBlockingLevel Level, IReadOnlyDictionary<FilterList, bool> Choices,
-        IReadOnlyList<CustomFilterList> CustomLists, string CustomFilters);
+        IReadOnlyList<CustomFilterList> CustomLists, string CustomFilters, bool CleansCopiedLinks);
 
     #endregion
 
@@ -23,6 +24,8 @@ internal sealed partial class Device {
 
     /// The most filter lists the person may add.
     public const int MaximumCustomFilterLists = 30;
+    /// The longest address a custom filter list may have.
+    public const int MaximumFilterListAddressLength = 2_048;
 
     /// The longest the person's own filters may be.
     public const int MaximumCustomFiltersBytes = 512 * 1024;
@@ -53,7 +56,8 @@ internal sealed partial class Device {
         get {
             var level = ContentBlockingLevel;
             lock (gate)
-                return new(level, new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters);
+                return new(level, new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters,
+                    links.CleansCopiedLinks);
         }
     }
 
@@ -133,8 +137,8 @@ internal sealed partial class Device {
     internal bool AddCustomFilterList(Guid id, string url) {
         ArgumentNullException.ThrowIfNull(url);
         string address = url.Trim();
-        if (address.Length > 2048 || !Uri.TryCreate(address, UriKind.Absolute, out var parsed)
-            || parsed.Scheme != "https" || string.IsNullOrEmpty(parsed.Host))
+        if (address.Length > MaximumFilterListAddressLength || !Uri.TryCreate(address, UriKind.Absolute, out var parsed)
+            || WebScheme.Spelled(parsed.Scheme) != WebScheme.Https || string.IsNullOrEmpty(parsed.Host))
             throw new Rejected(new FilterListAddressInvalid(url));
         lock (gate) {
             if (customFilterLists.Any(list => list.Id == id || list.Url == parsed.AbsoluteUri)) return false;

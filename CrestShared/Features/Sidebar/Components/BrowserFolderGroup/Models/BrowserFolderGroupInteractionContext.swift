@@ -17,9 +17,9 @@ struct BrowserFolderGroupInteractionContext {
     let beginCreatingChild: () -> Void
     let beginRenaming: () -> Void
     let toggleExpansion: () -> Void
+    let closeAllTabs: () -> Void
     let beginTitleEditingIfNeeded: () -> Void
     let commitTitle: () -> Void
     let cancelTitleEditing: () -> Void
     let deleteFolder: () -> Void
-    let unloadKeptCollapsedTab: (UUID) -> Void
 }

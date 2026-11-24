@@ -4,7 +4,7 @@ struct BrowserRootView: View {
     private let transientBrowsing: BrowserTransientBrowsingCoordinator
     private let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     private let shortcuts: BrowserShortcutStore?
-    private let persistSidebarWidth: (Double) -> Void
+    private let persistSidebarWidth: @MainActor (Double) -> Void
 
     @State private var model: BrowserRootModel
     @State private var storedSidebarWidth: Double
@@ -23,7 +23,7 @@ struct BrowserRootView: View {
         startupBehavior: StartupBehavior = .showStartPage,
         shortcuts: BrowserShortcutStore? = nil,
         initialSidebarWidth: Double? = nil,
-        persistSidebarWidth: @escaping (Double) -> Void =
+        persistSidebarWidth: @escaping @MainActor (Double) -> Void =
             BrowserRootSidebarWidthPersistence.write
     ) {
         self.transientBrowsing = transientBrowsing
@@ -76,62 +76,93 @@ struct BrowserRootView: View {
         .modifier(BrowserExtensionSidePanelRegistration(host: model.extensionSidePanel, pages: model.pages))
         .modifier(BrowserPopupWindowPresentation(pages: model.pages))
         .modifier(BrowserRootWindowTitle(model: model))
+        .modifier(BrowserRootWindowCommands(model: model, shortcuts: shortcuts))
     }
 }
 
-/// Page titles update the window without rebuilding its browser shell.
-private struct BrowserRootWindowTitle: ViewModifier {
+/// Lets controls anywhere in the window, such as Site Controls, run the
+/// window's commands as its menu bar does.
+private struct BrowserRootWindowCommands: ViewModifier {
     let model: BrowserRootModel
+    let shortcuts: BrowserShortcutStore?
+    @Environment(\.browserMacWindows) private var windows
+    @Environment(\.layoutDirection) private var layoutDirection
 
     func body(content: Content) -> some View {
-        content.navigationTitle(Text(verbatim: model.windowTitle))
+        content.environment(
+            \.browserWindowCommands,
+            BrowserWindowCommands(
+                actions: model.commandActions(windows: windows, layoutDirection: layoutDirection), shortcuts: shortcuts)
+        )
     }
 }
 
-#Preview("Browser Root — Docked") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
+/// Page titles update the window without rebuilding its browser shell. A
+/// view shown inside another window leaves that window's title alone.
+private struct BrowserRootWindowTitle: ViewModifier {
+    let model: BrowserRootModel
+    @Environment(\.browserRootStylesWindow) private var stylesWindow
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if stylesWindow {
+            content.navigationTitle(Text(verbatim: model.windowTitle))
+        } else {
+            content
+        }
+    }
 }
 
-#Preview("Browser Root — Collapsed") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
-}
+#if DEBUG
+    #Preview("Browser Root — Docked") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif
 
-#Preview("Browser Root — Command Palette") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
-}
+#if DEBUG
+    #Preview("Browser Root — Collapsed") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif
+
+#if DEBUG
+    #Preview("Browser Root — Command Palette") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif

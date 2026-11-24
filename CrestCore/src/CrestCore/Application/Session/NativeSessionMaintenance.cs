@@ -19,14 +19,6 @@ public static class NativeSessionMaintenance {
 
     #region Actions - Session maintenance
 
-    /// The repaired session and positional asset references: `{"session", "assets"}`.
-    public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
-        var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
-            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
-        return Answer(repaired, origins);
-    }
-
     /// A repaired session with the positional references to the native assets
     /// each of its tabs keeps: `{"session", "assets"}`.
     internal static JsonObject Answer(SessionState repaired, IReadOnlyList<TabOrigin> origins) => new() {
@@ -50,8 +42,13 @@ public static class NativeSessionMaintenance {
     /// Spaces' groups, keeps a Space that is being deleted exactly as it was,
     /// and adds a Space when none would remain.
     internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
-        out IReadOnlyList<TabOrigin> origins) {
-        var pending = source.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        out IReadOnlyList<TabOrigin> origins) => Repair(source, now, emptySpace, ids, out origins, out _);
+
+    /// `Repair`, with `places` saying where each of `source`'s Spaces stands
+    /// in the repaired session, since each group gathers where its primary is.
+    internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
+        out IReadOnlyList<TabOrigin> origins, out IReadOnlyList<int> places) {
+        var pending = source.DeletingSpaceIds;
         var spaces = source.Spaces.ToList();
         if (spaces.Count == 0 || spaces.All(space => pending.Contains(space.Id))) spaces.Add(SessionRepair.Empty(emptySpace, ids, now));
         var repair = new SessionRepair(ids, now);
@@ -59,12 +56,14 @@ public static class NativeSessionMaintenance {
         IReadOnlyList<SpaceState> repaired = [.. spaces.Select((space, spaceIndex) =>
             pending.Contains(space.Id) ? repair.Kept(space, spaceIndex) : repair.Repaired(space, spaceIndex))];
         origins = repair.Origins;
+        places = [.. Enumerable.Range(0, source.Spaces.Count)];
         // Each group gathers where its primary is, so the asset references
-        // follow the Spaces to their places.
+        // and places follow the Spaces there.
         var grouped = SpaceGroup.Regrouped(repaired, pending);
         if (!ReferenceEquals(grouped, repaired)) {
-            var places = grouped.Select((space, index) => (space.Id, index)).ToDictionary(pair => pair.Id, pair => pair.index);
-            origins = [.. origins.Select(origin => origin with { SpaceIndex = places[repaired[origin.SpaceIndex].Id] })];
+            var moved = grouped.Select((space, index) => (space.Id, index)).ToDictionary(pair => pair.Id, pair => pair.index);
+            origins = [.. origins.Select(origin => origin with { SpaceIndex = moved[repaired[origin.SpaceIndex].Id] })];
+            places = [.. places.Select(index => moved[repaired[index].Id])];
             repaired = grouped;
         }
         // A launch Space that is gone falls back to the first Space that stays.
@@ -94,7 +93,7 @@ public static class NativeSessionMaintenance {
     /// Removes history and archive records older than each Space keeps them;
     /// a Space that is being deleted keeps everything.
     internal static SessionState Retain(SessionState session, DateTimeOffset at, out bool removed) {
-        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = session.DeletingSpaceIds;
         bool changed = false;
         IReadOnlyList<SpaceState> spaces = [.. session.Spaces.Select(space => {
             if (pending.Contains(space.Id)) return space;

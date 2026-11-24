@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// A reusable colored symbol tile for navigation, settings, and feature identity.
+/// A tile of Crest's paper in one color with a solid glyph on it, for
+/// navigation, settings and feature identity: flat, and when it casts a
+/// shadow, a paper one in ink, as a tile cut and laid on the page.
 struct CrestIconTile: View {
     let systemImage: String
     let color: Color
@@ -9,19 +11,13 @@ struct CrestIconTile: View {
     var cornerRadius: CGFloat = CrestRadius.compact
     var castsShadow = false
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     var body: some View {
         Image(systemName: systemImage)
             .font(.system(size: symbolSize, weight: .semibold))
             .browserReadableForeground(over: color)
             .frame(width: size, height: size)
             .background(color, in: .rect(cornerRadius: cornerRadius))
-            .shadow(
-                color: color.opacity(castsShadow && !reduceTransparency ? 0.2 : 0),
-                radius: castsShadow ? 5 : 0,
-                y: castsShadow ? CrestSpacing.extraExtraSmall : 0
-            )
+            .crestElevation(castsShadow ? .control : nil)
     }
 }
 

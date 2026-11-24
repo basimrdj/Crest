@@ -34,42 +34,14 @@ struct MobileBrowserSidebarTopChrome: View {
                     clearHistory: confirmClearHistory
                 )
                 .padding(.horizontal, BrowserSidebarMetrics.layerInset)
-                .padding(.bottom, 4)
+                .padding(.bottom, CrestSpacing.extraSmall)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
-                BrowserSidebarAddressField(
-                    configuration: addressConfiguration,
-                    fieldContextMenu: {
-                        if let pageActions = selectedPageActions,
-                            pageActions.isAvailable,
-                            !configuration.isAddressEditing.wrappedValue
-                        {
-                            MobilePageActionsContent(
-                                browser: configuration.context.browser,
-                                pages: pageActions
-                            )
-                            .tint(.primary)
-                        }
-                    }
-                )
-                .padding(.horizontal, BrowserSidebarMetrics.layerInset)
-                .padding(.bottom, 4)
+                BrowserSidebarAddressField(configuration: addressConfiguration)
+                    .modifier(SurfaceToneAppearance())
+                    .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+                    .padding(.bottom, CrestSpacing.extraSmall)
             }
-        }
-
-        if configuration.showsCompactAddressBar {
-            GlassEffectContainer(spacing: 0) {
-                MobileCompactNewTabPrompt(
-                    namespace: configuration.compactChromeNamespace,
-                    geometryID: configuration.context.browser
-                        .selectedSpaceID,
-                    transitionEnded: configuration.compactTransitionEnded,
-                    openNewTab: configuration.openNewTab
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
         }
     }
 
@@ -111,7 +83,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     .crestMenuActionLabelStyle()
                 }
             }
-            .accessibilityIdentifier("reload-control")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.reloadControl)
         }
         .collapsing(at: .navigation)
         ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
@@ -131,7 +103,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 systemImage: "ellipsis.circle",
                 isToolbarItem: isToolbarItem
             )
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         } else {
             Button(
                 "Page Actions",
@@ -139,7 +111,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 action: {}
             )
             .disabled(true)
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         }
     }
 
@@ -156,7 +128,10 @@ struct MobileBrowserSidebarTopChrome: View {
         BrowserSidebarAddressFieldConfiguration(
             text: configuration.address,
             isEditing: configuration.isAddressEditing,
-            isSecure: displayedURL?.scheme?.lowercased() == "https",
+            isSecure: PageSecurity.isSecure(
+                page: selectedPageActions?.activePage?.live,
+                storedAddress: configuration.context.browser.shownTab?.url
+            ),
             progress: selectedPageActions?.activePage?.estimatedProgress ?? 0,
             isLoading: selectedPageActions?.activePage?.live.isLoading == true,
             hasResidentPage: false,
@@ -165,6 +140,7 @@ struct MobileBrowserSidebarTopChrome: View {
             submit: configuration.submitAddress,
             morphNamespace: configuration.compactChromeNamespace,
             spaceID: selectedSpaceID,
+            spaceHasAddress: spaceHasAddress,
             commandPaletteHandoff: configuration.commandPaletteHandoff,
             branding: configuration.context.browser.shownSpace.map(\.settings.look)
         )
@@ -178,9 +154,12 @@ struct MobileBrowserSidebarTopChrome: View {
         )
     }
 
-    private var displayedURL: URL? {
-        selectedPageActions?.activeURL
-            ?? configuration.context.browser.shownTab?.url.flatMap(URL.init(string:))
+    /// Whether the selected Space's shown tab has an address of its own,
+    /// rather than the prompt.
+    private var spaceHasAddress: Bool {
+        let browser = configuration.context.browser
+        guard let tabID = browser.selectedTabID(in: selectedSpaceID) else { return false }
+        return browser.spaceModel(selectedSpaceID)?.shownTab(tabID)?.url?.isEmpty == false
     }
 
     /// The chrome sits above the pager, so the field and the toolbar belong

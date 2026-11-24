@@ -1,6 +1,21 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Types
+
+/// The commands of the window a view is in, as its menu bar runs them, with
+/// the keys the person set for them.
+struct BrowserWindowCommands {
+    let actions: BrowserCommandActions
+    let shortcuts: BrowserShortcutStore?
+}
+
+extension EnvironmentValues {
+    /// The commands of the window a view is in; nil outside a window that
+    /// runs them.
+    @Entry var browserWindowCommands: BrowserWindowCommands? = nil
+}
+
 /// Every command Crest's Mac shell can run, as ordinary methods on a value.
 ///
 /// The menu bar used to own these bodies privately, which meant the command
@@ -36,7 +51,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// presentation owns.
     func paletteRegistry(
         shortcuts: BrowserShortcutStore?,
-        openSettings: @escaping (String) -> Void = { _ in }
+        openSettings: @escaping (BrowserSettingsDestination) -> Void = { _ in }
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
             commands: Self.paletteCommands.filter(isListedInPalette),
@@ -71,9 +86,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Copies `text` and says so.
     func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        chrome.showNotice(.copied)
+        chrome.copy(text)
     }
 
     /// Runs `command` when the window and its page allow it, putting an open
@@ -211,14 +224,13 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     }
 
     /// Opens a blank Quick Window in the Space this window shows, over the
-    /// window, or with `wherePersonIs`, over the window the person is in in
-    /// another app.
-    func openQuickWindow(wherePersonIs: Bool = false) {
+    /// window, or with `source`, over the window the person is in in that
+    /// app.
+    func openQuickWindow(over source: BrowserQuickWindowSourceApp? = nil) {
         guard let space = browser.shownSpace else { return }
         windows?.openQuickWindow(
-            .empty(
-                spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID,
-                opensWherePersonIs: wherePersonIs))
+            .empty(spaceAssignment: BrowserSpaceRuntimeAssignment(space: space), targetWindowID: targetWindowID),
+            over: source)
     }
 
     func closeKeyWindow() {
@@ -230,6 +242,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     func closeTabOrWindow() {
         // A Peek open over the tab closes first, as it is what shows.
         if pages.closePeek() { return }
+        if closeSidebarSelection() { return }
         guard let selectedTab = browser.shownTab, let space = browser.shownSpace,
             !browser.closingLeavesOnlyTheWindow(selectedTab.id, in: space.id)
         else {
@@ -253,6 +266,22 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         } else {
             archiveSelectedTab()
         }
+    }
+
+    /// Closes the tabs selected in the sidebar together, as the selection's
+    /// Archive does, while the selection has this window's keyboard; answers
+    /// whether it did. A Quick Window in front, a page or a field with the
+    /// keyboard, and a selection of the shown tab alone leave the close to
+    /// the shown tab.
+    private func closeSidebarSelection() -> Bool {
+        let selection = browser.tabMultiSelection
+        guard let window = pages.presentationWindow, window.isKeyWindow, selection.hasKeyboard(in: window),
+            let item = selection.focusedItem, let request = BrowserSidebarSelection.capture(for: item, in: browser),
+            request.rootItems != browser.shownTab.map({ [BrowserSelectionItemID.tab($0.id)] })
+        else { return false }
+        BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(
+            browser.closing(request), for: request)
+        return true
     }
 
     // MARK: - Conditions
@@ -355,6 +384,26 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         chrome.showURLCopiedFeedback()
     }
 
+    /// Copies the title of the page the page commands act on.
+    func copyPageTitle() {
+        guard let title = commandPage?.live.title, !title.isEmpty else { return }
+        chrome.copy(title)
+    }
+
+    /// Opens the Site Controls of the page the page commands act on, on its
+    /// QR code.
+    func showPageQRCode() {
+        guard let page = commandPage else { return }
+        chrome.requestSiteControls(.qrCode, for: page)
+    }
+
+    /// Opens the address of the page the page commands act on in private
+    /// browsing.
+    func openPageInPrivateWindow() {
+        guard let url = commandPage?.live.documentURL else { return }
+        windows?.openInPrivateWindow(url)
+    }
+
     /// Turns blocking off, or on again, for the site of the page the window
     /// shows, in its Space, and reloads the page so the change shows.
     func toggleContentBlocking() {
@@ -444,10 +493,27 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
-    func clearCurrentTabs() {
-        guard browser.clearShownSpaceTabs(accessController: spaceAccess) else { return }
+    func clearCurrentTabs(keepingShownTab: Bool) {
+        guard browser.clearShownSpaceTabs(accessController: spaceAccess, keepingShownTab: keepingShownTab) else {
+            return
+        }
         pages.reconcile()
         pages.select()
+    }
+
+    /// Whether the Space this window shows is unlocked and has a folder open.
+    var canCollapseAllFolders: Bool {
+        browser.canCollapseShownSpaceFolders(accessController: spaceAccess)
+    }
+
+    /// Collapses every open folder of the Space this window shows, with the
+    /// sidebar's disclosure motion.
+    func collapseAllFolders() {
+        withAnimation(
+            CrestMotion.disclosure.unlessReducingMotion(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        ) {
+            _ = browser.collapseShownSpaceFolders(accessController: spaceAccess)
+        }
     }
 
     func archiveSelectedTab() {
@@ -611,7 +677,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selectAdjacentSpace(.next)
     }
 
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
+    func selectAdjacentSpace(_ direction: AdjacentDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
         pages.selectSpace(in: browser)
     }

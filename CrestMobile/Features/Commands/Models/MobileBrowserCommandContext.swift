@@ -13,6 +13,8 @@ struct MobileBrowserCommandContext {
     let canArchiveSelectedTab: Bool
     let canDuplicateSelectedTab: Bool
     let canReopenClosedTab: Bool
+    /// Whether the shown Space is unlocked and has a folder open to collapse.
+    let canCollapseAllFolders: Bool
     let tabCount: Int
     /// Whether the window has a second tab or split in its recent order.
     let canJumpToRecentTab: Bool
@@ -44,7 +46,9 @@ struct MobileBrowserCommandContext {
     let toggleSelectedTabPinned: () -> Void
     let duplicateSelectedTab: () -> Void
     let reopenClosedTab: () -> Void
-    let clearCurrentTabs: () -> Void
+    let clearOtherTabs: () -> Void
+    let clearAllTabs: () -> Void
+    let collapseAllFolders: () -> Void
     let dismissSelectedTab: () -> Void
     let archiveSelectedTab: () -> Void
     let selectPreviousTab: () -> Void
@@ -83,4 +87,15 @@ struct MobileBrowserCommandContext {
     let presentHistory: () -> Void
     let presentArchive: () -> Void
     let presentDownloads: () -> Void
+    /// Whether the shown tab can move between Saved Tabs and Current Tabs.
+    let canSaveSelectedTab: Bool
+    let toggleSelectedTabSaved: () -> Void
+    let copyPageTitle: () -> Void
+    /// Opens the active page's address in private browsing.
+    let openPageInPrivateBrowsing: () -> Void
+    /// Opens the active page's address as a new tab in another Space of the
+    /// window, unlocking it first.
+    let openPageInSpace: (UUID) -> Void
+    /// Opens Settings at a destination.
+    let openSettings: (BrowserSettingsDestination) -> Void
 }

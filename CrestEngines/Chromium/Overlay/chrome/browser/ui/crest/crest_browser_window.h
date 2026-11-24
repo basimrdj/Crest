@@ -22,7 +22,6 @@
 #include "chrome/browser/ui/exclusive_access/exclusive_access_context.h"
 #include "chrome/browser/ui/find_bar/find_bar.h"
 #include "chrome/browser/ui/location_bar/location_bar.h"
-#include "components/sharing_message/sharing_dialog_data.h"
 #include "components/web_modal/web_contents_modal_dialog_host.h"
 
 class Browser;
@@ -281,8 +280,6 @@ class CrestBrowserWindow : public BrowserWindow {
   web_modal::WebContentsModalDialogHost* GetWebContentsModalDialogHost() override;
   web_modal::WebContentsModalDialogHost* GetWebContentsModalDialogHostFor(content::WebContents* web_contents) override;
   void ShowAvatarBubbleFromAvatarButton(bool is_source_accelerator) override;
-  void MaybeShowProfileSwitchIPH() override;
-  void MaybeShowSupervisedUserProfileSignInIPH() override;
   void ShowHatsDialog( const std::string& site_id, const std::optional<std::string>& hats_histogram_name, const std::optional<uint64_t> hats_survey_ukm_id, base::OnceClosure success_callback, base::OnceClosure failure_callback, const SurveyBitsData& product_specific_bits_data, const SurveyStringData& product_specific_string_data) override;
   ExclusiveAccessContext* GetExclusiveAccessContext() override;
   std::string GetWorkspace() const override;

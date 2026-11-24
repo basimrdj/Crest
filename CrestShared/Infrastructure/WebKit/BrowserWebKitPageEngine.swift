@@ -18,6 +18,9 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     /// snapshot reports.
     @ObservationIgnored private(set) var knownMediaActivity: PageMediaActivity = []
     @ObservationIgnored private var stagedRequest: URLRequest?
+    /// Whether the web view runs `WebKitRestoredTraversalBridge`, which it
+    /// takes on the first restore of saved history.
+    @ObservationIgnored private var runsRestoredTraversalBridge = false
     #if os(macOS)
         @ObservationIgnored private var closeCompletion: (@MainActor (Bool) -> Void)?
         @ObservationIgnored private var closeTimeout: Task<Void, Never>?
@@ -55,6 +58,12 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     func restoreHistory(_ state: Data) -> Bool {
         // Supplements describe the list being replaced.
         history = BrowserPageNavigationHistory()
+        // A page restored from saved history misses WebKit's navigate event
+        // on moves back to its restored entries; the bridge replays them.
+        if !runsRestoredTraversalBridge {
+            runsRestoredTraversalBridge = true
+            WebKitRestoredTraversalBridge.install(in: webView.configuration.userContentController)
+        }
         webView.interactionState = state
         return webView.backForwardList.currentItem != nil
     }
@@ -147,6 +156,24 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             }
             closeCompletion = completion
             scheduleCloseTimeout()
+        }
+
+        /// Closes WebKit's page once its owner has let it go, so nothing loads,
+        /// commits or plays in it again, whoever still holds the web view. A page
+        /// left open keeps running its scripts, and WebKit commits a navigation
+        /// to another site in a new process; a web view whose last release lands
+        /// during that commit crashes WebKit. WebKit empties the page's history
+        /// as it closes, and the core reads that history as the page ends, so the
+        /// close waits for the next turn. It holds the web view until the close
+        /// returns, so the last release always comes after it.
+        func retire() {
+            let webView = webView
+            Task { @MainActor in
+                let selector = NSSelectorFromString("_close")
+                guard webView.responds(to: selector) else { return }
+                typealias Close = @convention(c) (AnyObject, Selector) -> Void
+                unsafeBitCast(webView.method(for: selector), to: Close.self)(webView, selector)
+            }
         }
 
         /// The person is deciding; a prompt has no time limit.

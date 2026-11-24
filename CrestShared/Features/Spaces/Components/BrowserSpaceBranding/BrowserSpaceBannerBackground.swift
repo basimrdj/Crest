@@ -4,6 +4,7 @@ struct BrowserSpaceBannerBackground: View {
     let branding: SpaceBranding
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
 
     private let previewReduceTransparency: Bool?
@@ -27,26 +28,28 @@ struct BrowserSpaceBannerBackground: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let colors = resolvedColors
             ZStack {
                 CrestColor.windowBackground
                 BrowserSpaceThemeField(
                     themeMode: branding.themeMode,
                     bannerPattern: branding.bannerPattern,
-                    gradientAngle: branding.gradientAngle,
-                    colors: colors,
+                    sidebarFill: resolvedFill,
+                    fills: resolvedFills,
                     size: geometry.size
                 )
                 .opacity(fieldOpacity)
 
+                // The readability fade darkens the colors under light text and
+                // lightens them under dark text.
                 if readabilityOpacity > 0 {
-                    Color.black.opacity(readabilityOpacity)
+                    (branding.foregroundTone(over: colorScheme) == .dark ? Color.white : Color.black)
+                        .opacity(readabilityOpacity)
                 }
 
-                if branding.themeMode == .gradient, branding.showsTexture {
-                    BrowserSpaceThemeTexture()
+                if branding.textureStrength > 0 {
+                    CrestGrain()
                         .blendMode(.softLight)
-                        .opacity(effectiveReduceTransparency ? 0.24 : 0.38)
+                        .opacity(textureOpacity)
                 }
             }
             .clipped()
@@ -54,14 +57,33 @@ struct BrowserSpaceBannerBackground: View {
         .accessibilityHidden(true)
     }
 
-    private var resolvedColors: [Color] {
-        let colors = branding.colors.map(\.color)
-        return colors.isEmpty ? [BrandColor.indigo.color] : colors
+    /// The sidebar's colors as its gradient runs them.
+    private var resolvedFill: CrestColorFill {
+        CrestColorFill(
+            branding.colors.isEmpty ? [SpaceBranding.fallbackColor] : Array(branding.colors),
+            kind: CrestGradientKind(branding.gradientKind), degrees: branding.gradientAngle)
+    }
+
+    /// The palette's colors as a banner fills them, each running into its
+    /// own gradient where it has one.
+    private var resolvedFills: [AnyShapeStyle] {
+        branding.colors.isEmpty
+            ? [AnyShapeStyle(SpaceBranding.fallbackColor.color)]
+            : branding.colors.indices.map { branding.slotFill($0).style }
     }
 
     private var fieldOpacity: Double {
         effectiveReduceTransparency
             ? max(branding.bannerStrength, 0.85) : branding.bannerStrength
+    }
+
+    /// How strongly the grain lies over the sidebar, whatever its mode: the
+    /// look's texture strength of a full grain, which is fainter while the
+    /// system reduces transparency.
+    private var textureOpacity: Double {
+        branding.textureStrength
+            * (effectiveReduceTransparency
+                ? CrestGrainMetrics.reducedTransparencyOpacity : CrestGrainMetrics.fullOpacity)
     }
 
     private var readabilityOpacity: Double {

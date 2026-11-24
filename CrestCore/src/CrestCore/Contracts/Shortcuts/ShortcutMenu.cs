@@ -12,13 +12,13 @@ public sealed class ShortcutMenu {
 
     public static readonly ShortcutMenu File = new(name: "file", title: "File", groups: [
         [ShortcutCommand.NewWindow, ShortcutCommand.NewBlankWindow, ShortcutCommand.NewTab, ShortcutCommand.NewQuickWindow,
-            ShortcutCommand.NewPrivateWindow],
+            ShortcutCommand.NewPrivateWindow, ShortcutCommand.OpenPageInPrivateWindow],
         [ShortcutCommand.OpenFile],
         [ShortcutCommand.CloseTabOrWindow, ShortcutCommand.CloseWindow],
         [ShortcutCommand.PrintPage]
     ]);
     public static readonly ShortcutMenu View = new(name: "view", title: "View", groups: [
-        [ShortcutCommand.ToggleSidebar, ShortcutCommand.ToggleTranslationToolbar],
+        [ShortcutCommand.ToggleSidebar, ShortcutCommand.CollapseAllFolders, ShortcutCommand.ToggleTranslationToolbar],
         [ShortcutCommand.ShowHistory, ShortcutCommand.ShowArchive, ShortcutCommand.ShowDownloads]
     ]);
     public static readonly ShortcutMenu Navigate = new(name: "navigate", title: "Navigate", groups: [
@@ -28,7 +28,8 @@ public sealed class ShortcutMenu {
     ]);
     public static readonly ShortcutMenu Tabs = new(name: "tabs", title: "Tabs", groups: [
         [ShortcutCommand.ToggleSelectedTabPinned, ShortcutCommand.ToggleSelectedTabSaved, ShortcutCommand.DuplicateTab,
-            ShortcutCommand.ReopenClosedTab, ShortcutCommand.ClearUnpinnedTabs, ShortcutCommand.ArchiveTab],
+            ShortcutCommand.ReopenClosedTab, ShortcutCommand.ClearOtherTabs, ShortcutCommand.ClearAllTabs,
+            ShortcutCommand.ArchiveTab],
         [ShortcutCommand.PreviousTab, ShortcutCommand.NextTab, ShortcutCommand.MostRecentTab,
             ShortcutCommand.MostRecentTabBackward],
         [ShortcutCommand.SplitWithNextTab, ShortcutCommand.FocusNextSplitCard, ShortcutCommand.FocusPreviousSplitCard,
@@ -43,10 +44,12 @@ public sealed class ShortcutMenu {
     public static readonly ShortcutMenu Page = new(name: "page", title: "Page", groups: [
         [ShortcutCommand.ToggleReaderMode, ShortcutCommand.ToggleContentBlocking, ShortcutCommand.BlockElement,
             ShortcutCommand.ShowBlockedElements],
+        [ShortcutCommand.OpenNextExtension],
         [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
-        [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,
-            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage],
+        [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.CopyPageTitle,
+            ShortcutCommand.ShowPageQRCode, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF, ShortcutCommand.SaveWebArchive,
+            ShortcutCommand.CapturePage],
         [ShortcutCommand.ClearSiteCookies, ShortcutCommand.ClearSiteCache]
     ]);
     public static readonly ShortcutMenu Develop = new(name: "develop", title: "Develop", groups: [

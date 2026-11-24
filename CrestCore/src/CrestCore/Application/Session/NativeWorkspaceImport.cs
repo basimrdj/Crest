@@ -22,11 +22,9 @@ internal sealed class NativeWorkspaceImport {
     internal const string OverflowFolderTitle = "Imported Pinned Tabs";
     internal const string OverflowFolderSymbol = "pin.slash";
 
-    /// The fewest tabs a split brings.
-    private const int MinimumSplitMembers = 2;
 
     /// How deep an imported Space may nest, as the stored format reads it.
-    private static readonly JsonDocumentOptions SpacesDocument = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions SpacesDocument = JsonDepth.Session.Options;
 
     #endregion
 
@@ -198,8 +196,9 @@ internal sealed class NativeWorkspaceImport {
         return new(space.SpaceId, space.ProfileId, settings, Folders: [], Tabs: [], SplitGroups: [], ArchivedTabs: [], History: []);
     }
 
-    /// Applies a manual setup's Spaces in their order; see `ApplyManualSetup`.
-    internal void ApplySetup(SetupDraft setup) {
+    /// Applies a manual setup's Spaces in their order, a new Sub-Space joining
+    /// its group at `now`; see `ApplyManualSetup`.
+    internal void ApplySetup(SetupDraft setup, DateTimeOffset now) {
         var paired = Pair(setup.Spaces, draft => draft.SpaceId);
         SessionState.RequireSpaceCapacity(spaces.Count, setup.Spaces.Count(draft => draft.IsNew));
         foreach (var (input, draft) in paired) {
@@ -216,6 +215,13 @@ internal sealed class NativeWorkspaceImport {
             if (!created) continue;
             spaces.Add(destination);
             affected ??= destination;
+        }
+        foreach (var (input, draft) in paired) {
+            if (!draft.IsNew || draft.PrimaryId is not { } primaryId) continue;
+            if (spaces.FirstOrDefault(s => s.Id == input.Id) is not { } member
+                || spaces.FirstOrDefault(s => s.Id == primaryId) is not { } primary) continue;
+            var leader = primary.State.PrimaryId is { } leadId ? spaces.FirstOrDefault(s => s.Id == leadId) ?? primary : primary;
+            member.State = Joining(member.State, leader.State, now);
         }
         if (setup.OrderWasEdited) {
             var order = paired.Select(pair => pair.Input.Id).ToArray();
@@ -297,6 +303,9 @@ internal sealed class NativeWorkspaceImport {
     /// A reviewed Space's included tabs, in the placements the review chose, with
     /// the folders they need where they stay in a folder's place, saved tabs or
     /// a tab group's open tabs, and the splits whose tabs still come together.
+    /// A folder it adds comes open or closed as its source has it, which for
+    /// another browser's data is closed, and the overflow folder it makes
+    /// comes closed; a folder it joins stays as it is.
     /// Pinned tabs past the limit become saved tabs in the overflow folder. New
     /// identities come from `ids`.
     private void Import(SetupReviewSpace review, Draft input, Draft destination, bool isNew, IIdSource ids) {
@@ -328,7 +337,6 @@ internal sealed class NativeWorkspaceImport {
             folders.Add(original with {
                 Id = identity,
                 ParentId = parent,
-                IsCollapsed = false,
                 CollapseModifiedAt = null,
                 OrderAnchorTabId = null
             });
@@ -345,16 +353,15 @@ internal sealed class NativeWorkspaceImport {
                 placement = spill;
                 if (overflowFolder is null && folders.Count < MaximumFolders) {
                     overflowFolder = new FolderState(ids.Next(), spill, OverflowFolderTitle,
-                        OverflowFolderSymbol);
+                        OverflowFolderSymbol, IsCollapsed: true);
                     folders.Add(overflowFolder);
                 }
                 folder = overflowFolder?.Id;
             } else folder = Kept(tab) && tab.FolderId is { } old && mapping.TryGetValue(old, out var copied)
                   ? copied : null;
-            return Copied(tab, tab with {
+            return Copied(tab, tab.SavedAt(placement.IsDurable ? tab.SavedUrl ?? tab.Url : null) with {
                 Placement = placement,
                 FolderId = folder,
-                SavedUrl = placement.IsDurable ? tab.SavedUrl ?? tab.Url : null,
                 Symbol = placement.ImportedSymbol ?? tab.Symbol
             });
         }).ToArray();
@@ -400,7 +407,7 @@ internal sealed class NativeWorkspaceImport {
         var repaired = SplitMember.Repair(all).Skip(existing.Count).ToArray();
         var counts = repaired.OfType<Guid>().GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count());
         var tabs = edited.Select((tab, index) => {
-            Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= MinimumSplitMembers ? joined : null;
+            Guid? kept = repaired[index] is { } joined && joined == asked[index] && counts[joined] >= SplitGroupState.MinimumMembers ? joined : null;
             return tab.SplitGroupId == kept ? tab : Copied(tab, tab with { SplitGroupId = kept });
         }).ToArray();
         foreach (var (source, identity) in identities)
@@ -433,7 +440,8 @@ internal sealed class NativeWorkspaceImport {
                 && !tab.Placement.IsDurable && tab.LastActivatedAt < now ? Copied(tab, tab with { LastActivatedAt = now }) : tab)]
         };
         int affectedIndex = affected is null ? -1 : spaces.IndexOf(affected);
-        // Repair may replace colliding identities, so hints and origins travel by position.
+        // Repair may replace colliding identities and move a Sub-Space beside
+        // its primary, so hints and origins travel by where each Space went.
         var shown = new List<(int Space, int Tab)>();
         for (int si = 0; si < spaces.Count; si++)
             if (spaces[si].ShownTab is { } tab && spaces[si].State.Tabs.Select(t => t.Id).ToList().IndexOf(tab) is var ti and >= 0)
@@ -444,20 +452,24 @@ internal sealed class NativeWorkspaceImport {
             DefaultSpaceId = defaultSpace,
             DisposableSeedMarker = seedMarker
         };
-        var repaired = NativeSessionMaintenance.Repair(imported, now, null, ids, out _);
+        var repaired = NativeSessionMaintenance.Repair(imported, now, null, ids, out _, out var places);
         // Show the imported instance even when repair replaced a colliding ID.
-        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[affectedIndex].Id);
-        foreach (var (si, ti) in shown) followUp.ShowTab(repaired.Spaces[si].Id, repaired.Spaces[si].Tabs[ti].Id);
-        var (importedTabs, copies) = Placed(before, repaired);
+        if (affectedIndex >= 0) followUp.ShowSpace(repaired.Spaces[places[affectedIndex]].Id);
+        foreach (var (si, ti) in shown) {
+            var space = repaired.Spaces[places[si]];
+            followUp.ShowTab(space.Id, space.Tabs[ti].Id);
+        }
+        var (importedTabs, copies) = Placed(before, repaired, places);
         return new(repaired, importedTabs, copies);
     }
 
     /// Where each tab of `repaired` came from, matched by position with the
-    /// records `before` held: each tab an imported Space brought, and each of
-    /// the session's own tabs repair gave a new identity. A Space repair kept
-    /// as it was, such as one being deleted, placed nothing.
+    /// records `before` held, each Space where `places` says it went: each
+    /// tab an imported Space brought, and each of the session's own tabs
+    /// repair gave a new identity. A Space repair kept as it was, such as one
+    /// being deleted, placed nothing.
     private (IReadOnlyList<ImportedTab> Imported, IReadOnlyList<SessionTabCopy> Copied) Placed(IReadOnlyList<SpaceState> before,
-        SessionState repaired) {
+        SessionState repaired, IReadOnlyList<int> places) {
         var imported = new List<ImportedTab>();
         var copied = new List<SessionTabCopy>();
         void Place(object record, Guid id) {
@@ -466,7 +478,7 @@ internal sealed class NativeWorkspaceImport {
             else if (id != origin.TabId) copied.Add(new(origin.TabId, id));
         }
         for (int si = 0; si < before.Count; si++) {
-            var space = repaired.Spaces[si];
+            var space = repaired.Spaces[places[si]];
             if (ReferenceEquals(space, before[si])) continue;
             for (int ti = 0; ti < before[si].Tabs.Count; ti++) Place(before[si].Tabs[ti], space.Tabs[ti].Id);
             // Repair drops a Start Page from the archive.

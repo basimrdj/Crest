@@ -22,11 +22,14 @@ struct MobileBrowserCommand {
         .reloadFromOrigin, isEnabled: { $0.hasActivePage }, run: { $0.reloadFromOrigin() })
     static let toggleSelectedTabPinned = MobileBrowserCommand(
         .toggleSelectedTabPinned, isEnabled: { $0.hasSelectedTab }, run: { $0.toggleSelectedTabPinned() })
+    static let toggleSelectedTabSaved = MobileBrowserCommand(
+        .toggleSelectedTabSaved, isEnabled: { $0.canSaveSelectedTab }, run: { $0.toggleSelectedTabSaved() })
     static let duplicateTab = MobileBrowserCommand(
         .duplicateTab, isEnabled: { $0.canDuplicateSelectedTab }, run: { $0.duplicateSelectedTab() })
     static let reopenClosedTab = MobileBrowserCommand(
         .reopenClosedTab, isEnabled: { $0.canReopenClosedTab }, run: { $0.reopenClosedTab() })
-    static let clearUnpinnedTabs = MobileBrowserCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
+    static let clearOtherTabs = MobileBrowserCommand(.clearOtherTabs) { $0.clearOtherTabs() }
+    static let clearAllTabs = MobileBrowserCommand(.clearAllTabs) { $0.clearAllTabs() }
     static let archiveTab = MobileBrowserCommand(
         .archiveTab, isEnabled: { $0.canArchiveSelectedTab }, run: { $0.archiveSelectedTab() })
     static let previousTab = MobileBrowserCommand(
@@ -74,12 +77,20 @@ struct MobileBrowserCommand {
         .copyPageLink, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLink() })
     static let copyPageLinkAsMarkdown = MobileBrowserCommand(
         .copyPageLinkAsMarkdown, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLinkAsMarkdown() })
+    static let copyPageTitle = MobileBrowserCommand(
+        .copyPageTitle, isEnabled: { $0.hasActivePage }, run: { $0.copyPageTitle() })
+    static let openPageInPrivateWindow = MobileBrowserCommand(
+        .openPageInPrivateWindow, menuTitle: { _ in "Open in Private Browsing" },
+        isAvailable: { !$0.isPrivateBrowsing }, isEnabled: { $0.hasActivePage && !$0.isPrivateBrowsing },
+        run: { $0.openPageInPrivateBrowsing() })
     static let printPage = MobileBrowserCommand(.printPage, isEnabled: { $0.hasActivePage }, run: { $0.printPage() })
     static let clearSiteCookies = MobileBrowserCommand(
         .clearSiteCookies, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.siteData) })
     static let clearSiteCache = MobileBrowserCommand(
         .clearSiteCache, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.cache) })
     static let toggleSidebar = MobileBrowserCommand(.toggleSidebar) { $0.toggleSidebar() }
+    static let collapseAllFolders = MobileBrowserCommand(
+        .collapseAllFolders, isEnabled: { $0.canCollapseAllFolders }, run: { $0.collapseAllFolders() })
     static let toggleTranslationToolbar = MobileBrowserCommand(
         .toggleTranslationToolbar, isAvailable: { $0.canToggleTranslationToolbar },
         isEnabled: { $0.canToggleTranslationToolbar },
@@ -93,15 +104,18 @@ struct MobileBrowserCommand {
     /// The commands the platform runs, in the order the palette offers them.
     static let all = [
         closeTabOrWindow, back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned,
-        duplicateTab,
-        reopenClosedTab, clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        toggleSelectedTabSaved, duplicateTab,
+        reopenClosedTab, clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab,
+        mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace,
         nextSpace, toggleReaderMode, toggleContentBlocking, blockElement, showBlockedElements,
         findInPage, zoomIn, zoomOut, actualSize,
         copyPageLink,
-        copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, toggleTranslationToolbar,
+        copyPageLinkAsMarkdown, copyPageTitle, openPageInPrivateWindow, printPage, clearSiteCookies, clearSiteCache,
+        toggleSidebar, collapseAllFolders,
+        toggleTranslationToolbar,
         showHistory, showArchive,
         showDownloads,
     ]

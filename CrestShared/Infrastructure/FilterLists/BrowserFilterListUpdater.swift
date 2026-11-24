@@ -23,16 +23,17 @@ final class BrowserFilterListUpdater {
             newRequest request: URLRequest,
             completionHandler: @escaping @Sendable (URLRequest?) -> Void
         ) {
-            completionHandler(request.url?.scheme?.lowercased() == "https" ? request : nil)
+            completionHandler(request.url?.webScheme?.isSecure == true ? request : nil)
         }
     }
 
     // MARK: - Static Variables
 
     private static let interval: Duration = .seconds(60 * 60)
-    /// The most a list may hold, as the core keeps it
-    /// (`FilterLibrary.MaximumListBytes`).
-    nonisolated private static let maximumBytes = 15 * 1024 * 1024
+    /// How long a list's server may go silent before the update gives up.
+    private static let requestTimeout: TimeInterval = 60
+    /// The most a list may hold, as the core keeps it.
+    nonisolated private static let maximumBytes = CapacityLimits.current.filterListBytes
 
     // MARK: - Variables
 
@@ -53,14 +54,14 @@ final class BrowserFilterListUpdater {
         configuration.urlCredentialStorage = nil
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        configuration.timeoutIntervalForRequest = 60
+        configuration.timeoutIntervalForRequest = Self.requestTimeout
         session = URLSession(configuration: configuration)
     }
 
     // MARK: - Actions - Scheduling
 
-    /// Checks now, then every hour and whenever the lists change, until the
-    /// updater goes away.
+    /// Checks now, then every hour and whenever the lists or Super Copy
+    /// change, until the updater goes away.
     func start() {
         guard schedule == nil else { return }
         schedule = Task { [weak self] in
@@ -72,12 +73,14 @@ final class BrowserFilterListUpdater {
         checkWhenListsChange()
     }
 
-    /// Checks again once the core's lists change, watching again first so a
-    /// change during the check is not missed. The core answers only what is
-    /// due, so a change a download made asks for nothing more.
+    /// Checks again once the core's lists change, or Super Copy, which keeps
+    /// a list of its own, watching again first so a change during the check
+    /// is not missed. The core answers only what is due, so a change a
+    /// download made asks for nothing more.
     private func checkWhenListsChange() {
         withObservationTracking {
             _ = core.state.filterLists
+            _ = core.state.linkPreferences?.cleansCopiedLinks
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, self.schedule?.isCancelled == false else { return }

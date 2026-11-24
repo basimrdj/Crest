@@ -54,6 +54,13 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    /// Where a pinned tab returns when closing puts its page away.
+    var pinnedTabClosePolicy: SavedTabClosePolicy {
+        get { preferences.pinnedTabClose }
+        set { set { $0.pinnedTabClose = newValue } }
+    }
+
+    /// Where a saved tab returns when closing puts its page away.
     var savedTabClosePolicy: SavedTabClosePolicy {
         get { preferences.savedTabClose }
         set { set { $0.savedTabClose = newValue } }
@@ -64,6 +71,13 @@ final class BrowserAppPreferenceStore {
         set {
             set { $0.savedTabFaviconReturnsToSavedURL = newValue }
         }
+    }
+
+    /// Whether a saved tab stays as it is once its page is unloaded. Off,
+    /// its row offers to delete it once it is unloaded.
+    var unloadedSavedTabsStay: Bool {
+        get { preferences.unloadedSavedTabsStay }
+        set { set { $0.unloadedSavedTabsStay = newValue } }
     }
 
     var splitFocusFollowsMouse: Bool {
@@ -81,6 +95,19 @@ final class BrowserAppPreferenceStore {
     var showsRecentTabs: Bool {
         get { preferences.showsRecentTabs }
         set { set { $0.showsRecentTabs = newValue } }
+    }
+
+    /// Where among the open tabs a new tab the person opens goes.
+    var newTabPosition: NewTabPosition {
+        get { preferences.newTabPosition }
+        set { set { $0.newTabPosition = newValue } }
+    }
+
+    /// Whether a new tab opened from a tab in a folder opens at the end of
+    /// that folder; off, it opens at `newTabPosition`.
+    var newTabsJoinFolder: Bool {
+        get { preferences.newTabsJoinFolder }
+        set { set { $0.newTabsJoinFolder = newValue } }
     }
 
     /// How the command palette ranks and arranges what it offers.
@@ -117,6 +144,19 @@ final class BrowserAppPreferenceStore {
             SetTranslationRule(
                 workspaceID: browser.family.workspaceID, sourceLanguage: sourceID, targetLanguage: targetID,
                 isEnabled: isEnabled))
+    }
+
+    /// Whether pages in `translation`'s source language translate into its
+    /// target by themselves, as Always Translate turns on.
+    func alwaysTranslates(_ translation: BrowserPageTranslation) -> Bool {
+        automaticallyTranslates && preferences.translationRules.decision(for: translation.sourceID)?.target != nil
+    }
+
+    /// Turns Always Translate on or off for `translation`'s source language,
+    /// which turns automatic translation on too.
+    func setAlwaysTranslates(_ enabled: Bool, _ translation: BrowserPageTranslation) {
+        setTranslationRule(sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
+        if enabled { automaticallyTranslates = true }
     }
 
     // MARK: - Actions - Commands

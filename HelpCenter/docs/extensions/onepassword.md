@@ -1,6 +1,6 @@
 ---
 title: Set up 1Password in Crest
-description: Install the 1Password Chrome extension in Crest for Mac and authorize Crest in the 1Password app.
+description: Install the 1Password extension in Crest for Mac and authorize Crest in the 1Password app.
 slug: /onepassword
 sidebar_label: 1Password setup
 sidebar_position: 10
@@ -39,6 +39,8 @@ The 1Password Chrome Web Store extension runs on Chromium pages in Crest for Mac
 1Password warns that an additional browser can reach your saved information while 1Password is unlocked, so it can save and fill logins. Only authorize a Crest build you trust.
 
 ## If it does not connect
+
+Touch ID unlock comes from the 1Password app, so the extension offers it only after you authorize Crest there. Until then, the extension unlocks with your account password.
 
 Reinstalling the extension does not change the signature 1Password checks. Confirm that you added the Crest app in `/Applications`, then see [Native companions](./native-companion-limits.md) and [Troubleshoot an extension](./troubleshoot-partial-compatibility.md).
 

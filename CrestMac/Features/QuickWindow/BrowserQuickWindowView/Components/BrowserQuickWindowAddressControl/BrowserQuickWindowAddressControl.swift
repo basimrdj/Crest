@@ -19,6 +19,7 @@ struct BrowserQuickWindowAddressControl: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
+    @Environment(\.browserMacWindows) private var windows
 
     var body: some View {
         HStack(spacing: 7) {
@@ -40,6 +41,7 @@ struct BrowserQuickWindowAddressControl: View {
                 summaryAccessibilityIdentifier: "quick-window-address-display",
                 prompt: "Search or enter a website",
                 centeringField: Self.field,
+                display: BrowserDeviceAppearanceStore.shared.address.display,
                 submit: openAddress
             )
             .padding(.vertical, BrowserQuickWindowLayout.addressVerticalPadding)
@@ -52,6 +54,7 @@ struct BrowserQuickWindowAddressControl: View {
                 )
                 if let siteControl {
                     BrowserSiteControlButton(configuration: siteControl)
+                        .environment(\.browserWindowCommands, windowCommands)
                 }
             }
         }
@@ -60,7 +63,7 @@ struct BrowserQuickWindowAddressControl: View {
             progress: model.page?.estimatedProgress ?? 0,
             isLoading: model.page?.live.isLoading == true,
             isEditing: isAddressEditing,
-            isGlass: true
+            activate: openFromSurface
         )
         .coordinateSpace(Self.field)
         .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
@@ -81,12 +84,22 @@ struct BrowserQuickWindowAddressControl: View {
     /// The page's Site Controls, as a browser window's address field offers
     /// them: its site settings, permission requests and extensions.
     private var siteControl: BrowserSiteControlConfiguration? {
-        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel,
-            let pages = model.pages
+        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel, model.pages != nil
         else { return nil }
         return BrowserSiteControlConfiguration(
-            page: page, space: space, selectedTabID: nil, permissionCenter: pages.permissionCenter,
+            page: page, space: space, selectedTabID: nil,
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
+    }
+
+    /// The page commands as they run in this Quick Window, on its page, which
+    /// its Site Controls run.
+    private var windowCommands: BrowserWindowCommands? {
+        guard let chrome, let pages = model.pages, let page = model.page else { return nil }
+        return BrowserWindowCommands(
+            actions: BrowserCommandActions(
+                browser: model.browser, pages: pages, chrome: chrome, windows: windows,
+                targetWindowID: model.presentedRequest.targetWindowID, quickWindowPage: page),
+            shortcuts: nil)
     }
 
     /// Whether the palette shows over the field, which needs the Quick
@@ -94,7 +107,7 @@ struct BrowserQuickWindowAddressControl: View {
     private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
 
     /// The field's frame, carrying the palette's identity while the field
-    /// holds it, so the palette's glass grows out of the field's, as the
+    /// holds it, so the palette's surface grows out of the field's, as the
     /// sidebar's field does with a browser window's palette.
     @ViewBuilder
     private var commandPaletteAnchor: some View {
@@ -116,13 +129,27 @@ struct BrowserQuickWindowAddressControl: View {
         return { [model] in chrome.openLocation(model.address) }
     }
 
+    // MARK: - Actions - Address
+
+    /// What a click on the field's surface does where nothing in the field
+    /// takes it, such as the band above and below the address: what a click
+    /// on the address does. An address being edited keeps its edit.
+    private func openFromSurface() {
+        guard !isAddressEditing else { return }
+        if let openPalette {
+            openPalette()
+        } else {
+            isAddressEditing = true
+        }
+    }
+
     // MARK: - Actions - Page
 
     private func openAddress() {
         guard let space = model.spaceModel,
             let resolved = try? model.browser.core.query(
                 ResolveAddress(workspaceID: model.browser.family.workspaceID, spaceID: space.id, input: addressText)),
-            let url = resolved.url.flatMap(URL.init(string:))
+            let url = resolved.url.flatMap(URL.init(address:))
         else { return }
         addressText = url.absoluteString
         model.open(url, isActive: scenePhase == .active)

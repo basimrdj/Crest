@@ -1,6 +1,8 @@
 import Foundation
 
-/// A house as the starting point of a Space's look.
+/// A house as the starting point of a Space's look: a template, which is a
+/// full set of icon and colors, or a crest the Space wears as its icon in its
+/// own colors.
 extension SpaceHouse {
     /// The house a crest started from, by the name it recorded. Earlier builds
     /// recorded the house's English title, which differs only in case.
@@ -9,28 +11,18 @@ extension SpaceHouse {
         return all.first { $0.name.caseInsensitiveCompare(recorded) == .orderedSame }
     }
 
-    /// `branding` starting over from the house's look, keeping the Space's
-    /// own strengths, folder and text choices. A look that started from a
-    /// scheme wore the scheme's strength, fade, texture, text and icon color
-    /// rather than the person's, so it takes the house's own instead.
+    /// `branding` starting over from the house as a template: its colors,
+    /// texture and sidebar, and its crest as the icon, as the core applies
+    /// it. A core that cannot answer keeps the look as it is.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
-        var updated = branding
-        if SpaceScheme.startingPoint(of: branding) != nil {
-            updated.bannerStrength = look.bannerStrength
-            updated.readabilityFade = look.readabilityFade
-            updated.showsTexture = look.showsTexture
-            updated.textColorMode = look.textColorMode
-            updated.symbolColor = look.symbolColor
-        }
-        updated.colors = look.colors
-        updated.themeMode = look.themeMode
-        updated.bannerPattern = look.bannerPattern
-        updated.gradientAngle = look.gradientAngle
-        updated.iconStyle = .layeredCrest
-        updated.crest = look.crest
-        updated.crest.startingPresetID = name
-        updated.hasCustomAppearance = false
-        return updated.normalized()
+        (try? CrestCore.answer(ApplyHouse(branding: branding, house: self)))?.branding ?? branding
+    }
+
+    /// `branding` wearing the house's crest as its icon, in the Space's own
+    /// colors, which stay as they are. A core that cannot answer keeps the
+    /// look as it is.
+    func wearingCrest(on branding: SpaceBranding) -> SpaceBranding {
+        (try? CrestCore.answer(WearHouseCrest(branding: branding, house: self)))?.branding ?? branding
     }
 
     /// Whether `branding` still wears the house's look unchanged.
@@ -38,17 +30,8 @@ extension SpaceHouse {
         var crest = branding.crest
         crest.startingPresetID = nil
         return branding.hasCustomAppearance != true && branding.iconStyle == .layeredCrest
-            && branding.colors == look.colors && branding.themeMode == look.themeMode
+            && branding.colors == look.colors && branding.colorGradients == look.colorGradients
+            && branding.themeMode == look.themeMode
             && (look.themeMode == .gradient || branding.bannerPattern == look.bannerPattern) && crest == look.crest
-    }
-
-    /// The colors the house is made of, darkest first.
-    var tinctures: [BrandColor] {
-        var seen: [BrandColor] = []
-        for color in Array(look.colors) + Array(look.crest.palette ?? [])
-        where !seen.contains(where: { $0.matches(color) }) {
-            seen.append(color)
-        }
-        return seen.sorted { $0.luminance < $1.luminance }
     }
 }

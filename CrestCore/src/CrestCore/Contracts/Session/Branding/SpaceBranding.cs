@@ -4,6 +4,12 @@ namespace CrestCore.Contracts;
 /// How a Space's sidebar and icon look. <see cref="RenderingVersion"/> is the newest
 /// vocabulary the branding uses, which older readers need to read it faithfully.
 /// <see cref="HasCustomAppearance"/> is null for branding stored before it was recorded.
+/// <see cref="TextureStrength"/> is how strongly a grain lies over the sidebar, whatever its
+/// mode, from none at 0 to full at 1. <see cref="GradientKind"/> is how a gradient runs, or
+/// null for along a line at <see cref="GradientAngle"/>, as every build before it drew.
+/// <see cref="SymbolGradient"/> is the gradient the icon's <see cref="SymbolColor"/> runs on
+/// into, and <see cref="ColorGradients"/> the ones each of <see cref="Colors"/> runs on into,
+/// by index. Without them each color is plain, which is how every build before them draws it.
 /// </summary>
 public sealed partial record SpaceBranding(
     ColorPalette Colors,
@@ -13,14 +19,17 @@ public sealed partial record SpaceBranding(
     bool KeepsControlsReadable,
     SpaceThemeMode ThemeMode,
     double GradientAngle,
-    bool ShowsTexture,
+    double TextureStrength,
     SpaceIconStyle IconStyle,
     BrandColor? SymbolColor,
     SpaceCrest Crest,
     int RenderingVersion,
     double FolderColorIntensity,
     SpaceTextColorMode TextColorMode,
-    bool? HasCustomAppearance) {
+    bool? HasCustomAppearance,
+    SpaceGradientKind? GradientKind = null,
+    BrandGradient? SymbolGradient = null,
+    PaletteGradients? ColorGradients = null) {
     #region Static Variables
 
     /// The rendering vocabulary every shipped build draws. A banner strength stored
@@ -34,7 +43,7 @@ public sealed partial record SpaceBranding(
     /// gave it no colors: a gray solid banner that keeps controls readable, with a
     /// plain mountain crest.</summary>
     public static SpaceBranding Neutral { get; } = new(new([new(0.24, 0.25, 0.27)]), SpaceBannerPattern.Solid, BannerStrength: 1,
-        ReadabilityFade: 0.34, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, ShowsTexture: false,
+        ReadabilityFade: 0.34, KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, TextureStrength: 0,
         SpaceIconStyle.SimpleSymbol, SymbolColor: null,
         SpaceCrest.PlainField(CrestBackplate.Shield, CrestSymbol.Mountain, CrestTrim.None, layers: [1, 1, 2, 1, 2, 1], trimWeight: 1,
             chargeScale: 1),
@@ -60,7 +69,7 @@ public sealed partial record SpaceBranding(
         var crest = SpaceCrest.PlainField(CrestBackplate.Shield, LegacyFigure(symbol), CrestTrim.None, layers: [1, 1, 2, 1, 2, 1],
             trimWeight: 1, chargeScale: 1);
         return new(new(accent.LegacyColors), SpaceBannerPattern.Diagonal, BannerStrength: 1, LegacyReadabilityFade,
-            KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, ShowsTexture: false, SpaceIconStyle.SimpleSymbol,
+            KeepsControlsReadable: true, SpaceThemeMode.Banner, GradientAngle: 0, TextureStrength: 0, SpaceIconStyle.SimpleSymbol,
             SymbolColor: null, crest, BaselineRenderingVersion, FolderColorIntensity: 0, SpaceTextColorMode.Automatic,
             HasCustomAppearance: null);
     }

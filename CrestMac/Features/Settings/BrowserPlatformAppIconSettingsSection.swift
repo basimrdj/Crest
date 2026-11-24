@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct BrowserPlatformAppIconSettingsSection: View {
+    /// An icon's corner, as the icon's own rounding draws it at the size the
+    /// choice shows it.
+    private static let iconCornerRadius: CGFloat = 13
+
     @AppStorage(BrowserMacAppIconAssets.preferenceKey, store: BrowserMacDockTile.shared.defaults)
     private var selectedName = ""
     @State private var appearanceRevision = 0
@@ -13,8 +17,11 @@ struct BrowserPlatformAppIconSettingsSection: View {
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
                 iconChoice(name: "", title: "Crest", preview: "CrestPreview")
-                ForEach(SpaceHouse.all, id: \.self) { house in
-                    iconChoice(name: house.appIconName, title: house.title, preview: house.appIconName + "Preview")
+                // A house that wears Crest's own icon is the choice above.
+                ForEach(SpaceHouse.all.filter { $0.appIconName != nil }, id: \.self) { house in
+                    if let icon = house.appIconName {
+                        iconChoice(name: icon, title: house.title, preview: icon + "Preview")
+                    }
                 }
             }
             .padding(.vertical, 8)
@@ -51,7 +58,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
                 .resizable().scaledToFit()
                 .id(appearanceRevision)
                 .frame(width: 58, height: 58)
-                .clipShape(.rect(cornerRadius: 13))
+                .clipShape(.rect(cornerRadius: Self.iconCornerRadius))
                 Text(title).font(.caption).foregroundStyle(.primary)
             }
         }

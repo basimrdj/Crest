@@ -56,12 +56,15 @@ struct BrowserSettingsView: View {
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
         .ignoresSafeArea(.container, edges: .top)
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
+        .tint(CrestBrandTheme.accent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(\.browserSettingsTabState, tabState)
         .environment(\.browserSettingsIsTab, true)
         .environment(\.browserSettingsUsesLiveSidebar, usesLiveSidebar)
         .environment(\.browserSettingsOpenSpace, openSpaceAction)
+        // Every Mac browser window draws tab previews beside its sidebar.
+        .environment(\.browserTabPreviewHosting, .hover)
         .onChange(of: scenePhase) { previousPhase, phase in
             lockPrivateSettings(previousPhase, phase)
         }

@@ -9,7 +9,6 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
     let selectedSpaceID: UUID?
     let selectSpace: (UUID) -> Void
     var style: CrestSpaceIconPickerStyle = .compact
-    var selectionTint: Color? = nil
     var accessibilityIdentifier: String?
     var moveSpace: ((UUID, UUID) -> Void)? = nil
     var reorderViewport = CGRect.zero
@@ -17,11 +16,17 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
     var segmentSize = CGSize(
         width: CrestSpaceIconPickerMetrics.segmentWidth,
         height: CrestSpaceIconPickerMetrics.segmentHeight)
+    /// Whether the picker draws its track, the selection and the outline
+    /// around a group. Dots go without them and show both by their shade.
+    var drawsSurfaces = true
     @ViewBuilder let segmentContent: (Space) -> SegmentContent
 
     @State private var reorder = CrestSpacePickerReordering()
     @State private var frames: [UUID: CGRect] = [:]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var tone: CrestSpaceIconPickerTone { .over(colorScheme) }
 
     // MARK: - Actions - Drawing
 
@@ -42,21 +47,14 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                         spaces: spaces.map(\.identity),
                         selectedSpaceID: selectedSpaceID,
                         frames: anchors.mapValues { geometry[$0] },
-                        selectionTint: selectionTint
+                        drawsHighlight: drawsSurfaces
                     )
                 }
             }
         }
         .background {
             CrestSpaceIconPickerShape(style: style)
-                .fill(.primary.opacity(style.trackFillOpacity))
-        }
-        .overlay {
-            CrestSpaceIconPickerShape(style: style)
-                .strokeBorder(
-                    .primary.opacity(style.trackBorderOpacity),
-                    lineWidth: CrestLayout.hairline / 2
-                )
+                .fill(drawsSurfaces ? tone.wellColor : .clear)
         }
         .fixedSize(horizontal: true, vertical: false)
         .background {
@@ -91,7 +89,7 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 }
                 .offset(reorder.offset(for: space.id, ids: spaces.map(\.id), frames: frames))
                 .scaleEffect(lifted ? 1.08 : 1)
-                .shadow(color: .black.opacity(lifted ? 0.25 : 0), radius: 4, y: 2)
+                .crestElevation(.lifted, scale: lifted ? 1 : 0)
                 .animation(
                     reduceMotion || lifted ? nil : CrestMotion.dragSource,
                     value: reorder.targetID
@@ -134,7 +132,6 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
     private func spaceButton(_ space: Space) -> some View {
         let identity = space.identity
         let isSelected = space.id == selectedSpaceID
-        let tint = selectionTint ?? identity.branding.primaryColor.color
         let accessibilityValue = accessibilityValue(
             isSelected: isSelected,
             requiresAuthentication: identity.requiresAuthentication
@@ -150,17 +147,9 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 )
                 .contentShape(.rect)
                 .background {
-                    if isSelected && selectionPresentation == nil {
+                    if isSelected && selectionPresentation == nil && drawsSurfaces {
                         CrestSpaceIconPickerShape(style: style)
-                            .fill((style.tintsSelection ? tint : Color.primary).opacity(style.selectionFillOpacity))
-                            .overlay {
-                                CrestSpaceIconPickerShape(style: style)
-                                    .strokeBorder(
-                                        style.tintsSelection
-                                            ? tint.mix(with: .primary, by: CrestSpaceIconPickerMetrics.strokeLift)
-                                            : .clear,
-                                        lineWidth: CrestSpaceIconPickerMetrics.selectionStroke)
-                            }
+                            .fill(tone.selectorColor)
                     }
                 }
         }

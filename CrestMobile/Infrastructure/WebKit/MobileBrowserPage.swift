@@ -302,7 +302,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         #if DEBUG
             // iOS ships no developer tooling of its own, so an inspectable
             // release web view would be attack surface and nothing else: any
-            // trusted Mac could attach Safari's Web Inspector to a session.
+            // trusted Mac could attach a Web Inspector to a session.
             webView.isInspectable = true
         #endif
         webView.navigationDelegate = self
@@ -571,7 +571,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webKitPage.resetAutomaticDownloads()
         webView.stopLoading()
         webView.removeFromSuperview()
-        webView.navigationDelegate = nil
+        // Whoever still holds the web view, the ended page loads and plays
+        // nothing more.
+        MobileEndedPageNavigationDelegate.takeOver(webView)
         webView.uiDelegate = nil
         for observation in observations {
             observation.invalidate()
@@ -729,22 +731,21 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         readerModeSession.toggle()
     }
 
+    /// Copies the page's address, without its trackers while Super Copy is
+    /// on.
     @discardableResult
     func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(live.documentURL)
+        BrowserPageLinkClipboard.copy(linkToCopy)
+    }
+
+    /// The page's address as copying or sharing it hands it out.
+    var linkToCopy: BrowserCopiedLink? {
+        live.documentURL.map(downloadCenter.core.linkToCopy)
     }
 
     @discardableResult
     func copyPageLinkAsMarkdown() -> Bool {
-        guard let url = live.documentURL else { return false }
-        let label = live.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedLabel = label.isEmpty ? (url.host() ?? url.absoluteString) : label
-        let escapedLabel =
-            resolvedLabel
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "]", with: "\\]")
-        UIPasteboard.general.string = "[\(escapedLabel)](\(url.absoluteString))"
-        return true
+        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
     }
 
     func printPage() {
@@ -775,7 +776,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether Apple's Add to Home Screen can take the page: a web page, not a
     /// blank, internal or file one.
     var canAddToHomeScreen: Bool {
-        ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+        webView.url?.webScheme != nil
     }
 
     /// Opens Apple's Add to Home Screen for the page, where the person adds it
@@ -1135,7 +1136,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Whether the page's bridge can start the element picker: Crest blocks,
     /// it shows a site on the web and its bridge has posted.
     var canPickElementToBlock: Bool {
-        cosmeticFilters?.blocksContent == true && ["http", "https"].contains(webView.url?.scheme?.lowercased() ?? "")
+        cosmeticFilters?.blocksContent == true && webView.url?.webScheme != nil
     }
 
     /// Lets the person point at an element of the page to block on its site

@@ -17,29 +17,40 @@ struct BrowserTabBatchMenu: View {
 
     @ViewBuilder
     private var tabMenu: some View {
-        Group {
-            if count == 1 { Text("1 tab selected") } else { Text("\(count) tabs selected") }
-        }
-        .disabled(true)
+        Text("\(count) tabs selected")
+            .disabled(true)
         Divider()
         Button("Copy Link URLs", systemImage: "link", action: copyLinks)
         Divider()
         // A selection of pinned tabs only is unpinned, the pair of Pin N Tabs;
         // any other selection may hold tabs to pin.
         if request.members.allSatisfy({ $0.placement == .pinned }) {
-            action(
-                count == 1 ? "Unpin Tab" : "Unpin \(count) Tabs", systemImage: "pin.slash",
-                browser.filing(request, .current))
+            action("Unpin \(count) Tabs", systemImage: "pin.slash", browser.filing(request, .current))
+        } else if request.members.allSatisfy({ $0.placement == .saved }) {
+            // A selection of saved tabs only is unsaved, the pair of Save N
+            // Tabs, which moves it back among the open tabs.
+            action("Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action("Unsave \(count) Tabs", systemImage: "bookmark.slash", browser.filing(request, .current))
         } else {
-            action(
-                count == 1 ? "Pin Tab" : "Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action("Pin \(count) Tabs", systemImage: "pin", browser.filing(request, .pinned))
+            action("Save \(count) Tabs", systemImage: "bookmark", browser.filing(request, .saved))
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
+        }
+        // A group holds only tabs, so a selection with folders has none to offer.
+        if request.folderIDs.isEmpty {
+            Menu("Move to Group", systemImage: "rectangle.stack.badge.plus") {
+                newGroupAction
+                ForEach(groupChoices) { choice in
+                    action(group: choice.folder, browser.filing(request, .current, folder: choice.id))
+                }
+            }
+            .crestMenuActionLabelStyle()
         }
         Menu("Move to Folder", systemImage: "folder") {
             Group {
                 newFolderActions
                 action("Saved Tabs", systemImage: "bookmark", browser.filing(request, .saved))
-                ForEach(folderChoices) { choice in
+                ForEach(folderChoices.filter { !$0.folder.isGroup }) { choice in
                     action(choice, browser.filing(request, choice.folder.location, folder: choice.id))
                 }
             }
@@ -95,21 +106,16 @@ struct BrowserTabBatchMenu: View {
 
     private var folderMenu: some View {
         Group {
-            Group {
-                if request.rootItems.count == 1 {
-                    Text("1 item selected")
-                } else {
-                    Text("\(request.rootItems.count) items selected")
-                }
-            }
-            .disabled(true)
+            Text("\(request.rootItems.count) items selected")
+                .disabled(true)
             Divider()
             action("Move to Current Tabs", systemImage: "rectangle.stack", browser.filing(request, .current))
             action("Move to Saved Tabs", systemImage: "bookmark", browser.filing(request, .saved))
             Menu("Move to Folder", systemImage: "folder") {
                 Group {
                     newFolderActions
-                    ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) }) { choice in
+                    ForEach(folderChoices.filter { !request.folderIDs.contains($0.id) && !$0.folder.isGroup }) {
+                        choice in
                         action(choice, browser.filing(request, choice.folder.location, folder: choice.id))
                     }
                 }
@@ -156,11 +162,44 @@ struct BrowserTabBatchMenu: View {
         action("New Saved Folder", systemImage: "folder.badge.plus", browser.filingInNewFolder(request, in: .saved))
     }
 
+    /// Files the selection into a new group, whose name then starts editing.
+    private var newGroupAction: some View {
+        let batch = browser.filingInNewFolder(request, in: .current, isGroup: true)
+        return Button("New Group", systemImage: "rectangle.stack.badge.plus") {
+            let before = Set(browser.spaceModel(request.spaceID)?.folders.models.map(\.id) ?? [])
+            actions.perform(batch, for: request)
+            guard let space = browser.spaceModel(request.spaceID),
+                let made = space.folders.models.first(where: { $0.isGroup && !before.contains($0.id) })
+            else { return }
+            sidebarInteraction.beginRenaming(folder: made.id, in: space)
+        }
+        .disabled(!actions.isAvailable(batch))
+    }
+
+    /// A menu item titled by a group's own name, beside its icon in its color.
+    private func action(group: FolderStateModel, _ batch: BrowserTabBatch) -> some View {
+        Button {
+            actions.perform(batch, for: request)
+        } label: {
+            Label {
+                Text(verbatim: group.shownTitle)
+            } icon: {
+                BrowserFolderMenuIcon(systemName: "rectangle.stack.fill", color: group.displayColor)
+            }
+        }
+        .disabled(!actions.isAvailable(batch))
+    }
+
     private func copyLinks() { actions.copyLinks(request) }
 
     /// Every folder of the selection's Space, saved first, in the order the
     /// sidebar lists them.
     private var folderChoices: [SpaceModel.FolderChoice] {
         browser.spaceModel(request.spaceID)?.folderChoices(in: [.saved, .current]) ?? []
+    }
+
+    /// Every group of the selection's Space, in the order the sidebar lists them.
+    private var groupChoices: [SpaceModel.FolderChoice] {
+        browser.spaceModel(request.spaceID)?.folderChoices(in: [.current]).filter(\.folder.isGroup) ?? []
     }
 }

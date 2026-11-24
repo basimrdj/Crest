@@ -10,16 +10,23 @@ struct BrowserPlatformAppIconSettingsSection: View {
             "App icon",
             settings: [resettable]
         ) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 12)], spacing: 16) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 78), spacing: CrestSpacing.medium)], spacing: CrestSpacing.large
+            ) {
                 iconChoice(name: nil, title: "Crest")
-                ForEach(SpaceHouse.all, id: \.self) { house in
+                // A house that wears Crest's own icon is the choice above.
+                ForEach(SpaceHouse.all.filter { $0.appIconName != nil }, id: \.self) { house in
                     iconChoice(name: house.appIconName, title: house.title)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, CrestSpacing.small)
             .disabled(isChanging || !UIApplication.shared.supportsAlternateIcons)
         }
         .onAppear { selectedName = UIApplication.shared.alternateIconName }
+        // Reset All changes the icon too, without going through this picker.
+        .onReceive(NotificationCenter.default.publisher(for: BrowserPlatformCurrentAppIcon.didChange)) { _ in
+            selectedName = UIApplication.shared.alternateIconName
+        }
     }
 
     private var resettable: CrestResettableSetting {
@@ -34,6 +41,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
             do {
                 try await UIApplication.shared.setAlternateIconName(name)
                 selectedName = UIApplication.shared.alternateIconName
+                NotificationCenter.default.post(name: BrowserPlatformCurrentAppIcon.didChange, object: nil)
             } catch {
                 BrowserNoticeCenter.shared.post(.failure(String(localized: "Couldn’t change app icon")))
             }

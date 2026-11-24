@@ -20,12 +20,11 @@ extension SetupLook {
 
     // MARK: - Actions - Looks
 
-    /// `branding` in this look: the sidebar mode, gradient angle and icon
-    /// style the core gives the look, keeping its colors and crest.
+    /// `branding` in this look: the sidebar mode and icon style the core
+    /// gives the look, keeping its colors, crest and texture.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
         var look = branding
         look.themeMode = themeMode
-        look.gradientAngle = gradientAngle ?? branding.gradientAngle
         look.iconStyle = iconStyle
         return look.normalized()
     }

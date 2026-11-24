@@ -57,6 +57,9 @@ protocol CloudTransportIntent: Intent {}
 /// The members of `Intent` that derive from the core's `DataDeletionIntent`.
 protocol DataDeletionIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `DevicePreferenceIntent`.
+protocol DevicePreferenceIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `DownloadIntent`.
 protocol DownloadIntent: Intent {}
 
@@ -135,6 +138,7 @@ enum Change: Equatable, Sendable {
     case dataDeleted(DataDeleted)
     case downloadApprovalAsked(DownloadApprovalAsked)
     case downloadDestinationAsked(DownloadDestinationAsked)
+    case downloadPreferencesChanged(DownloadPreferencesChanged)
     case downloadStarted(DownloadStarted)
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
@@ -152,12 +156,14 @@ enum Change: Equatable, Sendable {
     case offeredWindowAdopted(OfferedWindowAdopted)
     case pageChanged(PageChanged)
     case pageOpened(PageOpened)
+    case pagePreferencesChanged(PagePreferencesChanged)
     case pageRehosted(PageRehosted)
     case pageRemoved(PageRemoved)
     case pageUnloaded(PageUnloaded)
     case permissionAsked(PermissionAsked)
     case promptSettled(PromptSettled)
     case quitWithDownloadsAsked(QuitWithDownloadsAsked)
+    case releaseNotesDue(ReleaseNotesDue)
     case saved(Saved)
     case scriptDialogAsked(ScriptDialogAsked)
     case searchCatalogChanged(SearchCatalogChanged)
@@ -169,6 +175,7 @@ enum Change: Equatable, Sendable {
     case shortcutsChanged(ShortcutsChanged)
     case sidebarChanged(SidebarChanged)
     case siteContentBlockingChanged(SiteContentBlockingChanged)
+    case siteControlTopActionsChanged(SiteControlTopActionsChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -181,6 +188,7 @@ enum Change: Equatable, Sendable {
     case tabCopied(TabCopied)
     case tabFaviconAssigned(TabFaviconAssigned)
     case tabPagePutAway(TabPagePutAway)
+    case tabSavedImageChanged(TabSavedImageChanged)
     case tabsChanged(TabsChanged)
     case tabsImported(TabsImported)
     case transientPageClosed(TransientPageClosed)
@@ -193,6 +201,386 @@ enum Change: Equatable, Sendable {
     case workspaceChanged(WorkspaceChanged)
     case workspaceClosed(WorkspaceClosed)
     case workspaceOpened(WorkspaceOpened)
+
+    /// The `AgentPreferencesChanged` this change carries, or nil for another member.
+    var agentPreferencesChanged: AgentPreferencesChanged? {
+        if case .agentPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsChanged` this change carries, or nil for another member.
+    var agentSessionsChanged: AgentSessionsChanged? {
+        if case .agentSessionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AppPreferencesChanged` this change carries, or nil for another member.
+    var appPreferencesChanged: AppPreferencesChanged? {
+        if case .appPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveChanged` this change carries, or nil for another member.
+    var archiveChanged: ArchiveChanged? {
+        if case .archiveChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationAsked` this change carries, or nil for another member.
+    var authenticationAsked: AuthenticationAsked? {
+        if case .authenticationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `CloseReady` this change carries, or nil for another member.
+    var closeReady: CloseReady? {
+        if case .closeReady(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudMergeBegan` this change carries, or nil for another member.
+    var cloudMergeBegan: CloudMergeBegan? {
+        if case .cloudMergeBegan(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudSyncAdvanced` this change carries, or nil for another member.
+    var cloudSyncAdvanced: CloudSyncAdvanced? {
+        if case .cloudSyncAdvanced(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudTransportChanged` this change carries, or nil for another member.
+    var cloudTransportChanged: CloudTransportChanged? {
+        if case .cloudTransportChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListsChanged` this change carries, or nil for another member.
+    var contentRuleListsChanged: ContentRuleListsChanged? {
+        if case .contentRuleListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `DataDeleted` this change carries, or nil for another member.
+    var dataDeleted: DataDeleted? {
+        if case .dataDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadApprovalAsked` this change carries, or nil for another member.
+    var downloadApprovalAsked: DownloadApprovalAsked? {
+        if case .downloadApprovalAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadDestinationAsked` this change carries, or nil for another member.
+    var downloadDestinationAsked: DownloadDestinationAsked? {
+        if case .downloadDestinationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadPreferencesChanged` this change carries, or nil for another member.
+    var downloadPreferencesChanged: DownloadPreferencesChanged? {
+        if case .downloadPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadStarted` this change carries, or nil for another member.
+    var downloadStarted: DownloadStarted? {
+        if case .downloadStarted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadUpdated` this change carries, or nil for another member.
+    var downloadUpdated: DownloadUpdated? {
+        if case .downloadUpdated(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadsRemoved` this change carries, or nil for another member.
+    var downloadsRemoved: DownloadsRemoved? {
+        if case .downloadsRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginePreferencesChanged` this change carries, or nil for another member.
+    var enginePreferencesChanged: EnginePreferencesChanged? {
+        if case .enginePreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginesChanged` this change carries, or nil for another member.
+    var enginesChanged: EnginesChanged? {
+        if case .enginesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallAsked` this change carries, or nil for another member.
+    var extensionInstallAsked: ExtensionInstallAsked? {
+        if case .extensionInstallAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallChanged` this change carries, or nil for another member.
+    var extensionInstallChanged: ExtensionInstallChanged? {
+        if case .extensionInstallChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListsChanged` this change carries, or nil for another member.
+    var filterListsChanged: FilterListsChanged? {
+        if case .filterListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FoldersChanged` this change carries, or nil for another member.
+    var foldersChanged: FoldersChanged? {
+        if case .foldersChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `HistoryChanged` this change carries, or nil for another member.
+    var historyChanged: HistoryChanged? {
+        if case .historyChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `InstalledExtensionsChanged` this change carries, or nil for another member.
+    var installedExtensionsChanged: InstalledExtensionsChanged? {
+        if case .installedExtensionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPreferencesChanged` this change carries, or nil for another member.
+    var linkPreferencesChanged: LinkPreferencesChanged? {
+        if case .linkPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `NavigationRecorded` this change carries, or nil for another member.
+    var navigationRecorded: NavigationRecorded? {
+        if case .navigationRecorded(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedPageAdopted` this change carries, or nil for another member.
+    var offeredPageAdopted: OfferedPageAdopted? {
+        if case .offeredPageAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedWindowAdopted` this change carries, or nil for another member.
+    var offeredWindowAdopted: OfferedWindowAdopted? {
+        if case .offeredWindowAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageChanged` this change carries, or nil for another member.
+    var pageChanged: PageChanged? {
+        if case .pageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `PageOpened` this change carries, or nil for another member.
+    var pageOpened: PageOpened? {
+        if case .pageOpened(let value) = self { value } else { nil }
+    }
+
+    /// The `PagePreferencesChanged` this change carries, or nil for another member.
+    var pagePreferencesChanged: PagePreferencesChanged? {
+        if case .pagePreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRehosted` this change carries, or nil for another member.
+    var pageRehosted: PageRehosted? {
+        if case .pageRehosted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRemoved` this change carries, or nil for another member.
+    var pageRemoved: PageRemoved? {
+        if case .pageRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `PageUnloaded` this change carries, or nil for another member.
+    var pageUnloaded: PageUnloaded? {
+        if case .pageUnloaded(let value) = self { value } else { nil }
+    }
+
+    /// The `PermissionAsked` this change carries, or nil for another member.
+    var permissionAsked: PermissionAsked? {
+        if case .permissionAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptSettled` this change carries, or nil for another member.
+    var promptSettled: PromptSettled? {
+        if case .promptSettled(let value) = self { value } else { nil }
+    }
+
+    /// The `QuitWithDownloadsAsked` this change carries, or nil for another member.
+    var quitWithDownloadsAsked: QuitWithDownloadsAsked? {
+        if case .quitWithDownloadsAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ReleaseNotesDue` this change carries, or nil for another member.
+    var releaseNotesDue: ReleaseNotesDue? {
+        if case .releaseNotesDue(let value) = self { value } else { nil }
+    }
+
+    /// The `Saved` this change carries, or nil for another member.
+    var saved: Saved? {
+        if case .saved(let value) = self { value } else { nil }
+    }
+
+    /// The `ScriptDialogAsked` this change carries, or nil for another member.
+    var scriptDialogAsked: ScriptDialogAsked? {
+        if case .scriptDialogAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchCatalogChanged` this change carries, or nil for another member.
+    var searchCatalogChanged: SearchCatalogChanged? {
+        if case .searchCatalogChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionAdopted` this change carries, or nil for another member.
+    var sessionAdopted: SessionAdopted? {
+        if case .sessionAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupCompletedChanged` this change carries, or nil for another member.
+    var setupCompletedChanged: SetupCompletedChanged? {
+        if case .setupCompletedChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupDraftChanged` this change carries, or nil for another member.
+    var setupDraftChanged: SetupDraftChanged? {
+        if case .setupDraftChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFinished` this change carries, or nil for another member.
+    var setupFinished: SetupFinished? {
+        if case .setupFinished(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFlowChanged` this change carries, or nil for another member.
+    var setupFlowChanged: SetupFlowChanged? {
+        if case .setupFlowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutsChanged` this change carries, or nil for another member.
+    var shortcutsChanged: ShortcutsChanged? {
+        if case .shortcutsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SidebarChanged` this change carries, or nil for another member.
+    var sidebarChanged: SidebarChanged? {
+        if case .sidebarChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SiteContentBlockingChanged` this change carries, or nil for another member.
+    var siteContentBlockingChanged: SiteContentBlockingChanged? {
+        if case .siteContentBlockingChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SiteControlTopActionsChanged` this change carries, or nil for another member.
+    var siteControlTopActionsChanged: SiteControlTopActionsChanged? {
+        if case .siteControlTopActionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionsChanged` this change carries, or nil for another member.
+    var sitePermissionsChanged: SitePermissionsChanged? {
+        if case .sitePermissionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLockChanged` this change carries, or nil for another member.
+    var spaceLockChanged: SpaceLockChanged? {
+        if case .spaceLockChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceSettingsChanged` this change carries, or nil for another member.
+    var spaceSettingsChanged: SpaceSettingsChanged? {
+        if case .spaceSettingsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpacesChanged` this change carries, or nil for another member.
+    var spacesChanged: SpacesChanged? {
+        if case .spacesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitGroupsChanged` this change carries, or nil for another member.
+    var splitGroupsChanged: SplitGroupsChanged? {
+        if case .splitGroupsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFailed` this change carries, or nil for another member.
+    var storageFailed: StorageFailed? {
+        if case .storageFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncJournalChanged` this change carries, or nil for another member.
+    var syncJournalChanged: SyncJournalChanged? {
+        if case .syncJournalChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncRecordsSkipped` this change carries, or nil for another member.
+    var syncRecordsSkipped: SyncRecordsSkipped? {
+        if case .syncRecordsSkipped(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingFailed` this change carries, or nil for another member.
+    var syncStagingFailed: SyncStagingFailed? {
+        if case .syncStagingFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `TabCopied` this change carries, or nil for another member.
+    var tabCopied: TabCopied? {
+        if case .tabCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `TabFaviconAssigned` this change carries, or nil for another member.
+    var tabFaviconAssigned: TabFaviconAssigned? {
+        if case .tabFaviconAssigned(let value) = self { value } else { nil }
+    }
+
+    /// The `TabPagePutAway` this change carries, or nil for another member.
+    var tabPagePutAway: TabPagePutAway? {
+        if case .tabPagePutAway(let value) = self { value } else { nil }
+    }
+
+    /// The `TabSavedImageChanged` this change carries, or nil for another member.
+    var tabSavedImageChanged: TabSavedImageChanged? {
+        if case .tabSavedImageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsChanged` this change carries, or nil for another member.
+    var tabsChanged: TabsChanged? {
+        if case .tabsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsImported` this change carries, or nil for another member.
+    var tabsImported: TabsImported? {
+        if case .tabsImported(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPageClosed` this change carries, or nil for another member.
+    var transientPageClosed: TransientPageClosed? {
+        if case .transientPageClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPagePromoted` this change carries, or nil for another member.
+    var transientPagePromoted: TransientPagePromoted? {
+        if case .transientPagePromoted(let value) = self { value } else { nil }
+    }
+
+    /// The `WebsiteDataRead` this change carries, or nil for another member.
+    var websiteDataRead: WebsiteDataRead? {
+        if case .websiteDataRead(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowBroughtForward` this change carries, or nil for another member.
+    var windowBroughtForward: WindowBroughtForward? {
+        if case .windowBroughtForward(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowChanged` this change carries, or nil for another member.
+    var windowChanged: WindowChanged? {
+        if case .windowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowClosed` this change carries, or nil for another member.
+    var windowClosed: WindowClosed? {
+        if case .windowClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowRecordsAdopted` this change carries, or nil for another member.
+    var windowRecordsAdopted: WindowRecordsAdopted? {
+        if case .windowRecordsAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceChanged` this change carries, or nil for another member.
+    var workspaceChanged: WorkspaceChanged? {
+        if case .workspaceChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceClosed` this change carries, or nil for another member.
+    var workspaceClosed: WorkspaceClosed? {
+        if case .workspaceClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceOpened` this change carries, or nil for another member.
+    var workspaceOpened: WorkspaceOpened? {
+        if case .workspaceOpened(let value) = self { value } else { nil }
+    }
 }
 
 /// The rule that refused an intent or a query.
@@ -216,6 +604,7 @@ enum Rejection: Equatable, Error, Sendable {
     case bookmarksUnrecognized(BookmarksUnrecognized)
     case borrowedProfileRequiresOwner(BorrowedProfileRequiresOwner)
     case borrowedWorkspaceRequiresSpace(BorrowedWorkspaceRequiresSpace)
+    case cannotBecomeGroup(CannotBecomeGroup)
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
@@ -244,6 +633,7 @@ enum Rejection: Equatable, Error, Sendable {
     case folderCycle(FolderCycle)
     case folderDepthLimitReached(FolderDepthLimitReached)
     case folderLimitReached(FolderLimitReached)
+    case groupHoldsOnlyTabs(GroupHoldsOnlyTabs)
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
     case invalidAgent(InvalidAgent)
@@ -307,6 +697,7 @@ enum Rejection: Equatable, Error, Sendable {
     case pinsOneTabAtATime(PinsOneTabAtATime)
     case primaryCannotJoin(PrimaryCannotJoin)
     case primaryCannotSeparate(PrimaryCannotSeparate)
+    case privateSpaceCannotLock(PrivateSpaceCannotLock)
     case privateSpaceCannotShare(PrivateSpaceCannotShare)
     case privateWorkspaceBoundary(PrivateWorkspaceBoundary)
     case profileInUse(ProfileInUse)
@@ -363,6 +754,7 @@ enum Rejection: Equatable, Error, Sendable {
     case unknownSplitGroup(UnknownSplitGroup)
     case unknownTab(UnknownTab)
     case unknownWorkspace(UnknownWorkspace)
+    case unpreparedImport(UnpreparedImport)
     case unregisteredEngine(UnregisteredEngine)
     case unrelatedWorkspaces(UnrelatedWorkspaces)
     case unsavedWorkspace(UnsavedWorkspace)
@@ -373,6 +765,906 @@ enum Rejection: Equatable, Error, Sendable {
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
     case wrongDeletionOperation(WrongDeletionOperation)
+
+    /// The `AgentNotApproved` this rejection carries, or nil for another member.
+    var agentNotApproved: AgentNotApproved? {
+        if case .agentNotApproved(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsFull` this rejection carries, or nil for another member.
+    var agentSessionsFull: AgentSessionsFull? {
+        if case .agentSessionsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSpaceUnavailable` this rejection carries, or nil for another member.
+    var agentSpaceUnavailable: AgentSpaceUnavailable? {
+        if case .agentSpaceUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabStopped` this rejection carries, or nil for another member.
+    var agentTabStopped: AgentTabStopped? {
+        if case .agentTabStopped(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabUnavailable` this rejection carries, or nil for another member.
+    var agentTabUnavailable: AgentTabUnavailable? {
+        if case .agentTabUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsFull` this rejection carries, or nil for another member.
+    var agentsFull: AgentsFull? {
+        if case .agentsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsOff` this rejection carries, or nil for another member.
+    var agentsOff: AgentsOff? {
+        if case .agentsOff(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsUnavailable` this rejection carries, or nil for another member.
+    var agentsUnavailable: AgentsUnavailable? {
+        if case .agentsUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSpace` this rejection carries, or nil for another member.
+    var alreadyInSpace: AlreadyInSpace? {
+        if case .alreadyInSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSplit` this rejection carries, or nil for another member.
+    var alreadyInSplit: AlreadyInSplit? {
+        if case .alreadyInSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveInvalid` this rejection carries, or nil for another member.
+    var archiveInvalid: ArchiveInvalid? {
+        if case .archiveInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveTooLarge` this rejection carries, or nil for another member.
+    var archiveTooLarge: ArchiveTooLarge? {
+        if case .archiveTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationBusy` this rejection carries, or nil for another member.
+    var authenticationBusy: AuthenticationBusy? {
+        if case .authenticationBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksHaveNoLinks` this rejection carries, or nil for another member.
+    var bookmarksHaveNoLinks: BookmarksHaveNoLinks? {
+        if case .bookmarksHaveNoLinks(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksOverLimits` this rejection carries, or nil for another member.
+    var bookmarksOverLimits: BookmarksOverLimits? {
+        if case .bookmarksOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksTooLarge` this rejection carries, or nil for another member.
+    var bookmarksTooLarge: BookmarksTooLarge? {
+        if case .bookmarksTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksUnrecognized` this rejection carries, or nil for another member.
+    var bookmarksUnrecognized: BookmarksUnrecognized? {
+        if case .bookmarksUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedProfileRequiresOwner` this rejection carries, or nil for another member.
+    var borrowedProfileRequiresOwner: BorrowedProfileRequiresOwner? {
+        if case .borrowedProfileRequiresOwner(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedWorkspaceRequiresSpace` this rejection carries, or nil for another member.
+    var borrowedWorkspaceRequiresSpace: BorrowedWorkspaceRequiresSpace? {
+        if case .borrowedWorkspaceRequiresSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotBecomeGroup` this rejection carries, or nil for another member.
+    var cannotBecomeGroup: CannotBecomeGroup? {
+        if case .cannotBecomeGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotDeleteLastSpace` this rejection carries, or nil for another member.
+    var cannotDeleteLastSpace: CannotDeleteLastSpace? {
+        if case .cannotDeleteLastSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotMoveSplitAcrossSpaces` this rejection carries, or nil for another member.
+    var cannotMoveSplitAcrossSpaces: CannotMoveSplitAcrossSpaces? {
+        if case .cannotMoveSplitAcrossSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotPinSplit` this rejection carries, or nil for another member.
+    var cannotPinSplit: CannotPinSplit? {
+        if case .cannotPinSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ClosePreparationUnderway` this rejection carries, or nil for another member.
+    var closePreparationUnderway: ClosePreparationUnderway? {
+        if case .closePreparationUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListUnavailable` this rejection carries, or nil for another member.
+    var contentRuleListUnavailable: ContentRuleListUnavailable? {
+        if case .contentRuleListUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `CredentialRecordLimitReached` this rejection carries, or nil for another member.
+    var credentialRecordLimitReached: CredentialRecordLimitReached? {
+        if case .credentialRecordLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CurrentTabsOnly` this rejection carries, or nil for another member.
+    var currentTabsOnly: CurrentTabsOnly? {
+        if case .currentTabsOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFilterListLimitReached` this rejection carries, or nil for another member.
+    var customFilterListLimitReached: CustomFilterListLimitReached? {
+        if case .customFilterListLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFiltersTooLarge` this rejection carries, or nil for another member.
+    var customFiltersTooLarge: CustomFiltersTooLarge? {
+        if case .customFiltersTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `DefaultEngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var defaultEngineAlreadyRegistered: DefaultEngineAlreadyRegistered? {
+        if case .defaultEngineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadLimitReached` this rejection carries, or nil for another member.
+    var downloadLimitReached: DownloadLimitReached? {
+        if case .downloadLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateCredential` this rejection carries, or nil for another member.
+    var duplicateCredential: DuplicateCredential? {
+        if case .duplicateCredential(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateDownload` this rejection carries, or nil for another member.
+    var duplicateDownload: DuplicateDownload? {
+        if case .duplicateDownload(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateMediaSession` this rejection carries, or nil for another member.
+    var duplicateMediaSession: DuplicateMediaSession? {
+        if case .duplicateMediaSession(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicatePage` this rejection carries, or nil for another member.
+    var duplicatePage: DuplicatePage? {
+        if case .duplicatePage(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchEngineName` this rejection carries, or nil for another member.
+    var duplicateSearchEngineName: DuplicateSearchEngineName? {
+        if case .duplicateSearchEngineName(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchShortcut` this rejection carries, or nil for another member.
+    var duplicateSearchShortcut: DuplicateSearchShortcut? {
+        if case .duplicateSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `ElementSelectorInvalid` this rejection carries, or nil for another member.
+    var elementSelectorInvalid: ElementSelectorInvalid? {
+        if case .elementSelectorInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var engineAlreadyRegistered: EngineAlreadyRegistered? {
+        if case .engineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineLacksCapability` this rejection carries, or nil for another member.
+    var engineLacksCapability: EngineLacksCapability? {
+        if case .engineLacksCapability(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineNotRegistered` this rejection carries, or nil for another member.
+    var engineNotRegistered: EngineNotRegistered? {
+        if case .engineNotRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionNotChangeable` this rejection carries, or nil for another member.
+    var extensionNotChangeable: ExtensionNotChangeable? {
+        if case .extensionNotChangeable(let value) = self { value } else { nil }
+    }
+
+    /// The `FileUnreadable` this rejection carries, or nil for another member.
+    var fileUnreadable: FileUnreadable? {
+        if case .fileUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListAddressInvalid` this rejection carries, or nil for another member.
+    var filterListAddressInvalid: FilterListAddressInvalid? {
+        if case .filterListAddressInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderAlreadyExists` this rejection carries, or nil for another member.
+    var folderAlreadyExists: FolderAlreadyExists? {
+        if case .folderAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderCycle` this rejection carries, or nil for another member.
+    var folderCycle: FolderCycle? {
+        if case .folderCycle(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderDepthLimitReached` this rejection carries, or nil for another member.
+    var folderDepthLimitReached: FolderDepthLimitReached? {
+        if case .folderDepthLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderLimitReached` this rejection carries, or nil for another member.
+    var folderLimitReached: FolderLimitReached? {
+        if case .folderLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `GroupHoldsOnlyTabs` this rejection carries, or nil for another member.
+    var groupHoldsOnlyTabs: GroupHoldsOnlyTabs? {
+        if case .groupHoldsOnlyTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `GuideSpaceLocked` this rejection carries, or nil for another member.
+    var guideSpaceLocked: GuideSpaceLocked? {
+        if case .guideSpaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `IncompleteSplit` this rejection carries, or nil for another member.
+    var incompleteSplit: IncompleteSplit? {
+        if case .incompleteSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidAgent` this rejection carries, or nil for another member.
+    var invalidAgent: InvalidAgent? {
+        if case .invalidAgent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidBlockedPopup` this rejection carries, or nil for another member.
+    var invalidBlockedPopup: InvalidBlockedPopup? {
+        if case .invalidBlockedPopup(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialDate` this rejection carries, or nil for another member.
+    var invalidCredentialDate: InvalidCredentialDate? {
+        if case .invalidCredentialDate(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialFile` this rejection carries, or nil for another member.
+    var invalidCredentialFile: InvalidCredentialFile? {
+        if case .invalidCredentialFile(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialOrigin` this rejection carries, or nil for another member.
+    var invalidCredentialOrigin: InvalidCredentialOrigin? {
+        if case .invalidCredentialOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialRecord` this rejection carries, or nil for another member.
+    var invalidCredentialRecord: InvalidCredentialRecord? {
+        if case .invalidCredentialRecord(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialUsername` this rejection carries, or nil for another member.
+    var invalidCredentialUsername: InvalidCredentialUsername? {
+        if case .invalidCredentialUsername(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadIdentity` this rejection carries, or nil for another member.
+    var invalidDownloadIdentity: InvalidDownloadIdentity? {
+        if case .invalidDownloadIdentity(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadProgress` this rejection carries, or nil for another member.
+    var invalidDownloadProgress: InvalidDownloadProgress? {
+        if case .invalidDownloadProgress(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadSample` this rejection carries, or nil for another member.
+    var invalidDownloadSample: InvalidDownloadSample? {
+        if case .invalidDownloadSample(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadText` this rejection carries, or nil for another member.
+    var invalidDownloadText: InvalidDownloadText? {
+        if case .invalidDownloadText(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderPlacement` this rejection carries, or nil for another member.
+    var invalidFolderPlacement: InvalidFolderPlacement? {
+        if case .invalidFolderPlacement(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderSymbol` this rejection carries, or nil for another member.
+    var invalidFolderSymbol: InvalidFolderSymbol? {
+        if case .invalidFolderSymbol(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidImport` this rejection carries, or nil for another member.
+    var invalidImport: InvalidImport? {
+        if case .invalidImport(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidLinkRouteEdit` this rejection carries, or nil for another member.
+    var invalidLinkRouteEdit: InvalidLinkRouteEdit? {
+        if case .invalidLinkRouteEdit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidMediaSessionCount` this rejection carries, or nil for another member.
+    var invalidMediaSessionCount: InvalidMediaSessionCount? {
+        if case .invalidMediaSessionCount(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidName` this rejection carries, or nil for another member.
+    var invalidName: InvalidName? {
+        if case .invalidName(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidNewPrimary` this rejection carries, or nil for another member.
+    var invalidNewPrimary: InvalidNewPrimary? {
+        if case .invalidNewPrimary(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidPasswordLength` this rejection carries, or nil for another member.
+    var invalidPasswordLength: InvalidPasswordLength? {
+        if case .invalidPasswordLength(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidRetentionLifetime` this rejection carries, or nil for another member.
+    var invalidRetentionLifetime: InvalidRetentionLifetime? {
+        if case .invalidRetentionLifetime(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchEngine` this rejection carries, or nil for another member.
+    var invalidSearchEngine: InvalidSearchEngine? {
+        if case .invalidSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchShortcut` this rejection carries, or nil for another member.
+    var invalidSearchShortcut: InvalidSearchShortcut? {
+        if case .invalidSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSession` this rejection carries, or nil for another member.
+    var invalidSession: InvalidSession? {
+        if case .invalidSession(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidShortcut` this rejection carries, or nil for another member.
+    var invalidShortcut: InvalidShortcut? {
+        if case .invalidShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteHost` this rejection carries, or nil for another member.
+    var invalidSiteHost: InvalidSiteHost? {
+        if case .invalidSiteHost(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteOrigin` this rejection carries, or nil for another member.
+    var invalidSiteOrigin: InvalidSiteOrigin? {
+        if case .invalidSiteOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionDetail` this rejection carries, or nil for another member.
+    var invalidSitePermissionDetail: InvalidSitePermissionDetail? {
+        if case .invalidSitePermissionDetail(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionGrant` this rejection carries, or nil for another member.
+    var invalidSitePermissionGrant: InvalidSitePermissionGrant? {
+        if case .invalidSitePermissionGrant(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSpaceOrder` this rejection carries, or nil for another member.
+    var invalidSpaceOrder: InvalidSpaceOrder? {
+        if case .invalidSpaceOrder(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitColumnShares` this rejection carries, or nil for another member.
+    var invalidSplitColumnShares: InvalidSplitColumnShares? {
+        if case .invalidSplitColumnShares(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitIcon` this rejection carries, or nil for another member.
+    var invalidSplitIcon: InvalidSplitIcon? {
+        if case .invalidSplitIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSyncRecords` this rejection carries, or nil for another member.
+    var invalidSyncRecords: InvalidSyncRecords? {
+        if case .invalidSyncRecords(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabContent` this rejection carries, or nil for another member.
+    var invalidTabContent: InvalidTabContent? {
+        if case .invalidTabContent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabIcon` this rejection carries, or nil for another member.
+    var invalidTabIcon: InvalidTabIcon? {
+        if case .invalidTabIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `LanguageTooLong` this rejection carries, or nil for another member.
+    var languageTooLong: LanguageTooLong? {
+        if case .languageTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LastStartPage` this rejection carries, or nil for another member.
+    var lastStartPage: LastStartPage? {
+        if case .lastStartPage(let value) = self { value } else { nil }
+    }
+
+    /// The `LegacyCloudStateUnreadable` this rejection carries, or nil for another member.
+    var legacyCloudStateUnreadable: LegacyCloudStateUnreadable? {
+        if case .legacyCloudStateUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPatternTooLong` this rejection carries, or nil for another member.
+    var linkPatternTooLong: LinkPatternTooLong? {
+        if case .linkPatternTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRouteExists` this rejection carries, or nil for another member.
+    var linkRouteExists: LinkRouteExists? {
+        if case .linkRouteExists(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRoutesFull` this rejection carries, or nil for another member.
+    var linkRoutesFull: LinkRoutesFull? {
+        if case .linkRoutesFull(let value) = self { value } else { nil }
+    }
+
+    /// The `MediaSessionLimitReached` this rejection carries, or nil for another member.
+    var mediaSessionLimitReached: MediaSessionLimitReached? {
+        if case .mediaSessionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `NoArchivedTabs` this rejection carries, or nil for another member.
+    var noArchivedTabs: NoArchivedTabs? {
+        if case .noArchivedTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoBrowsingDataCategory` this rejection carries, or nil for another member.
+    var noBrowsingDataCategory: NoBrowsingDataCategory? {
+        if case .noBrowsingDataCategory(let value) = self { value } else { nil }
+    }
+
+    /// The `NoCurrentTabs` this rejection carries, or nil for another member.
+    var noCurrentTabs: NoCurrentTabs? {
+        if case .noCurrentTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoIncludedSpaces` this rejection carries, or nil for another member.
+    var noIncludedSpaces: NoIncludedSpaces? {
+        if case .noIncludedSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `NoManualSetup` this rejection carries, or nil for another member.
+    var noManualSetup: NoManualSetup? {
+        if case .noManualSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSavedAddress` this rejection carries, or nil for another member.
+    var noSavedAddress: NoSavedAddress? {
+        if case .noSavedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSetup` this rejection carries, or nil for another member.
+    var noSetup: NoSetup? {
+        if case .noSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSplitStep` this rejection carries, or nil for another member.
+    var noSplitStep: NoSplitStep? {
+        if case .noSplitStep(let value) = self { value } else { nil }
+    }
+
+    /// The `NoStoredSession` this rejection carries, or nil for another member.
+    var noStoredSession: NoStoredSession? {
+        if case .noStoredSession(let value) = self { value } else { nil }
+    }
+
+    /// The `NotAnArchive` this rejection carries, or nil for another member.
+    var notAnArchive: NotAnArchive? {
+        if case .notAnArchive(let value) = self { value } else { nil }
+    }
+
+    /// The `NotPrivateWorkspace` this rejection carries, or nil for another member.
+    var notPrivateWorkspace: NotPrivateWorkspace? {
+        if case .notPrivateWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `PageNotLoadable` this rejection carries, or nil for another member.
+    var pageNotLoadable: PageNotLoadable? {
+        if case .pageNotLoadable(let value) = self { value } else { nil }
+    }
+
+    /// The `PageProfileMismatch` this rejection carries, or nil for another member.
+    var pageProfileMismatch: PageProfileMismatch? {
+        if case .pageProfileMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `PersistentWorkspaceRequired` this rejection carries, or nil for another member.
+    var persistentWorkspaceRequired: PersistentWorkspaceRequired? {
+        if case .persistentWorkspaceRequired(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsDragAlone` this rejection carries, or nil for another member.
+    var pinnedTabsDragAlone: PinnedTabsDragAlone? {
+        if case .pinnedTabsDragAlone(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsFull` this rejection carries, or nil for another member.
+    var pinnedTabsFull: PinnedTabsFull? {
+        if case .pinnedTabsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsStayPut` this rejection carries, or nil for another member.
+    var pinnedTabsStayPut: PinnedTabsStayPut? {
+        if case .pinnedTabsStayPut(let value) = self { value } else { nil }
+    }
+
+    /// The `PinsOneTabAtATime` this rejection carries, or nil for another member.
+    var pinsOneTabAtATime: PinsOneTabAtATime? {
+        if case .pinsOneTabAtATime(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotJoin` this rejection carries, or nil for another member.
+    var primaryCannotJoin: PrimaryCannotJoin? {
+        if case .primaryCannotJoin(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotSeparate` this rejection carries, or nil for another member.
+    var primaryCannotSeparate: PrimaryCannotSeparate? {
+        if case .primaryCannotSeparate(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotLock` this rejection carries, or nil for another member.
+    var privateSpaceCannotLock: PrivateSpaceCannotLock? {
+        if case .privateSpaceCannotLock(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotShare` this rejection carries, or nil for another member.
+    var privateSpaceCannotShare: PrivateSpaceCannotShare? {
+        if case .privateSpaceCannotShare(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateWorkspaceBoundary` this rejection carries, or nil for another member.
+    var privateWorkspaceBoundary: PrivateWorkspaceBoundary? {
+        if case .privateWorkspaceBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `ProfileInUse` this rejection carries, or nil for another member.
+    var profileInUse: ProfileInUse? {
+        if case .profileInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptAnswerMismatch` this rejection carries, or nil for another member.
+    var promptAnswerMismatch: PromptAnswerMismatch? {
+        if case .promptAnswerMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `RecoveryCheckpointUnusable` this rejection carries, or nil for another member.
+    var recoveryCheckpointUnusable: RecoveryCheckpointUnusable? {
+        if case .recoveryCheckpointUnusable(let value) = self { value } else { nil }
+    }
+
+    /// The `SaveFailed` this rejection carries, or nil for another member.
+    var saveFailed: SaveFailed? {
+        if case .saveFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchEngineLimitReached` this rejection carries, or nil for another member.
+    var searchEngineLimitReached: SearchEngineLimitReached? {
+        if case .searchEngineLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionChanged` this rejection carries, or nil for another member.
+    var selectionChanged: SelectionChanged? {
+        if case .selectionChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionHoldsFolders` this rejection carries, or nil for another member.
+    var selectionHoldsFolders: SelectionHoldsFolders? {
+        if case .selectionHoldsFolders(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionEncrypted` this rejection carries, or nil for another member.
+    var sessionEncrypted: SessionEncrypted? {
+        if case .sessionEncrypted(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionHasNoTabs` this rejection carries, or nil for another member.
+    var sessionHasNoTabs: SessionHasNoTabs? {
+        if case .sessionHasNoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionOverLimits` this rejection carries, or nil for another member.
+    var sessionOverLimits: SessionOverLimits? {
+        if case .sessionOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionTooLarge` this rejection carries, or nil for another member.
+    var sessionTooLarge: SessionTooLarge? {
+        if case .sessionTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionUnrecognized` this rejection carries, or nil for another member.
+    var sessionUnrecognized: SessionUnrecognized? {
+        if case .sessionUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupBusy` this rejection carries, or nil for another member.
+    var setupBusy: SetupBusy? {
+        if case .setupBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutInUse` this rejection carries, or nil for another member.
+    var shortcutInUse: ShortcutInUse? {
+        if case .shortcutInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionLimitReached` this rejection carries, or nil for another member.
+    var sitePermissionLimitReached: SitePermissionLimitReached? {
+        if case .sitePermissionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceAlreadyExists` this rejection carries, or nil for another member.
+    var spaceAlreadyExists: SpaceAlreadyExists? {
+        if case .spaceAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceBeingDeleted` this rejection carries, or nil for another member.
+    var spaceBeingDeleted: SpaceBeingDeleted? {
+        if case .spaceBeingDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDataNotErased` this rejection carries, or nil for another member.
+    var spaceDataNotErased: SpaceDataNotErased? {
+        if case .spaceDataNotErased(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDeletionUnderway` this rejection carries, or nil for another member.
+    var spaceDeletionUnderway: SpaceDeletionUnderway? {
+        if case .spaceDeletionUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceIsPrivate` this rejection carries, or nil for another member.
+    var spaceIsPrivate: SpaceIsPrivate? {
+        if case .spaceIsPrivate(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLimitReached` this rejection carries, or nil for another member.
+    var spaceLimitReached: SpaceLimitReached? {
+        if case .spaceLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLocked` this rejection carries, or nil for another member.
+    var spaceLocked: SpaceLocked? {
+        if case .spaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceProfileChanged` this rejection carries, or nil for another member.
+    var spaceProfileChanged: SpaceProfileChanged? {
+        if case .spaceProfileChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitBoundary` this rejection carries, or nil for another member.
+    var splitBoundary: SplitBoundary? {
+        if case .splitBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitLimitReached` this rejection carries, or nil for another member.
+    var splitLimitReached: SplitLimitReached? {
+        if case .splitLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitNeedsTwoTabs` this rejection carries, or nil for another member.
+    var splitNeedsTwoTabs: SplitNeedsTwoTabs? {
+        if case .splitNeedsTwoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `StagedLinkElsewhere` this rejection carries, or nil for another member.
+    var stagedLinkElsewhere: StagedLinkElsewhere? {
+        if case .stagedLinkElsewhere(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleCredentialComparison` this rejection carries, or nil for another member.
+    var staleCredentialComparison: StaleCredentialComparison? {
+        if case .staleCredentialComparison(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleUnlockRequest` this rejection carries, or nil for another member.
+    var staleUnlockRequest: StaleUnlockRequest? {
+        if case .staleUnlockRequest(let value) = self { value } else { nil }
+    }
+
+    /// The `StartPageNotCopied` this rejection carries, or nil for another member.
+    var startPageNotCopied: StartPageNotCopied? {
+        if case .startPageNotCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFromNewerApp` this rejection carries, or nil for another member.
+    var storageFromNewerApp: StorageFromNewerApp? {
+        if case .storageFromNewerApp(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageRestoreInterrupted` this rejection carries, or nil for another member.
+    var storageRestoreInterrupted: StorageRestoreInterrupted? {
+        if case .storageRestoreInterrupted(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageUnreadable` this rejection carries, or nil for another member.
+    var storageUnreadable: StorageUnreadable? {
+        if case .storageUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `StoredSessionClosed` this rejection carries, or nil for another member.
+    var storedSessionClosed: StoredSessionClosed? {
+        if case .storedSessionClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingRefused` this rejection carries, or nil for another member.
+    var syncStagingRefused: SyncStagingRefused? {
+        if case .syncStagingRefused(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyExists` this rejection carries, or nil for another member.
+    var tabAlreadyExists: TabAlreadyExists? {
+        if case .tabAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyHasPage` this rejection carries, or nil for another member.
+    var tabAlreadyHasPage: TabAlreadyHasPage? {
+        if case .tabAlreadyHasPage(let value) = self { value } else { nil }
+    }
+
+    /// The `TabLimitReached` this rejection carries, or nil for another member.
+    var tabLimitReached: TabLimitReached? {
+        if case .tabLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientAlreadyCompleted` this rejection carries, or nil for another member.
+    var transientAlreadyCompleted: TransientAlreadyCompleted? {
+        if case .transientAlreadyCompleted(let value) = self { value } else { nil }
+    }
+
+    /// The `TranslationRuleLimitReached` this rejection carries, or nil for another member.
+    var translationRuleLimitReached: TranslationRuleLimitReached? {
+        if case .translationRuleLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownAgentSession` this rejection carries, or nil for another member.
+    var unknownAgentSession: UnknownAgentSession? {
+        if case .unknownAgentSession(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownArchivedTab` this rejection carries, or nil for another member.
+    var unknownArchivedTab: UnknownArchivedTab? {
+        if case .unknownArchivedTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownCloudMerge` this rejection carries, or nil for another member.
+    var unknownCloudMerge: UnknownCloudMerge? {
+        if case .unknownCloudMerge(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownExtension` this rejection carries, or nil for another member.
+    var unknownExtension: UnknownExtension? {
+        if case .unknownExtension(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownFolder` this rejection carries, or nil for another member.
+    var unknownFolder: UnknownFolder? {
+        if case .unknownFolder(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownLinkRoute` this rejection carries, or nil for another member.
+    var unknownLinkRoute: UnknownLinkRoute? {
+        if case .unknownLinkRoute(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPage` this rejection carries, or nil for another member.
+    var unknownPage: UnknownPage? {
+        if case .unknownPage(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPrompt` this rejection carries, or nil for another member.
+    var unknownPrompt: UnknownPrompt? {
+        if case .unknownPrompt(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchEngine` this rejection carries, or nil for another member.
+    var unknownSearchEngine: UnknownSearchEngine? {
+        if case .unknownSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchOption` this rejection carries, or nil for another member.
+    var unknownSearchOption: UnknownSearchOption? {
+        if case .unknownSearchOption(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSpace` this rejection carries, or nil for another member.
+    var unknownSpace: UnknownSpace? {
+        if case .unknownSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSplitGroup` this rejection carries, or nil for another member.
+    var unknownSplitGroup: UnknownSplitGroup? {
+        if case .unknownSplitGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownTab` this rejection carries, or nil for another member.
+    var unknownTab: UnknownTab? {
+        if case .unknownTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownWorkspace` this rejection carries, or nil for another member.
+    var unknownWorkspace: UnknownWorkspace? {
+        if case .unknownWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnpreparedImport` this rejection carries, or nil for another member.
+    var unpreparedImport: UnpreparedImport? {
+        if case .unpreparedImport(let value) = self { value } else { nil }
+    }
+
+    /// The `UnregisteredEngine` this rejection carries, or nil for another member.
+    var unregisteredEngine: UnregisteredEngine? {
+        if case .unregisteredEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnrelatedWorkspaces` this rejection carries, or nil for another member.
+    var unrelatedWorkspaces: UnrelatedWorkspaces? {
+        if case .unrelatedWorkspaces(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsavedWorkspace` this rejection carries, or nil for another member.
+    var unsavedWorkspace: UnsavedWorkspace? {
+        if case .unsavedWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsuitableDefaultSearch` this rejection carries, or nil for another member.
+    var unsuitableDefaultSearch: UnsuitableDefaultSearch? {
+        if case .unsuitableDefaultSearch(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedAddress` this rejection carries, or nil for another member.
+    var unsupportedAddress: UnsupportedAddress? {
+        if case .unsupportedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedArchiveVersion` this rejection carries, or nil for another member.
+    var unsupportedArchiveVersion: UnsupportedArchiveVersion? {
+        if case .unsupportedArchiveVersion(let value) = self { value } else { nil }
+    }
+
+    /// The `WebPagesOnly` this rejection carries, or nil for another member.
+    var webPagesOnly: WebPagesOnly? {
+        if case .webPagesOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowNotOpen` this rejection carries, or nil for another member.
+    var windowNotOpen: WindowNotOpen? {
+        if case .windowNotOpen(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceBusy` this rejection carries, or nil for another member.
+    var workspaceBusy: WorkspaceBusy? {
+        if case .workspaceBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `WrongDeletionOperation` this rejection carries, or nil for another member.
+    var wrongDeletionOperation: WrongDeletionOperation? {
+        if case .wrongDeletionOperation(let value) = self { value } else { nil }
+    }
 
     var message: LocalizedStringResource? {
         switch self {
@@ -416,6 +1708,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .pinsOneTabAtATime(let value): value.message
         case .primaryCannotJoin(let value): value.message
         case .primaryCannotSeparate(let value): value.message
+        case .privateSpaceCannotLock(let value): value.message
         case .privateSpaceCannotShare(let value): value.message
         case .profileInUse(let value): value.message
         case .saveFailed(let value): value.message
@@ -441,6 +1734,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .unknownAgentSession(let value): value.message
         case .unknownCloudMerge(let value): value.message
         case .unknownExtension(let value): value.message
+        case .unpreparedImport(let value): value.message
         case .unsuitableDefaultSearch(let value): value.message
         case .unsupportedArchiveVersion(let value): value.message
         case .webPagesOnly(let value): value.message
@@ -470,6 +1764,7 @@ enum EngineCommand: Equatable, Sendable {
     case installExtensionPackage(InstallExtensionPackage)
     case listEngineExtensions(ListEngineExtensions)
     case loadPage(LoadPage)
+    case moveEngineExtensionPin(MoveEngineExtensionPin)
     case pauseEngineDownload(PauseEngineDownload)
     case readSiteData(ReadSiteData)
     case recoverPage(RecoverPage)
@@ -589,6 +1884,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: state)
         case .downloadApprovalAsked(let change): change.apply(to: state)
         case .downloadDestinationAsked(let change): change.apply(to: state)
+        case .downloadPreferencesChanged(let change): change.apply(to: state)
         case .downloadStarted(let change): change.apply(to: state)
         case .downloadUpdated(let change): change.apply(to: state)
         case .downloadsRemoved(let change): change.apply(to: state)
@@ -606,12 +1902,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: state)
         case .pageChanged(let change): change.apply(to: state)
         case .pageOpened(let change): change.apply(to: state)
+        case .pagePreferencesChanged(let change): change.apply(to: state)
         case .pageRehosted(let change): change.apply(to: state)
         case .pageRemoved(let change): change.apply(to: state)
         case .pageUnloaded(let change): change.apply(to: state)
         case .permissionAsked(let change): change.apply(to: state)
         case .promptSettled(let change): change.apply(to: state)
         case .quitWithDownloadsAsked(let change): change.apply(to: state)
+        case .releaseNotesDue(let change): change.apply(to: state)
         case .saved(let change): change.apply(to: state)
         case .scriptDialogAsked(let change): change.apply(to: state)
         case .searchCatalogChanged(let change): change.apply(to: state)
@@ -623,6 +1921,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: state)
         case .sidebarChanged(let change): change.apply(to: state)
         case .siteContentBlockingChanged(let change): change.apply(to: state)
+        case .siteControlTopActionsChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
@@ -635,6 +1934,7 @@ extension Change {
         case .tabCopied(let change): change.apply(to: state)
         case .tabFaviconAssigned(let change): change.apply(to: state)
         case .tabPagePutAway(let change): change.apply(to: state)
+        case .tabSavedImageChanged(let change): change.apply(to: state)
         case .tabsChanged(let change): change.apply(to: state)
         case .tabsImported(let change): change.apply(to: state)
         case .transientPageClosed(let change): change.apply(to: state)
@@ -667,6 +1967,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: core, in: &batch)
         case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
         case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
+        case .downloadPreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .downloadStarted(let change): change.apply(to: core, in: &batch)
         case .downloadUpdated(let change): change.apply(to: core, in: &batch)
         case .downloadsRemoved(let change): change.apply(to: core, in: &batch)
@@ -684,12 +1985,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: core, in: &batch)
         case .pageChanged(let change): change.apply(to: core, in: &batch)
         case .pageOpened(let change): change.apply(to: core, in: &batch)
+        case .pagePreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .pageRehosted(let change): change.apply(to: core, in: &batch)
         case .pageRemoved(let change): change.apply(to: core, in: &batch)
         case .pageUnloaded(let change): change.apply(to: core, in: &batch)
         case .permissionAsked(let change): change.apply(to: core, in: &batch)
         case .promptSettled(let change): change.apply(to: core, in: &batch)
         case .quitWithDownloadsAsked(let change): change.apply(to: core, in: &batch)
+        case .releaseNotesDue(let change): change.apply(to: core, in: &batch)
         case .saved(let change): change.apply(to: core, in: &batch)
         case .scriptDialogAsked(let change): change.apply(to: core, in: &batch)
         case .searchCatalogChanged(let change): change.apply(to: core, in: &batch)
@@ -701,6 +2004,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
         case .sidebarChanged(let change): change.apply(to: core, in: &batch)
         case .siteContentBlockingChanged(let change): change.apply(to: core, in: &batch)
+        case .siteControlTopActionsChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
@@ -713,6 +2017,7 @@ extension Change {
         case .tabCopied(let change): change.apply(to: core, in: &batch)
         case .tabFaviconAssigned(let change): change.apply(to: core, in: &batch)
         case .tabPagePutAway(let change): change.apply(to: core, in: &batch)
+        case .tabSavedImageChanged(let change): change.apply(to: core, in: &batch)
         case .tabsChanged(let change): change.apply(to: core, in: &batch)
         case .tabsImported(let change): change.apply(to: core, in: &batch)
         case .transientPageClosed(let change): change.apply(to: core, in: &batch)
@@ -745,6 +2050,7 @@ extension Change {
         case .dataDeleted(let change): change.note(in: &receipts)
         case .downloadApprovalAsked(let change): change.note(in: &receipts)
         case .downloadDestinationAsked(let change): change.note(in: &receipts)
+        case .downloadPreferencesChanged(let change): change.note(in: &receipts)
         case .downloadStarted(let change): change.note(in: &receipts)
         case .downloadUpdated(let change): change.note(in: &receipts)
         case .downloadsRemoved(let change): change.note(in: &receipts)
@@ -762,12 +2068,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.note(in: &receipts)
         case .pageChanged(let change): change.note(in: &receipts)
         case .pageOpened(let change): change.note(in: &receipts)
+        case .pagePreferencesChanged(let change): change.note(in: &receipts)
         case .pageRehosted(let change): change.note(in: &receipts)
         case .pageRemoved(let change): change.note(in: &receipts)
         case .pageUnloaded(let change): change.note(in: &receipts)
         case .permissionAsked(let change): change.note(in: &receipts)
         case .promptSettled(let change): change.note(in: &receipts)
         case .quitWithDownloadsAsked(let change): change.note(in: &receipts)
+        case .releaseNotesDue(let change): change.note(in: &receipts)
         case .saved(let change): change.note(in: &receipts)
         case .scriptDialogAsked(let change): change.note(in: &receipts)
         case .searchCatalogChanged(let change): change.note(in: &receipts)
@@ -779,6 +2087,7 @@ extension Change {
         case .shortcutsChanged(let change): change.note(in: &receipts)
         case .sidebarChanged(let change): change.note(in: &receipts)
         case .siteContentBlockingChanged(let change): change.note(in: &receipts)
+        case .siteControlTopActionsChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
@@ -791,6 +2100,7 @@ extension Change {
         case .tabCopied(let change): change.note(in: &receipts)
         case .tabFaviconAssigned(let change): change.note(in: &receipts)
         case .tabPagePutAway(let change): change.note(in: &receipts)
+        case .tabSavedImageChanged(let change): change.note(in: &receipts)
         case .tabsChanged(let change): change.note(in: &receipts)
         case .tabsImported(let change): change.note(in: &receipts)
         case .transientPageClosed(let change): change.note(in: &receipts)
@@ -845,6 +2155,7 @@ struct AddLinkRoute: Intent, LinkIntent, Equatable, Sendable {
 }
 
 struct AddSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
+    let fromSpaceID: UUID?
 }
 
 struct AddSubSpace: Intent, SessionIntent, Equatable, Sendable {
@@ -858,6 +2169,14 @@ struct AddressCompletion: Equatable, Sendable {
     let typed: String
     let suffix: String
     let accepted: String
+}
+
+struct AdoptDevicePreferences: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let defaultPageZoom: Double?
+    let backgroundPageActivity: String?
+    let allowsHighFrameRate: Bool?
+    let syncsWithICloud: Bool?
+    let downloads: [SpaceDownloadPreferences]
 }
 
 struct AdoptLegacySession: Intent, Equatable, Sendable {
@@ -1129,11 +2448,15 @@ struct AppPreferences: Equatable, Sendable {
         translationRules: [],
         checksSpelling: false,
         automaticallyEntersPictureInPicture: true,
+        pinnedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabClose: SavedTabClosePolicy.resumeLastLocation,
         savedTabFaviconReturnsToSavedURL: false,
+        unloadedSavedTabsStay: true,
         splitFocusFollowsMouse: false,
         automaticallyShowsDeveloperToolbar: true,
         showsRecentTabs: true,
+        newTabPosition: NewTabPosition.top,
+        newTabsJoinFolder: false,
         palette: PalettePreferences(
             layout: PaletteLayout.sections,
             sources: [
@@ -1166,17 +2489,28 @@ struct AppPreferences: Equatable, Sendable {
     var translationRules: [TranslationRule]
     var checksSpelling: Bool
     var automaticallyEntersPictureInPicture: Bool
+    var pinnedTabClose: SavedTabClosePolicy
     var savedTabClose: SavedTabClosePolicy
     var savedTabFaviconReturnsToSavedURL: Bool
+    var unloadedSavedTabsStay: Bool
     var splitFocusFollowsMouse: Bool
     var automaticallyShowsDeveloperToolbar: Bool
     var showsRecentTabs: Bool
+    var newTabPosition: NewTabPosition
+    var newTabsJoinFolder: Bool
     var palette: PalettePreferences
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let preferences: AppPreferences?
+}
+
+struct ApplyHouse: Query, Equatable, Sendable {
+    typealias Answer = NormalizedBranding
+
+    let branding: SpaceBranding
+    let house: SpaceHouse
 }
 
 struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
@@ -1321,10 +2655,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
     let hasAllowedAutomaticDownload: Bool
 }
 
-struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
-}
-
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
@@ -1365,10 +2695,6 @@ struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let requestID: UUID
-}
-
-struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
 }
 
 struct BlockElement: Intent, Equatable, Sendable {
@@ -1444,6 +2770,12 @@ struct BrandColor: Equatable, Sendable {
     var alpha: Double
 }
 
+struct BrandGradient: Equatable, Sendable {
+    var colors: ColorPalette
+    var kind: SpaceGradientKind?
+    var angle: Double
+}
+
 struct BrowsingPreferences: Equatable, Sendable {
     var selectedBuiltInEngine: BuiltInSearchProvider?
     var selectedCustomEngineID: UUID?
@@ -1475,7 +2807,7 @@ struct CanReturnToSavedAddress: Query, Equatable, Sendable {
 struct CanSend: Query, Sendable {
     typealias Answer = SendPermission
 
-    let intent: any Intent
+    let intent: any SessionIntent
 }
 
 struct CanTearOff: Query, Equatable, Sendable {
@@ -1503,6 +2835,10 @@ struct CancelExtensionInstall: Intent, ExtensionIntent, Equatable, Sendable {
 }
 
 struct CancelImportRead: Intent, SetupFlowIntent, Equatable, Sendable {
+}
+
+struct CannotBecomeGroup: Equatable, Sendable {
+    let folderID: UUID
 }
 
 struct CannotDeleteLastSpace: Equatable, Sendable {
@@ -1538,6 +2874,7 @@ struct CapacityLimits: Equatable, Sendable {
     let tabsPerSpace: Int
     let syncRecords: Int
     let credentialFileBytes: Int
+    let filterListBytes: Int
 }
 
 struct CaptureDecision: Query, Equatable, Sendable {
@@ -1612,10 +2949,6 @@ struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
 
-struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
-    let look: SetupLook
-}
-
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -1660,6 +2993,7 @@ struct ClearCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
+    let keepsShownTab: Bool
 }
 
 struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
@@ -1669,6 +3003,15 @@ struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
 }
 
 struct ClearPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
+}
+
+struct ClearedTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let keepsShownTab: Bool
 }
 
 struct ClickPage: PageRequest, Equatable, Sendable {
@@ -1707,6 +3050,7 @@ struct CloseTab: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+    let returnTabID: UUID?
 }
 
 struct CloseTabs: Intent, SessionIntent, Equatable, Sendable {
@@ -1796,11 +3140,6 @@ struct CloudStepFailed: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let observedCloudRecords: Int?
 }
 
-struct CloudSync: Query, Equatable, Sendable {
-    typealias Answer = CloudSyncStatus
-
-}
-
 struct CloudSyncAdvanced: CoreChange, Equatable, Sendable {
     let status: CloudSyncStatus
     let steps: [CloudSyncStep]
@@ -1869,6 +3208,11 @@ struct CloudTransportSynced: Intent, CloudSyncControlIntent, Equatable, Sendable
     let localChangesUnsaved: Bool
 }
 
+struct CollapseAllFolders: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+}
+
 struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -1876,12 +3220,18 @@ struct CollapseFolder: Intent, SessionIntent, Equatable, Sendable {
     let collapsed: Bool
 }
 
+struct CollapseSplit: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let groupID: UUID
+    let isCollapsed: Bool
+}
+
 struct ColorPalette: Equatable, Sendable {
     var colors: [BrandColor]
 }
 
 struct ConfigureCloudSync: Intent, CloudSyncControlIntent, Equatable, Sendable {
-    let isEnabled: Bool
     let canReachCloud: Bool
 }
 
@@ -1969,6 +3319,7 @@ struct CreateFolder: Intent, SessionIntent, Equatable, Sendable {
     let symbol: String?
     let tabIDs: [UUID]
     let leavesSplits: Bool
+    let isGroup: Bool
 }
 
 struct CreatePage: Equatable, Sendable {
@@ -1983,6 +3334,20 @@ struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
+}
+
+struct CredentialAccess: Query, Equatable, Sendable {
+    typealias Answer = CredentialAccessAnswer
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let use: CredentialUse
+    let origin: CredentialOrigin?
+}
+
+struct CredentialAccessAnswer: Equatable, Sendable {
+    let refusal: CredentialRefusal?
+    let vaults: [UUID]
 }
 
 struct CredentialCapture: Query, Equatable, Sendable {
@@ -2083,7 +3448,7 @@ struct CredentialImportPreview: Query, Equatable, Sendable {
 }
 
 struct CredentialOrigin: Equatable, Sendable {
-    static let maximumHostLength: Int = 1024
+    static let maximumFillCandidates: Int = 1024
 
     var scheme: String
     var host: String
@@ -2102,6 +3467,10 @@ struct CredentialPreferences: Equatable, Sendable {
 }
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
+    static let maximumRecords: Int = 64
+    static let revealLifetime: Double = 30
+    static let clipboardLifetime: Double = 60
+
     var id: UUID
     var username: String?
     var updatedAt: Double
@@ -2274,6 +3643,13 @@ struct DeleteFolder: Intent, SessionIntent, Equatable, Sendable {
     let folderID: UUID
 }
 
+struct DeleteFolderAndContents: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
 struct DeleteProfileData: Intent, DataDeletionIntent, Equatable, Sendable {
     let requestID: UUID
     let profileID: UUID
@@ -2306,6 +3682,10 @@ struct DetachedSession: Query, Equatable, Sendable {
     typealias Answer = SessionState
 
     let seed: SessionState.Seed
+}
+
+struct DevelopmentAddressVerdict: Equatable, Sendable {
+    let isLocal: Bool
 }
 
 struct DiscardStagedLink: Intent, PageIntent, Equatable, Sendable {
@@ -2384,25 +3764,17 @@ struct DownloadExtension: Equatable, Sendable {
     let extensionID: String
 }
 
+struct DownloadFolder: Equatable, Sendable {
+    var name: String
+    var token: Data
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
-struct DownloadProgress: Query, Equatable, Sendable {
-    typealias Answer = DownloadProgressReading
-
-    let estimator: DownloadTransferEstimator?
-    let completedUnitCount: Int64
-    let totalUnitCount: Int64
-    let fractionCompleted: Double
-    let isPaused: Bool
-    let uptime: Double
-}
-
-struct DownloadProgressReading: Equatable, Sendable {
-    let estimator: DownloadTransferEstimator
-    let telemetry: DownloadTelemetry
-    let progress: Double
+struct DownloadPreferencesChanged: CoreChange, Equatable, Sendable {
+    let spaces: [SpaceDownloadPreferences]
 }
 
 struct DownloadRisk: Query, Equatable, Sendable {
@@ -2469,28 +3841,6 @@ struct DownloadTelemetry: Equatable, Sendable {
     var bytesPerSecond: Double?
     var estimatedTimeRemaining: Double?
     var isPaused: Bool
-}
-
-struct DownloadTransferEstimator: Equatable, Sendable {
-    static let minimumRateInterval: Double = 0.15
-    static let smoothingWeight: Double = 0.25
-    static let minimumUsefulEstimate: Double = 0.5
-    static let maximumUsefulEstimate: Double = 604800
-    static let initial = DownloadTransferEstimator(
-        publishedBytes: 0,
-        knownTotalBytes: nil,
-        totalIsUnreliable: false,
-        measurementBytes: nil,
-        measurementUptime: nil,
-        smoothedBytesPerSecond: nil
-    )
-
-    var publishedBytes: Int64
-    var knownTotalBytes: Int64?
-    var totalIsUnreliable: Bool
-    var measurementBytes: Int64?
-    var measurementUptime: Double?
-    var smoothedBytesPerSecond: Double?
 }
 
 struct DownloadUpdated: CoreChange, Equatable, Sendable {
@@ -2795,6 +4145,12 @@ struct EraseSiteData: Equatable, Sendable {
     let erasureID: UUID
 }
 
+struct EscapedAddress: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let spelling: String
+}
+
 struct EvaluateContentScript: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -2870,6 +4226,7 @@ struct ExtensionAction: Equatable, Sendable, Identifiable {
     let icon: Data?
     let pinned: Bool
     let enabled: Bool
+    let hasPopup: Bool
 }
 
 struct ExtensionActionList: Equatable, Sendable {
@@ -3170,6 +4527,14 @@ struct FolderCycle: Equatable, Sendable {
     let folderID: UUID
 }
 
+struct FolderDeletionTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
 struct FolderDepthLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -3181,6 +4546,8 @@ struct FolderLimitReached: Equatable, Sendable {
 struct FolderState: Equatable, Sendable, Identifiable {
     static let maximumDepth: Int = 16
     static let defaultSymbol: String = "folder"
+    static let untitledTitle: String = "Untitled Folder"
+    static let maximumTitleLength: Int = 500
     static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
 
     let id: UUID
@@ -3192,6 +4559,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let isCollapsed: Bool
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
+    let isGroup: Bool
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -3207,6 +4575,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var isCollapsed: Bool
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
+        var isGroup: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -3220,7 +4589,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
             parentID: parentID,
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
-            orderAnchorTabID: orderAnchorTabID
+            orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup
         )
     }
 }
@@ -3232,6 +4602,7 @@ struct FolderTabs: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let placement: TabPlacement
     let title: String?
+    let isGroup: Bool
 }
 
 struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
@@ -3241,6 +4612,7 @@ struct FolderTabsAround: Intent, SessionIntent, Equatable, Sendable {
     let selection: TabSelection
     let tabID: UUID
     let title: String?
+    let isGroup: Bool
 }
 
 struct FoldersChanged: CoreChange, Equatable, Sendable {
@@ -3292,6 +4664,10 @@ struct GetSiteContentBlocking: Query, Equatable, Sendable {
 struct GoToHistoryEntry: Equatable, Sendable {
     let pageID: UUID
     let entryID: UUID
+}
+
+struct GroupHoldsOnlyTabs: Equatable, Sendable {
+    let groupID: UUID
 }
 
 struct GroupPages: Equatable, Sendable {
@@ -3431,6 +4807,7 @@ struct ImportPasswordRoutes: Equatable, Sendable {
 struct ImportPasswordSource: Equatable, Sendable {
     var profileName: String
     var host: String
+    var isSecure: Bool
 }
 
 struct ImportPasswordStore: Equatable, Sendable, Identifiable {
@@ -3934,14 +5311,6 @@ struct LinkHovered: Equatable, Sendable {
     let url: String?
 }
 
-struct LinkNavigation: Query, Equatable, Sendable {
-    typealias Answer = LinkNavigationAnswer
-
-    let pageID: UUID
-    let url: String?
-    let gesture: LinkGesture
-}
-
 struct LinkNavigationAnswer: Equatable, Sendable {
     let decision: LinkNavigationDecision
 }
@@ -3961,6 +5330,7 @@ struct LinkPreferences: Equatable, Sendable {
     let dimsPageBehindPeek: Bool
     let archivePolicy: QuickWindowArchivePolicy
     let remembersSpaceBySite: Bool
+    let cleansCopiedLinks: Bool
     let routes: [LinkRoute]
     let rememberedSites: [RememberedSite]
 }
@@ -3983,6 +5353,12 @@ struct LinkRouteExists: Equatable, Sendable {
 
 struct LinkRoutesFull: Equatable, Sendable {
     let maximum: Int
+}
+
+struct LinkToCopy: Query, Equatable, Sendable {
+    typealias Answer = String
+
+    let url: String
 }
 
 struct ListDropTarget: Equatable, Sendable {
@@ -4008,6 +5384,13 @@ struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
     let entryID: UUID?
+}
+
+struct LocalDevelopmentAddress: Query, Equatable, Sendable {
+    typealias Answer = DevelopmentAddressVerdict
+
+    let scheme: String?
+    let host: String?
 }
 
 struct LocalDocumentFacts: Equatable, Sendable {
@@ -4121,6 +5504,12 @@ struct MostRecentCredential: Query, Equatable, Sendable {
     let records: [CredentialRecord]
 }
 
+struct MoveEngineExtensionPin: Equatable, Sendable {
+    let profileID: UUID
+    let extensionID: String
+    let beforeExtensionID: String?
+}
+
 struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -4129,6 +5518,14 @@ struct MoveFolder: Intent, SessionIntent, Equatable, Sendable {
     let parentID: UUID?
     let beforeFolderID: UUID?
     let beforeTabID: UUID?
+}
+
+struct MoveFolderToSpace: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let destinationSpaceID: UUID
 }
 
 struct MoveLinkRoute: Intent, LinkIntent, Equatable, Sendable {
@@ -4151,9 +5548,21 @@ struct MovePageToWindow: PageRequest, Equatable, Sendable {
     let windowID: UUID
 }
 
+struct MovePinnedExtension: Intent, ExtensionIntent, Equatable, Sendable {
+    let spaceID: UUID
+    let engine: EngineKind
+    let extensionID: String
+    let beforeExtensionID: String?
+}
+
 struct MoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
     let targetSpaceID: UUID
+}
+
+struct MoveSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+    let index: Int
 }
 
 struct MoveSplitMember: Intent, SessionIntent, Equatable, Sendable {
@@ -4330,6 +5739,10 @@ struct NoteAgentActivity: Intent, AgentIntent, Equatable, Sendable {
     let subject: String
 }
 
+struct NoteLaunchRelease: Intent, WindowIntent, Equatable, Sendable {
+    let version: String
+}
+
 struct NotificationDisplayCheck: Query, Equatable, Sendable {
     typealias Answer = NotificationDisplayVerdict
 
@@ -4421,6 +5834,7 @@ struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let address: String
+    let placesAsNewTab: Bool
 }
 
 struct OpenCloudTransport: Intent, CloudTransportIntent, Equatable, Sendable {
@@ -4436,13 +5850,14 @@ struct OpenInspector: PageRequest, Equatable, Sendable {
 }
 
 struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
+    static let probeAddress: String = "about:blank"
+
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
     let targetTabID: UUID
     let address: String
-    let title: String
 }
 
 struct OpenPage: Intent, PageIntent, Equatable, Sendable {
@@ -4464,6 +5879,8 @@ struct OpenTab: Intent, SessionIntent, Equatable, Sendable {
     let placement: TabPlacement
     let afterTabID: UUID?
     let shows: Bool
+    let placesAsNewTab: Bool
+    let savesInSavedFolder: Bool
 }
 
 struct OpenWindow: Intent, WindowIntent, Equatable, Sendable {
@@ -4779,6 +6196,21 @@ struct PagePoint: Equatable, Sendable {
     var y: Double
 }
 
+struct PagePreferences: Equatable, Sendable {
+    static let standardZoom: Double = 1
+    static let minimumZoom: Double = 0.25
+    static let maximumZoom: Double = 5
+    static let `default` = PagePreferences(defaultZoom: 1, backgroundActivity: BackgroundPageActivity.suspend, allowsHighFrameRate: false)
+
+    let defaultZoom: Double
+    let backgroundActivity: BackgroundPageActivity
+    let allowsHighFrameRate: Bool
+}
+
+struct PagePreferencesChanged: CoreChange, Equatable, Sendable {
+    let preferences: PagePreferences
+}
+
 struct PagePresented: Equatable, Sendable {
     let presentation: PagePresentation
 }
@@ -4935,13 +6367,34 @@ struct PaletteEntry: Equatable, Sendable {
     let text: String
 }
 
+struct PaletteGradients: Equatable, Sendable {
+    var slots: [BrandGradient]
+}
+
 struct PaletteGroup: Equatable, Sendable {
     let section: PaletteSection
     let rows: [PaletteRow]
 }
 
+struct PaletteLimiting: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let limit: Int
+}
+
+struct PaletteOffering: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let isEnabled: Bool
+}
+
 struct PalettePreferences: Equatable, Sendable {
     static let maximumLimit: Int = 50
+    static let offeredLimits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
     static let `default` = PalettePreferences(
         layout: PaletteLayout.sections,
         sources: [
@@ -4991,6 +6444,8 @@ struct PaletteRow: Equatable, Sendable {
     let settingsPage: String?
     let scope: PaletteScope?
     let reason: PaletteReason?
+    let iconTabIDs: [UUID]
+    let httpFallback: String?
 
     /// The fields of a `PaletteRow` alone, as a platform builds one to send. The
     /// core resolves the rest when it reads it.
@@ -5007,6 +6462,8 @@ struct PaletteRow: Equatable, Sendable {
         var settingsPage: String?
         var scope: PaletteScope?
         var reason: PaletteReason?
+        var iconTabIDs: [UUID]
+        var httpFallback: String?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -5023,9 +6480,25 @@ struct PaletteRow: Equatable, Sendable {
             provider: provider?.seed,
             settingsPage: settingsPage,
             scope: scope,
-            reason: reason
+            reason: reason,
+            iconTabIDs: iconTabIDs,
+            httpFallback: httpFallback
         )
     }
+}
+
+struct PaletteSectionMove: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let index: Int
+}
+
+struct PaletteSectionOrder: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
 }
 
 struct PaletteSettingsPage: Equatable, Sendable {
@@ -5184,6 +6657,11 @@ struct PlaceImportTab: Intent, SetupFlowIntent, Equatable, Sendable {
     let placement: TabPlacement
 }
 
+struct PlaceSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+    let slot: Int
+}
+
 struct PopupBlocked: Equatable, Sendable {
     let pageID: UUID
     let pageURL: String
@@ -5235,6 +6713,14 @@ struct PrimaryCannotSeparate: Equatable, Sendable {
 
     var message: LocalizedStringResource {
         LocalizedStringResource("Only a Sub-Space can be separated.")
+    }
+}
+
+struct PrivateSpaceCannotLock: Equatable, Sendable {
+    let workspaceID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Private windows can't be locked.")
     }
 }
 
@@ -5310,6 +6796,13 @@ struct ProtectedMediaUnavailable: EngineEvent, PageEvent, Equatable, Sendable {
     let keySystem: KeySystem
 }
 
+struct PutAwayTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let tabIDs: [UUID]
+}
+
 struct QuitWithDownloadsAsked: CoreChange, Equatable, Sendable {
     let promptID: UUID
     let requestID: UUID
@@ -5362,6 +6855,7 @@ struct ReassignShortcut: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct RecentTabItem: Equatable, Sendable {
+    let spaceID: UUID
     let tabIDs: [UUID]
     let focusedTabID: UUID
 }
@@ -5433,6 +6927,10 @@ struct RejectOfferedPage: Equatable, Sendable {
     let offerID: UUID
 }
 
+struct ReleaseNotesDue: CoreChange, Equatable, Sendable {
+    let version: String
+}
+
 struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool
@@ -5492,6 +6990,14 @@ struct RemoveSearchProvider: Intent, SearchCatalogIntent, Equatable, Sendable, I
 
 struct RemoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
+}
+
+struct RemoveSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+}
+
+struct RemovedTabs: Equatable, Sendable {
+    let tabIDs: [UUID]
 }
 
 struct RenameFolder: Intent, SessionIntent, Equatable, Sendable {
@@ -5565,6 +7071,9 @@ struct ResetShortcut: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct ResetShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
+}
+
+struct ResetSiteControlTopActions: Intent, DevicePreferenceIntent, Equatable, Sendable {
 }
 
 struct ResetSitePermission: Intent, SitePermissionIntent, Equatable, Sendable {
@@ -5768,6 +7277,8 @@ struct SearchCatalogChanged: CoreChange, Equatable, Sendable {
     let providers: [SearchProvider]
     let `default`: SearchProvider
     let privateDefault: SearchProvider
+    let enabled: [SearchProvider]
+    let defaultChoices: [SearchProvider]
 }
 
 struct SearchEngineLimitReached: Equatable, Sendable {
@@ -6017,6 +7528,10 @@ struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let preferences: AppPreferences
 }
 
+struct SetBackgroundPageActivity: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let activity: BackgroundPageActivity
+}
+
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6048,6 +7563,10 @@ struct SetCustomFilters: Intent, Equatable, Sendable {
     let text: String
 }
 
+struct SetDefaultPageZoom: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let zoom: Double
+}
+
 struct SetDefaultSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
     let provider: SearchProvider.Seed
 }
@@ -6075,11 +7594,22 @@ struct SetFolderColor: Intent, SessionIntent, Equatable, Sendable {
     let color: BrandColor
 }
 
+struct SetFolderGroup: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+    let isGroup: Bool
+}
+
 struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let folderID: UUID
     let symbol: String
+}
+
+struct SetHighFrameRate: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let allowed: Bool
 }
 
 struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
@@ -6141,6 +7671,10 @@ struct SetSpaceBranding: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let branding: SpaceBranding
+}
+
+struct SetSpaceDownloads: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let preferences: SpaceDownloadPreferences
 }
 
 struct SetSpaceIdentity: Intent, SessionIntent, Equatable, Sendable {
@@ -6228,6 +7762,7 @@ struct SetupDraftSpace: Equatable, Sendable {
     let profileID: UUID
     let isNew: Bool
     let customization: SpaceCustomization
+    let primaryID: UUID?
     let shownName: String
 }
 
@@ -6301,6 +7836,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let placements: [TabPlacementChoice]
     let includesPasswords: Bool
     let passwordCount: Int
+    let insecurePasswordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
     let joinsGroupOf: UUID?
@@ -6420,6 +7956,7 @@ struct ShowStartPage: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let outsideSplits: Bool
+    let placesAsNewTab: Bool
 }
 
 struct ShowTab: Intent, WindowIntent, Equatable, Sendable {
@@ -6477,6 +8014,19 @@ struct SiteContentBlocking: Equatable, Sendable {
 
 struct SiteContentBlockingChanged: CoreChange, Equatable, Sendable {
     let sites: [SiteContentBlocking]
+}
+
+struct SiteControlTopActions: Equatable, Sendable {
+    static let maximumCount: Int = 4
+    static let `default` = SiteControlTopActions(
+        actions: [SiteControlAction.copyLink, SiteControlAction.share, SiteControlAction.pinTab, SiteControlAction.findInPage]
+    )
+
+    let actions: [SiteControlAction]
+}
+
+struct SiteControlTopActionsChanged: CoreChange, Equatable, Sendable {
+    let topActions: SiteControlTopActions
 }
 
 struct SiteDataRead: EngineEvent, Equatable, Sendable {
@@ -6578,7 +8128,7 @@ struct SpaceBranding: Equatable, Sendable {
         keepsControlsReadable: true,
         themeMode: SpaceThemeMode.banner,
         gradientAngle: 0,
-        showsTexture: false,
+        textureStrength: 0,
         iconStyle: SpaceIconStyle.simpleSymbol,
         symbolColor: nil,
         crest: SpaceCrest(
@@ -6610,12 +8160,16 @@ struct SpaceBranding: Equatable, Sendable {
             sheenAngle: 45,
             sealTeeth: 12,
             showsOutline: false,
-            depth: CrestDepth.none
+            depth: CrestDepth.none,
+            paletteGradients: nil
         ),
         renderingVersion: 2,
         folderColorIntensity: 0,
         textColorMode: SpaceTextColorMode.automatic,
-        hasCustomAppearance: nil
+        hasCustomAppearance: nil,
+        gradientKind: nil,
+        symbolGradient: nil,
+        colorGradients: nil
     )
 
     var colors: ColorPalette
@@ -6625,7 +8179,7 @@ struct SpaceBranding: Equatable, Sendable {
     var keepsControlsReadable: Bool
     var themeMode: SpaceThemeMode
     var gradientAngle: Double
-    var showsTexture: Bool
+    var textureStrength: Double
     var iconStyle: SpaceIconStyle
     var symbolColor: BrandColor?
     var crest: SpaceCrest
@@ -6633,6 +8187,9 @@ struct SpaceBranding: Equatable, Sendable {
     var folderColorIntensity: Double
     var textColorMode: SpaceTextColorMode
     var hasCustomAppearance: Bool?
+    var gradientKind: SpaceGradientKind?
+    var symbolGradient: BrandGradient?
+    var colorGradients: PaletteGradients?
 }
 
 struct SpaceCrest: Equatable, Sendable {
@@ -6668,10 +8225,12 @@ struct SpaceCrest: Equatable, Sendable {
     var sealTeeth: Int
     var showsOutline: Bool
     var depth: CrestDepth
+    var paletteGradients: PaletteGradients?
 }
 
 struct SpaceCustomization: Equatable, Sendable {
     static let untitledName: String = "Untitled Space"
+    static let maximumNameLength: Int = 200
 
     var name: String
     var symbol: String
@@ -6719,6 +8278,12 @@ struct SpaceDeletionUnderway: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest will quit once the Space is deleted.")
     }
+}
+
+struct SpaceDownloadPreferences: Equatable, Sendable {
+    var spaceID: UUID
+    var asksWhereToSave: Bool
+    var folder: DownloadFolder?
 }
 
 struct SpaceIsPrivate: Equatable, Sendable {
@@ -6907,7 +8472,8 @@ struct SplitDropTarget: Equatable, Sendable {
 }
 
 struct SplitGroupState: Equatable, Sendable, Identifiable {
-    static let minimumShownMembers: Int = 2
+    static let minimumMembers: Int = 2
+    static let maximumMembers: Int = 4
 
     let id: UUID
     let customTitle: String?
@@ -6916,6 +8482,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
     let iconModifiedAt: Date?
     let tint: BrandColor?
     let tintModifiedAt: Date?
+    let isCollapsed: Bool
+    let collapseModifiedAt: Date?
     let displayTitle: String?
     let displayEmojiIcon: String?
 
@@ -6933,6 +8501,8 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
         var iconModifiedAt: Date?
         var tint: BrandColor?
         var tintModifiedAt: Date?
+        var isCollapsed: Bool
+        var collapseModifiedAt: Date?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -6944,7 +8514,9 @@ struct SplitGroupState: Equatable, Sendable, Identifiable {
             customIconSymbol: customIconSymbol,
             iconModifiedAt: iconModifiedAt,
             tint: tint,
-            tintModifiedAt: tintModifiedAt
+            tintModifiedAt: tintModifiedAt,
+            isCollapsed: isCollapsed,
+            collapseModifiedAt: collapseModifiedAt
         )
     }
 }
@@ -6977,7 +8549,7 @@ struct SplitNeedsTwoTabs: Equatable, Sendable {
     let limit: Int
 
     var message: LocalizedStringResource {
-        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select at least 2 tabs to make a split.")
     }
 }
 
@@ -7248,6 +8820,13 @@ struct TabPlacementChoice: Equatable, Sendable {
     let placement: TabPlacement
 }
 
+struct TabSavedImageChanged: CoreChange, Equatable, Sendable {
+    let workspaceID: UUID
+    let tabID: UUID
+    let change: TabSavedImageChange
+    let faviconURL: String?
+}
+
 struct TabSelection: Equatable, Sendable {
     var tabIDs: [UUID]
     var folderIDs: [UUID]
@@ -7278,6 +8857,9 @@ struct TabState: Equatable, Sendable, Identifiable {
     let customTitle: String?
     let titleModifiedAt: Date?
     let keepsPageLoaded: Bool
+    let savedTitle: String?
+    let savedFaviconURL: String?
+    let savedIconAccent: TabIconAccent?
     let iconMode: TabIconMode
     let displayTitle: String
     let isAwayFromSavedAddress: Bool
@@ -7305,6 +8887,9 @@ struct TabState: Equatable, Sendable, Identifiable {
         var customTitle: String?
         var titleModifiedAt: Date?
         var keepsPageLoaded: Bool
+        var savedTitle: String?
+        var savedFaviconURL: String?
+        var savedIconAccent: TabIconAccent?
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -7326,7 +8911,10 @@ struct TabState: Equatable, Sendable, Identifiable {
             positionModifiedAt: positionModifiedAt,
             customTitle: customTitle,
             titleModifiedAt: titleModifiedAt,
-            keepsPageLoaded: keepsPageLoaded
+            keepsPageLoaded: keepsPageLoaded,
+            savedTitle: savedTitle,
+            savedFaviconURL: savedFaviconURL,
+            savedIconAccent: savedIconAccent
         )
     }
 }
@@ -7342,6 +8930,9 @@ struct TabsChanged: CoreChange, Equatable, Sendable {
 struct TabsImported: CoreChange, Equatable, Sendable {
     let workspaceID: UUID
     let tabs: [ImportedTab]
+}
+
+struct TakeReleaseNotes: Intent, WindowIntent, Equatable, Sendable {
 }
 
 struct TearOffPermission: Equatable, Sendable {
@@ -7385,13 +8976,17 @@ struct TransientPagePromoted: CoreChange, Equatable, Sendable {
 struct TranslationChoice: Query, Equatable, Sendable {
     typealias Answer = TranslationDecision
 
+    static let fallbackPreferredLanguage: String = "en"
+
     let rules: [TranslationRule]
     let sourceLanguage: String
+    let preferredLanguage: String?
 }
 
 struct TranslationDecision: Equatable, Sendable {
     let rule: TranslationRule?
     let target: String?
+    let offers: Bool
 }
 
 struct TranslationRule: Equatable, Sendable {
@@ -7488,6 +9083,14 @@ struct UnknownWorkspace: Equatable, Sendable {
     let workspaceID: UUID
 }
 
+struct UnpreparedImport: Equatable, Sendable {
+    let cause: String
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("Crest couldn’t prepare this import.")
+    }
+}
+
 struct UnregisteredEngine: Equatable, Sendable {
     let kind: EngineKind
 }
@@ -7532,6 +9135,13 @@ struct WatchPage: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
     let pageID: UUID
+}
+
+struct WearHouseCrest: Query, Equatable, Sendable {
+    typealias Answer = NormalizedBranding
+
+    let branding: SpaceBranding
+    let house: SpaceHouse
 }
 
 struct WebNotificationClosed: Equatable, Sendable {
@@ -7927,12 +9537,6 @@ struct PageMixedContent: OptionSet, Sendable {
     static let form = PageMixedContent(rawValue: 4)
 }
 
-enum PageResourceKind: Int, CaseIterable, Sendable {
-    case frame = 0
-    case image = 1
-    case object = 2
-}
-
 enum PageScriptWorld: Int, CaseIterable, Sendable {
     case agent = 0
     case page = 1
@@ -7997,14 +9601,6 @@ enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
     case deviceOwnerAuthentication = 1
 }
 
-enum StorageFailure: Int, CaseIterable, Sendable {
-    case diskFull = 0
-    case readOnly = 1
-    case busy = 2
-    case damaged = 3
-    case unavailable = 4
-}
-
 enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case available = 0
     case unsupportedPlatform = 1
@@ -8013,15 +9609,9 @@ enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case managedBrowserCapabilityRequired = 4
 }
 
-enum SystemTint: Int, CaseIterable, Sendable {
-    case red = 0
-    case orange = 1
-    case purple = 2
-    case blue = 3
-    case indigo = 4
-    case teal = 5
-    case pink = 6
-    case green = 7
+enum TabSavedImageChange: Int, CaseIterable, Sendable {
+    case keep = 0
+    case restore = 1
 }
 
 enum TearOffRefusal: Int, CaseIterable, Sendable {
@@ -8244,7 +9834,7 @@ struct ArchiveReason: Hashable, Sendable {
     var filterGroup: ArchiveFilterGroup { facts.filterGroup }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var isExplicitDeletion: Bool { facts.isExplicitDeletion }
     var isCleanup: Bool { facts.isCleanup }
     var isReceived: Bool { facts.isReceived }
@@ -8258,7 +9848,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint,
+        tone: StatusTone?,
         isExplicitDeletion: Bool,
         isCleanup: Bool,
         isReceived: Bool
@@ -8271,7 +9861,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: filterGroup,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             isExplicitDeletion: isExplicitDeletion,
             isCleanup: isCleanup,
             isReceived: isReceived
@@ -8286,7 +9876,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.automatic,
         title: LocalizedStringResource("Automatically cleaned"),
         symbol: "archivebox.fill",
-        tint: .orange,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: true,
         isReceived: false
@@ -8299,7 +9889,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Closed"),
         symbol: "xmark.circle.fill",
-        tint: .red,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -8312,7 +9902,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Deleted"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: false
@@ -8325,7 +9915,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Deleted on another device"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: true
@@ -8338,7 +9928,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.quickWindow,
         title: LocalizedStringResource("Quick Window"),
         symbol: "timer",
-        tint: .purple,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -8351,7 +9941,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Synced from another device"),
         symbol: "icloud.and.arrow.down.fill",
-        tint: .blue,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: true
@@ -8378,7 +9968,7 @@ struct ArchiveReason: Hashable, Sendable {
         let filterGroup: ArchiveFilterGroup
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint
+        let tone: StatusTone?
         let isExplicitDeletion: Bool
         let isCleanup: Bool
         let isReceived: Bool
@@ -8390,7 +9980,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: ArchiveFilterGroup,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint,
+            tone: StatusTone?,
             isExplicitDeletion: Bool,
             isCleanup: Bool,
             isReceived: Bool
@@ -8401,7 +9991,7 @@ struct ArchiveReason: Hashable, Sendable {
             self.filterGroup = filterGroup
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.isExplicitDeletion = isExplicitDeletion
             self.isCleanup = isCleanup
             self.isReceived = isReceived
@@ -8492,6 +10082,43 @@ struct AutomaticDownloadAction: Hashable, Sendable {
 
         init(kind: Kinds, name: String) {
             self.kind = kind
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `BackgroundPageActivity`. A member's wire tag is its index in `all`.
+struct BackgroundPageActivity: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let suspend = BackgroundPageActivity(tag: 0, name: "suspend")
+    static let throttle = BackgroundPageActivity(tag: 1, name: "throttle")
+
+    static let all: [BackgroundPageActivity] = [suspend, throttle]
+
+    static func named(_ name: String?) -> BackgroundPageActivity? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BackgroundPageActivity, rhs: BackgroundPageActivity) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
             self.name = name
         }
     }
@@ -9373,48 +11000,6 @@ struct BuiltInSearchProvider: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
-struct CapabilityStatus: Hashable, Sendable {
-    let tag: Int
-    var name: String { facts.name }
-    var isAvailable: Bool { facts.isAvailable }
-    private let facts: Facts
-
-    private init(tag: Int, name: String, isAvailable: Bool) {
-        self.tag = tag
-        facts = Facts(name: name, isAvailable: isAvailable)
-    }
-
-    static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
-    static let partial = CapabilityStatus(tag: 1, name: "partial", isAvailable: false)
-    static let unavailable = CapabilityStatus(tag: 2, name: "unavailable", isAvailable: false)
-    static let unverified = CapabilityStatus(tag: 3, name: "unverified", isAvailable: false)
-
-    static let all: [CapabilityStatus] = [supported, partial, unavailable, unverified]
-
-    static func named(_ name: String?) -> CapabilityStatus? {
-        all.first { $0.name == name }
-    }
-
-    static func == (lhs: CapabilityStatus, rhs: CapabilityStatus) -> Bool {
-        lhs.tag == rhs.tag
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(tag)
-    }
-
-    private final class Facts: Sendable {
-        let name: String
-        let isAvailable: Bool
-
-        init(name: String, isAvailable: Bool) {
-            self.name = name
-            self.isAvailable = isAvailable
-        }
-    }
-}
-
 /// The members of the core's `CloudAccountState`. A member's wire tag is its index in `all`.
 struct CloudAccountState: Hashable, Sendable {
     let tag: Int
@@ -9523,7 +11108,7 @@ struct CloudSyncPhase: Hashable, Sendable {
     var isRetryable: Bool { facts.isRetryable }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint? { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var keepsCloudOutOfReach: Bool { facts.keepsCloudOutOfReach }
     private let facts: Facts
 
@@ -9533,7 +11118,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: Bool,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint?,
+        tone: StatusTone?,
         keepsCloudOutOfReach: Bool
     ) {
         self.tag = tag
@@ -9542,7 +11127,7 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: isRetryable,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             keepsCloudOutOfReach: keepsCloudOutOfReach
         )
     }
@@ -9553,7 +11138,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Off"),
         symbol: "icloud.slash",
-        tint: nil,
+        tone: nil,
         keepsCloudOutOfReach: false
     )
     static let checking = CloudSyncPhase(
@@ -9562,7 +11147,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Checking iCloud"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: true
     )
     static let ready = CloudSyncPhase(
@@ -9571,7 +11156,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Up to date"),
         symbol: "checkmark.icloud.fill",
-        tint: .green,
+        tone: StatusTone.success,
         keepsCloudOutOfReach: false
     )
     static let syncing = CloudSyncPhase(
@@ -9580,7 +11165,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Syncing"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
     static let needsReconciliation = CloudSyncPhase(
@@ -9589,7 +11174,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Choose which copy to keep"),
         symbol: "exclamationmark.icloud.fill",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: false
     )
     static let waitingForAccount = CloudSyncPhase(
@@ -9598,7 +11183,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Waiting for iCloud"),
         symbol: "person.crop.circle.badge.exclamationmark",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: true
     )
     static let failed = CloudSyncPhase(
@@ -9607,7 +11192,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Needs attention"),
         symbol: "xmark.icloud.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         keepsCloudOutOfReach: true
     )
     static let waitingToUpload = CloudSyncPhase(
@@ -9616,7 +11201,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Waiting to upload"),
         symbol: "icloud.and.arrow.up",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
 
@@ -9648,7 +11233,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         let isRetryable: Bool
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint?
+        let tone: StatusTone?
         let keepsCloudOutOfReach: Bool
 
         init(
@@ -9656,14 +11241,14 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: Bool,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint?,
+            tone: StatusTone?,
             keepsCloudOutOfReach: Bool
         ) {
             self.name = name
             self.isRetryable = isRetryable
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.keepsCloudOutOfReach = keepsCloudOutOfReach
         }
     }
@@ -9912,6 +11497,72 @@ struct CloudZoneLoss: Hashable, Sendable {
         init(name: String, restoresLocalRecords: Bool) {
             self.name = name
             self.restoresLocalRecords = restoresLocalRecords
+        }
+    }
+}
+
+/// The members of the core's `ContentBlockKind`. A member's wire tag is its index in `all`.
+struct ContentBlockKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, symbol: symbol)
+    }
+
+    static let ads = ContentBlockKind(tag: 0, name: "ads", title: LocalizedStringResource("Ads"), symbol: "megaphone")
+    static let trackers = ContentBlockKind(
+        tag: 1,
+        name: "trackers",
+        title: LocalizedStringResource("Trackers"),
+        symbol: "eye.slash"
+    )
+    static let scams = ContentBlockKind(
+        tag: 2,
+        name: "scams",
+        title: LocalizedStringResource("Scams"),
+        symbol: "exclamationmark.shield"
+    )
+    static let cookieNotices = ContentBlockKind(
+        tag: 3,
+        name: "cookie-notices",
+        title: LocalizedStringResource("Cookie notices"),
+        symbol: "checklist"
+    )
+    static let annoyances = ContentBlockKind(
+        tag: 4,
+        name: "annoyances",
+        title: LocalizedStringResource("Annoyances"),
+        symbol: "bell.slash"
+    )
+
+    static let all: [ContentBlockKind] = [ads, trackers, scams, cookieNotices, annoyances]
+
+    static func named(_ name: String?) -> ContentBlockKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBlockKind, rhs: ContentBlockKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
         }
     }
 }
@@ -10350,6 +12001,44 @@ struct CredentialImportEffect: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialRefusal`. A member's wire tag is its index in `all`.
+struct CredentialRefusal: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let privateBrowsing = CredentialRefusal(tag: 0, name: "privateBrowsing")
+    static let managerOff = CredentialRefusal(tag: 1, name: "managerOff")
+    static let insecureOrigin = CredentialRefusal(tag: 2, name: "insecureOrigin")
+
+    static let all: [CredentialRefusal] = [privateBrowsing, managerOff, insecureOrigin]
+
+    static func named(_ name: String?) -> CredentialRefusal? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialRefusal, rhs: CredentialRefusal) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
 /// The members of the core's `CredentialRowCaution`. A member's wire tag is its index in `all`.
 struct CredentialRowCaution: Hashable, Sendable {
     let tag: Int
@@ -10446,6 +12135,50 @@ struct CredentialRowFlaw: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialUse`. A member's wire tag is its index in `all`.
+struct CredentialUse: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var needsManager: Bool { facts.needsManager }
+    var refusedInPrivate: Bool { facts.refusedInPrivate }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, needsManager: Bool, refusedInPrivate: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, needsManager: needsManager, refusedInPrivate: refusedInPrivate)
+    }
+
+    static let read = CredentialUse(tag: 0, name: "read", needsManager: false, refusedInPrivate: false)
+    static let fill = CredentialUse(tag: 1, name: "fill", needsManager: true, refusedInPrivate: false)
+    static let save = CredentialUse(tag: 2, name: "save", needsManager: true, refusedInPrivate: true)
+
+    static let all: [CredentialUse] = [read, fill, save]
+
+    static func named(_ name: String?) -> CredentialUse? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialUse, rhs: CredentialUse) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let needsManager: Bool
+        let refusedInPrivate: Bool
+
+        init(name: String, needsManager: Bool, refusedInPrivate: Bool) {
+            self.name = name
+            self.needsManager = needsManager
+            self.refusedInPrivate = refusedInPrivate
+        }
+    }
+}
+
 /// The members of the core's `CrestBackplate`. A member's wire tag is its index in `all`.
 struct CrestBackplate: Hashable, Sendable {
     enum Kinds: Sendable {
@@ -10461,6 +12194,9 @@ struct CrestBackplate: Hashable, Sendable {
         case oval
         case banner
         case badge
+        case softShield
+        case softHexagon
+        case ribbon
     }
 
     let tag: Int
@@ -10579,6 +12315,30 @@ struct CrestBackplate: Hashable, Sendable {
         drawnSince: CrestVocabulary.studio,
         hasTeeth: false
     )
+    static let softShield = CrestBackplate(
+        tag: 12,
+        kind: .softShield,
+        name: "softShield",
+        title: LocalizedStringResource("Soft Shield"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
+    static let softHexagon = CrestBackplate(
+        tag: 13,
+        kind: .softHexagon,
+        name: "softHexagon",
+        title: LocalizedStringResource("Soft Hexagon"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
+    static let ribbon = CrestBackplate(
+        tag: 14,
+        kind: .ribbon,
+        name: "ribbon",
+        title: LocalizedStringResource("Ribbon"),
+        drawnSince: CrestVocabulary.simple,
+        hasTeeth: false
+    )
 
     static let all: [CrestBackplate] = [
         none,
@@ -10592,7 +12352,10 @@ struct CrestBackplate: Hashable, Sendable {
         roundedSquare,
         oval,
         banner,
-        badge
+        badge,
+        softShield,
+        softHexagon,
+        ribbon
     ]
 
     static func named(_ name: String?) -> CrestBackplate? {
@@ -10625,7 +12388,7 @@ struct CrestBackplate: Hashable, Sendable {
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `normalize`.
+/// Core-only behavior, not emitted: `normalize`, `read`, `write`.
 struct CrestChargeKind: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
@@ -10884,6 +12647,7 @@ struct CrestDepth: Hashable, Sendable {
         case none
         case soft
         case lifted
+        case figure
     }
 
     let tag: Int
@@ -10919,8 +12683,15 @@ struct CrestDepth: Hashable, Sendable {
         title: LocalizedStringResource("Lifted"),
         drawnSince: CrestVocabulary.studio
     )
+    static let figure = CrestDepth(
+        tag: 3,
+        kind: .figure,
+        name: "figure",
+        title: LocalizedStringResource("Raised Figure"),
+        drawnSince: CrestVocabulary.simple
+    )
 
-    static let all: [CrestDepth] = [none, soft, lifted]
+    static let all: [CrestDepth] = [none, soft, lifted, figure]
 
     static func named(_ name: String?) -> CrestDepth? {
         all.first { $0.name == name }
@@ -12168,6 +13939,60 @@ struct CrestSymbol: Hashable, Sendable {
         assetName: nil,
         isOffered: true
     )
+    static let brightStar = CrestSymbol(
+        tag: 64,
+        name: "brightStar",
+        title: LocalizedStringResource("Bright Star"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "star.fill",
+        assetName: "CrestCharge-brightStar",
+        isOffered: true
+    )
+    static let moon = CrestSymbol(
+        tag: 65,
+        name: "moon",
+        title: LocalizedStringResource("Moon"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "moon.fill",
+        assetName: "CrestCharge-moon",
+        isOffered: true
+    )
+    static let chevrons = CrestSymbol(
+        tag: 66,
+        name: "chevrons",
+        title: LocalizedStringResource("Chevrons"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "chevron.up",
+        assetName: "CrestCharge-chevrons",
+        isOffered: true
+    )
+    static let lens = CrestSymbol(
+        tag: 67,
+        name: "lens",
+        title: LocalizedStringResource("Lens"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "smallcircle.filled.circle",
+        assetName: "CrestCharge-lens",
+        isOffered: true
+    )
+    static let spark = CrestSymbol(
+        tag: 68,
+        name: "spark",
+        title: LocalizedStringResource("Spark"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "bolt.fill",
+        assetName: "CrestCharge-spark",
+        isOffered: true
+    )
+    static let sprout = CrestSymbol(
+        tag: 69,
+        name: "sprout",
+        title: LocalizedStringResource("Sprout"),
+        drawnSince: CrestVocabulary.simple,
+        systemImage: "leaf.fill",
+        assetName: "CrestCharge-sprout",
+        isOffered: true
+    )
 
     static let all: [CrestSymbol] = [
         dragon,
@@ -12233,7 +14058,13 @@ struct CrestSymbol: Hashable, Sendable {
         sailboat,
         crown,
         horn,
-        crossedBanners
+        crossedBanners,
+        brightStar,
+        moon,
+        chevrons,
+        lens,
+        spark,
+        sprout
     ]
 
     static func named(_ name: String?) -> CrestSymbol? {
@@ -12428,8 +14259,9 @@ struct CrestVocabulary: Hashable, Sendable {
     static let expandedCharges = CrestVocabulary(tag: 1, name: "expandedCharges", version: 3)
     static let customization = CrestVocabulary(tag: 2, name: "customization", version: 4)
     static let studio = CrestVocabulary(tag: 3, name: "studio", version: 5)
+    static let simple = CrestVocabulary(tag: 4, name: "simple", version: 6)
 
-    static let all: [CrestVocabulary] = [baseline, expandedCharges, customization, studio]
+    static let all: [CrestVocabulary] = [baseline, expandedCharges, customization, studio, simple]
 
     static func named(_ name: String?) -> CrestVocabulary? {
         all.first { $0.name == name }
@@ -13960,6 +15792,7 @@ struct FilterList: Hashable, Sendable {
     var isDefault: Bool { facts.isDefault }
     var isStrict: Bool { facts.isStrict }
     var languages: [String] { facts.languages }
+    var blocks: [ContentBlockKind] { facts.blocks }
     private let facts: Facts
 
     private init(
@@ -13970,7 +15803,8 @@ struct FilterList: Hashable, Sendable {
         source: String,
         isDefault: Bool,
         isStrict: Bool,
-        languages: [String]
+        languages: [String],
+        blocks: [ContentBlockKind]
     ) {
         self.tag = tag
         facts = Facts(
@@ -13980,7 +15814,8 @@ struct FilterList: Hashable, Sendable {
             source: source,
             isDefault: isDefault,
             isStrict: isStrict,
-            languages: languages
+            languages: languages,
+            blocks: blocks
         )
     }
 
@@ -13992,7 +15827,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylist/easylist.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyPrivacy = FilterList(
         tag: 1,
@@ -14002,7 +15838,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylist/easyprivacy.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.trackers]
     )
     static let uBlockFilters = FilterList(
         tag: 2,
@@ -14012,7 +15849,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let uBlockPrivacy = FilterList(
         tag: 3,
@@ -14022,7 +15860,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.trackers]
     )
     static let uBlockBadware = FilterList(
         tag: 4,
@@ -14032,7 +15871,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.scams]
     )
     static let uBlockQuickFixes = FilterList(
         tag: 5,
@@ -14042,7 +15882,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: []
     )
     static let uBlockUnbreak = FilterList(
         tag: 6,
@@ -14052,7 +15893,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: []
     )
     static let adGuardBase = FilterList(
         tag: 7,
@@ -14062,7 +15904,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListGermany = FilterList(
         tag: 8,
@@ -14072,7 +15915,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylistgermany/easylistgermany.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["de"]
+        languages: ["de"],
+        blocks: [ContentBlockKind.ads]
     )
     static let listeFr = FilterList(
         tag: 9,
@@ -14082,7 +15926,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/liste_fr.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["fr"]
+        languages: ["fr"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListItaly = FilterList(
         tag: 10,
@@ -14092,7 +15937,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["it"]
+        languages: ["it"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListDutch = FilterList(
         tag: 11,
@@ -14102,7 +15948,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["nl"]
+        languages: ["nl"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListSpanish = FilterList(
         tag: 12,
@@ -14112,7 +15959,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["es"]
+        languages: ["es"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListPolish = FilterList(
         tag: 13,
@@ -14122,7 +15970,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["pl"]
+        languages: ["pl"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListChina = FilterList(
         tag: 14,
@@ -14132,7 +15981,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistchina.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["zh"]
+        languages: ["zh"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardJapanese = FilterList(
         tag: 15,
@@ -14142,7 +15992,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/7.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["ja"]
+        languages: ["ja"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardRussian = FilterList(
         tag: 16,
@@ -14152,7 +16003,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/1.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["ru", "uk", "be"]
+        languages: ["ru", "uk", "be"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardTurkish = FilterList(
         tag: 17,
@@ -14162,7 +16014,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/13.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["tr"]
+        languages: ["tr"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListCookie = FilterList(
         tag: 18,
@@ -14172,7 +16025,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.cookieNotices]
     )
     static let adGuardAnnoyances = FilterList(
         tag: 19,
@@ -14182,7 +16036,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/14.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.annoyances]
     )
 
     static let all: [FilterList] = [
@@ -14228,6 +16083,7 @@ struct FilterList: Hashable, Sendable {
         let isDefault: Bool
         let isStrict: Bool
         let languages: [String]
+        let blocks: [ContentBlockKind]
 
         init(
             name: String,
@@ -14236,7 +16092,8 @@ struct FilterList: Hashable, Sendable {
             source: String,
             isDefault: Bool,
             isStrict: Bool,
-            languages: [String]
+            languages: [String],
+            blocks: [ContentBlockKind]
         ) {
             self.name = name
             self.title = title
@@ -14245,6 +16102,7 @@ struct FilterList: Hashable, Sendable {
             self.isDefault = isDefault
             self.isStrict = isStrict
             self.languages = languages
+            self.blocks = blocks
         }
     }
 }
@@ -14946,6 +16804,7 @@ struct LinkBehavior: Hashable, Sendable {
     static let dragsLinksToPeek = LinkBehavior(tag: 3, name: "dragsLinksToPeek")
     static let dimsPageBehindPeek = LinkBehavior(tag: 4, name: "dimsPageBehindPeek")
     static let remembersSpaceBySite = LinkBehavior(tag: 5, name: "remembersSpaceBySite")
+    static let cleansCopiedLinks = LinkBehavior(tag: 6, name: "cleansCopiedLinks")
 
     static let all: [LinkBehavior] = [
         focusesNewTabs,
@@ -14953,7 +16812,8 @@ struct LinkBehavior: Hashable, Sendable {
         opensPeekAutomatically,
         dragsLinksToPeek,
         dimsPageBehindPeek,
-        remembersSpaceBySite
+        remembersSpaceBySite,
+        cleansCopiedLinks
     ]
 
     static func named(_ name: String?) -> LinkBehavior? {
@@ -15276,24 +17136,37 @@ struct NativeView: Hashable, Sendable {
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
+    var placement: TabPlacement { facts.placement }
+    var opensOnce: Bool { facts.opensOnce }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        placement: TabPlacement,
+        opensOnce: Bool
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, symbol: symbol)
+        facts = Facts(name: name, title: title, symbol: symbol, placement: placement, opensOnce: opensOnce)
     }
 
     static let settings = NativeView(
         tag: 0,
         name: "settings",
         title: LocalizedStringResource("Settings"),
-        symbol: "gearshape.fill"
+        symbol: "gearshape.fill",
+        placement: TabPlacement.current,
+        opensOnce: true
     )
     static let gettingStarted = NativeView(
         tag: 1,
         name: "getting-started",
         title: LocalizedStringResource("Getting Started"),
-        symbol: "book.closed.fill"
+        symbol: "book.closed.fill",
+        placement: TabPlacement.saved,
+        opensOnce: true
     )
 
     static let all: [NativeView] = [settings, gettingStarted]
@@ -15314,11 +17187,15 @@ struct NativeView: Hashable, Sendable {
         let name: String
         let title: LocalizedStringResource
         let symbol: String
+        let placement: TabPlacement
+        let opensOnce: Bool
 
-        init(name: String, title: LocalizedStringResource, symbol: String) {
+        init(name: String, title: LocalizedStringResource, symbol: String, placement: TabPlacement, opensOnce: Bool) {
             self.name = name
             self.title = title
             self.symbol = symbol
+            self.placement = placement
+            self.opensOnce = opensOnce
         }
     }
 }
@@ -15333,6 +17210,7 @@ struct NavigationError: Hashable, Sendable {
     var primarySuggestion: LocalizedStringResource { facts.primarySuggestion }
     var secondarySuggestion: LocalizedStringResource { facts.secondarySuggestion }
     var symbol: String { facts.symbol }
+    var fallsBackToHttp: Bool { facts.fallsBackToHttp }
     private let facts: Facts
 
     private init(
@@ -15343,7 +17221,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource,
         primarySuggestion: LocalizedStringResource,
         secondarySuggestion: LocalizedStringResource,
-        symbol: String
+        symbol: String,
+        fallsBackToHttp: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -15353,7 +17232,8 @@ struct NavigationError: Hashable, Sendable {
             message: message,
             primarySuggestion: primarySuggestion,
             secondarySuggestion: secondarySuggestion,
-            symbol: symbol
+            symbol: symbol,
+            fallsBackToHttp: fallsBackToHttp
         )
     }
 
@@ -15365,7 +17245,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest can’t reach %@ without a network connection."),
         primarySuggestion: LocalizedStringResource("Reconnect to Wi-Fi or Ethernet, then try again."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "wifi.slash"
+        symbol: "wifi.slash",
+        fallsBackToHttp: false
     )
     static let timedOut = NavigationError(
         tag: 1,
@@ -15375,7 +17256,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ didn’t respond in time."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "clock.badge.exclamationmark"
+        symbol: "clock.badge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let cannotFindServer = NavigationError(
         tag: 2,
@@ -15385,7 +17267,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t find the server for %@."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("If the address is correct, check your DNS or VPN settings."),
-        symbol: "network.slash"
+        symbol: "network.slash",
+        fallsBackToHttp: false
     )
     static let cannotConnect = NavigationError(
         tag: 3,
@@ -15395,7 +17278,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ refused the connection or isn’t accepting connections."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: true
     )
     static let connectionLost = NavigationError(
         tag: 4,
@@ -15405,7 +17289,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The connection to %@ ended before the page finished loading."),
         primarySuggestion: LocalizedStringResource("Check your connection and try again in a moment."),
         secondarySuggestion: LocalizedStringResource("If you use a VPN or proxy, confirm that it is connected."),
-        symbol: "bolt.horizontal.icloud"
+        symbol: "bolt.horizontal.icloud",
+        fallsBackToHttp: true
     )
     static let secureConnectionFailed = NavigationError(
         tag: 5,
@@ -15415,7 +17300,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest couldn’t verify a private, secure connection to %@."),
         primarySuggestion: LocalizedStringResource("Check that your device’s date and time are correct."),
         secondarySuggestion: LocalizedStringResource("Avoid entering private information until the site fixes its certificate."),
-        symbol: "lock.trianglebadge.exclamationmark"
+        symbol: "lock.trianglebadge.exclamationmark",
+        fallsBackToHttp: true
     )
     static let tooManyRedirects = NavigationError(
         tag: 6,
@@ -15425,7 +17311,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ sent Crest through too many redirects."),
         primarySuggestion: LocalizedStringResource("Try again later; the site may be temporarily misconfigured."),
         secondarySuggestion: LocalizedStringResource("Opening the site’s home page may avoid the redirect loop."),
-        symbol: "arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unsupportedAddress = NavigationError(
         tag: 7,
@@ -15435,7 +17322,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The address uses a format or protocol Crest doesn’t support."),
         primarySuggestion: LocalizedStringResource("Check the address for typing mistakes."),
         secondarySuggestion: LocalizedStringResource("Try an address beginning with http:// or https://."),
-        symbol: "link.badge.plus"
+        symbol: "link.badge.plus",
+        fallsBackToHttp: false
     )
     static let blocked = NavigationError(
         tag: 8,
@@ -15445,7 +17333,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("A security or content policy prevented this page from loading."),
         primarySuggestion: LocalizedStringResource("Review this Space’s content and network settings."),
         secondarySuggestion: LocalizedStringResource("A firewall, filter, or device policy may also be responsible."),
-        symbol: "hand.raised.slash"
+        symbol: "hand.raised.slash",
+        fallsBackToHttp: false
     )
     static let unavailable = NavigationError(
         tag: 9,
@@ -15455,7 +17344,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("%@ returned a response Crest couldn’t load."),
         primarySuggestion: LocalizedStringResource("Check whether the site is available in another browser or device."),
         secondarySuggestion: LocalizedStringResource("For an intranet site, confirm that you are on the required network."),
-        symbol: "exclamationmark.icloud"
+        symbol: "exclamationmark.icloud",
+        fallsBackToHttp: false
     )
     static let webContentProcessStopped = NavigationError(
         tag: 10,
@@ -15465,7 +17355,8 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("The web content process stopped repeatedly. Your tab and address are safe."),
         primarySuggestion: LocalizedStringResource("Try reloading the page in a fresh web content process."),
         secondarySuggestion: LocalizedStringResource("If it happens again, try closing and reopening the tab."),
-        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
+        symbol: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90",
+        fallsBackToHttp: false
     )
     static let unknown = NavigationError(
         tag: 11,
@@ -15475,7 +17366,19 @@ struct NavigationError: Hashable, Sendable {
         message: LocalizedStringResource("Crest encountered an unexpected problem while opening %@."),
         primarySuggestion: LocalizedStringResource("Try the address again or open a different page."),
         secondarySuggestion: LocalizedStringResource("The technical details below can help identify the cause."),
-        symbol: "doc.badge.ellipsis"
+        symbol: "doc.badge.ellipsis",
+        fallsBackToHttp: false
+    )
+    static let addressUnreachable = NavigationError(
+        tag: 12,
+        name: "addressUnreachable",
+        code: "CREST_ADDRESS_UNREACHABLE",
+        title: LocalizedStringResource("This address can’t be reached"),
+        message: LocalizedStringResource("Crest can’t reach %@ from this network."),
+        primarySuggestion: LocalizedStringResource("For a device on your local network, turn on Crest and Crest Helper in System Settings › Privacy & Security › Local Network."),
+        secondarySuggestion: LocalizedStringResource("Check that the device is on and connected to your network, and that a VPN isn’t blocking local access."),
+        symbol: "wifi.exclamationmark",
+        fallsBackToHttp: true
     )
 
     static let all: [NavigationError] = [
@@ -15490,7 +17393,8 @@ struct NavigationError: Hashable, Sendable {
         blocked,
         unavailable,
         webContentProcessStopped,
-        unknown
+        unknown,
+        addressUnreachable
     ]
 
     static func named(_ name: String?) -> NavigationError? {
@@ -15513,6 +17417,7 @@ struct NavigationError: Hashable, Sendable {
         let primarySuggestion: LocalizedStringResource
         let secondarySuggestion: LocalizedStringResource
         let symbol: String
+        let fallsBackToHttp: Bool
 
         init(
             name: String,
@@ -15521,7 +17426,8 @@ struct NavigationError: Hashable, Sendable {
             message: LocalizedStringResource,
             primarySuggestion: LocalizedStringResource,
             secondarySuggestion: LocalizedStringResource,
-            symbol: String
+            symbol: String,
+            fallsBackToHttp: Bool
         ) {
             self.name = name
             self.code = code
@@ -15530,6 +17436,47 @@ struct NavigationError: Hashable, Sendable {
             self.primarySuggestion = primarySuggestion
             self.secondarySuggestion = secondarySuggestion
             self.symbol = symbol
+            self.fallsBackToHttp = fallsBackToHttp
+        }
+    }
+}
+
+/// The members of the core's `NewTabPosition`. A member's wire tag is its index in `all`.
+struct NewTabPosition: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let top = NewTabPosition(tag: 0, name: "top", title: LocalizedStringResource("Top"))
+    static let bottom = NewTabPosition(tag: 1, name: "bottom", title: LocalizedStringResource("Bottom"))
+
+    static let all: [NewTabPosition] = [top, bottom]
+
+    static func named(_ name: String?) -> NewTabPosition? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: NewTabPosition, rhs: NewTabPosition) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }
@@ -15746,6 +17693,44 @@ struct PagePresentation: Hashable, Sendable {
     }
 
     static func == (lhs: PagePresentation, rhs: PagePresentation) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `PageResourceKind`. A member's wire tag is its index in `all`.
+struct PageResourceKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let frame = PageResourceKind(tag: 0, name: "frame")
+    static let image = PageResourceKind(tag: 1, name: "image")
+    static let object = PageResourceKind(tag: 2, name: "object")
+
+    static let all: [PageResourceKind] = [frame, image, object]
+
+    static func named(_ name: String?) -> PageResourceKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageResourceKind, rhs: PageResourceKind) -> Bool {
         lhs.tag == rhs.tag
     }
 
@@ -16185,7 +18170,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let tab = PaletteRowKind(
         tag: 3,
         name: "tab",
-        symbol: "globe",
+        symbol: "rectangle.stack.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Open Tab"),
         isPrimary: false,
@@ -16205,7 +18190,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let savedTab = PaletteRowKind(
         tag: 5,
         name: "savedTab",
-        symbol: "bookmark",
+        symbol: "bookmark.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Saved"),
         isPrimary: false,
@@ -16397,7 +18382,7 @@ struct PaletteScope: Hashable, Sendable {
         name: "saved",
         keyword: "@saved",
         title: LocalizedStringResource("Pinned & Saved"),
-        symbol: "pin",
+        symbol: "pin.fill",
         source: PaletteSource.saved
     )
     static let history = PaletteScope(
@@ -16607,6 +18592,7 @@ struct PaletteSource: Hashable, Sendable {
     var isEnabledByDefault: Bool { facts.isEnabledByDefault }
     var restingSection: PaletteSection? { facts.restingSection }
     var defaultLimit: Int { facts.defaultLimit }
+    var isArranged: Bool { facts.isArranged }
     private let facts: Facts
 
     private init(
@@ -16618,7 +18604,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: Bool,
         isEnabledByDefault: Bool,
         restingSection: PaletteSection?,
-        defaultLimit: Int
+        defaultLimit: Int,
+        isArranged: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -16629,7 +18616,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: isSection,
             isEnabledByDefault: isEnabledByDefault,
             restingSection: restingSection,
-            defaultLimit: defaultLimit
+            defaultLimit: defaultLimit,
+            isArranged: isArranged
         )
     }
 
@@ -16642,7 +18630,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.recentTabs,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let openTabs = PaletteSource(
         tag: 1,
@@ -16653,7 +18642,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 8
+        defaultLimit: 8,
+        isArranged: true
     )
     static let saved = PaletteSource(
         tag: 2,
@@ -16664,7 +18654,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let history = PaletteSource(
         tag: 3,
@@ -16675,7 +18666,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 6
+        defaultLimit: 6,
+        isArranged: true
     )
     static let actions = PaletteSource(
         tag: 4,
@@ -16686,7 +18678,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.actions,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let spaces = PaletteSource(
         tag: 5,
@@ -16697,7 +18690,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: true
     )
     static let archivedTabs = PaletteSource(
         tag: 6,
@@ -16708,7 +18702,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let suggestions = PaletteSource(
         tag: 7,
@@ -16719,7 +18714,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let settingsPages = PaletteSource(
         tag: 8,
@@ -16730,7 +18726,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let scopes = PaletteSource(
         tag: 9,
@@ -16741,7 +18738,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
     static let calculator = PaletteSource(
         tag: 10,
@@ -16752,7 +18750,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 1
+        defaultLimit: 1,
+        isArranged: false
     )
     static let pasteAndGo = PaletteSource(
         tag: 11,
@@ -16763,7 +18762,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
 
     static let all: [PaletteSource] = [
@@ -16802,6 +18802,7 @@ struct PaletteSource: Hashable, Sendable {
         let isEnabledByDefault: Bool
         let restingSection: PaletteSection?
         let defaultLimit: Int
+        let isArranged: Bool
 
         init(
             name: String,
@@ -16811,7 +18812,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: Bool,
             isEnabledByDefault: Bool,
             restingSection: PaletteSection?,
-            defaultLimit: Int
+            defaultLimit: Int,
+            isArranged: Bool
         ) {
             self.name = name
             self.title = title
@@ -16821,6 +18823,7 @@ struct PaletteSource: Hashable, Sendable {
             self.isEnabledByDefault = isEnabledByDefault
             self.restingSection = restingSection
             self.defaultLimit = defaultLimit
+            self.isArranged = isArranged
         }
     }
 }
@@ -18552,60 +20555,33 @@ struct SetupFailureReason: Hashable, Sendable {
 /// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `newSpaceLook`.
 struct SetupLook: Hashable, Sendable {
-    enum Kinds: Sendable {
-        case heraldic
-        case modern
-    }
-
     let tag: Int
-    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
-    var gradientAngle: Double? { facts.gradientAngle }
     private let facts: Facts
 
     private init(
         tag: Int,
-        kind: Kinds,
         name: String,
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
-        iconStyle: SpaceIconStyle,
-        gradientAngle: Double?
+        iconStyle: SpaceIconStyle
     ) {
         self.tag = tag
-        facts = Facts(
-            kind: kind,
-            name: name,
-            title: title,
-            themeMode: themeMode,
-            iconStyle: iconStyle,
-            gradientAngle: gradientAngle
-        )
+        facts = Facts(name: name, title: title, themeMode: themeMode, iconStyle: iconStyle)
     }
 
     static let heraldic = SetupLook(
         tag: 0,
-        kind: .heraldic,
         name: "heraldic",
-        title: LocalizedStringResource("Heraldic"),
+        title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
-        iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil
-    )
-    static let modern = SetupLook(
-        tag: 1,
-        kind: .modern,
-        name: "modern",
-        title: LocalizedStringResource("Modern"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90
+        iconStyle: SpaceIconStyle.layeredCrest
     )
 
-    static let all: [SetupLook] = [heraldic, modern]
+    static let all: [SetupLook] = [heraldic]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -18620,27 +20596,16 @@ struct SetupLook: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
-        let kind: Kinds
         let name: String
         let title: LocalizedStringResource
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
-        let gradientAngle: Double?
 
-        init(
-            kind: Kinds,
-            name: String,
-            title: LocalizedStringResource,
-            themeMode: SpaceThemeMode,
-            iconStyle: SpaceIconStyle,
-            gradientAngle: Double?
-        ) {
-            self.kind = kind
+        init(name: String, title: LocalizedStringResource, themeMode: SpaceThemeMode, iconStyle: SpaceIconStyle) {
             self.name = name
             self.title = title
             self.themeMode = themeMode
             self.iconStyle = iconStyle
-            self.gradientAngle = gradientAngle
         }
     }
 }
@@ -18782,7 +20747,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleSelectedTabPinned
         case duplicateTab
         case reopenClosedTab
-        case clearUnpinnedTabs
+        case clearOtherTabs
         case archiveTab
         case previousTab
         case nextTab
@@ -18826,6 +20791,12 @@ struct ShortcutCommand: Hashable, Sendable {
         case toggleSelectedTabSaved
         case blockElement
         case showBlockedElements
+        case openNextExtension
+        case clearAllTabs
+        case collapseAllFolders
+        case copyPageTitle
+        case showPageQRCode
+        case openPageInPrivateWindow
     }
 
     let tag: Int
@@ -18842,6 +20813,7 @@ struct ShortcutCommand: Hashable, Sendable {
     var defaultShortcuts: [ShortcutDefault] { facts.defaultShortcuts }
     var paletteRest: Int? { facts.paletteRest }
     var offersInPalette: Bool { facts.offersInPalette }
+    var isOptionAlternate: Bool { facts.isOptionAlternate }
     var isReservedFromPages: Bool { facts.isReservedFromPages }
     var defaultPreference: ShortcutPreference { facts.defaultPreference }
     private let facts: Facts
@@ -18861,6 +20833,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [ShortcutDefault],
         paletteRest: Int?,
         offersInPalette: Bool,
+        isOptionAlternate: Bool,
         isReservedFromPages: Bool,
         defaultPreference: ShortcutPreference
     ) {
@@ -18879,6 +20852,7 @@ struct ShortcutCommand: Hashable, Sendable {
             defaultShortcuts: defaultShortcuts,
             paletteRest: paletteRest,
             offersInPalette: offersInPalette,
+            isOptionAlternate: isOptionAlternate,
             isReservedFromPages: isReservedFromPages,
             defaultPreference: defaultPreference
         )
@@ -18910,6 +20884,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 1,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -18934,6 +20909,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -18963,6 +20939,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -18992,6 +20969,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19021,6 +20999,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19050,6 +21029,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19079,6 +21059,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19108,6 +21089,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19137,6 +21119,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19166,6 +21149,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19195,6 +21179,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19224,6 +21209,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19253,6 +21239,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19282,6 +21269,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19300,6 +21288,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19329,16 +21318,17 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 2,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
-    static let clearUnpinnedTabs = ShortcutCommand(
+    static let clearOtherTabs = ShortcutCommand(
         tag: 16,
-        kind: .clearUnpinnedTabs,
+        kind: .clearOtherTabs,
         name: "clearUnpinnedTabs",
         section: ShortcutSection.tabs,
-        title: LocalizedStringResource("Clear Unpinned Tabs"),
-        searchTerms: LocalizedStringResource("clean tidy archive unpinned tabs"),
+        title: LocalizedStringResource("Clear Other Tabs"),
+        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs"),
         menuTitle: nil,
         symbol: "sparkles",
         requiredCapability: nil,
@@ -19358,6 +21348,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19376,8 +21367,8 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [
             ShortcutDefault(
                 platform: DevicePlatform.desktop,
-                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
-                yieldsToOverrides: false
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command, .shift]),
+                yieldsToOverrides: true
             ),
             ShortcutDefault(
                 platform: DevicePlatform.mobile,
@@ -19387,6 +21378,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -19416,6 +21408,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19445,6 +21438,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19474,6 +21468,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19503,6 +21498,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19532,6 +21528,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19561,6 +21558,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19590,6 +21588,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19619,6 +21618,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19648,6 +21648,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19677,6 +21678,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19706,6 +21708,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19735,6 +21738,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -19764,6 +21768,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19793,6 +21798,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19822,6 +21828,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19851,6 +21858,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19880,6 +21888,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19909,6 +21918,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19938,6 +21948,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19967,6 +21978,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -19996,6 +22008,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20025,6 +22038,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20054,6 +22068,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: false,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20072,6 +22087,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20090,6 +22106,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20108,6 +22125,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20126,6 +22144,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20155,6 +22174,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20184,6 +22204,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20213,6 +22234,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20242,6 +22264,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20271,6 +22294,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20300,6 +22324,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20318,6 +22343,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20336,6 +22362,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20354,6 +22381,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20383,6 +22411,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20412,6 +22441,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 5,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20441,6 +22471,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 3,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20459,6 +22490,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20488,6 +22520,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: 4,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20517,6 +22550,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20535,6 +22569,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20564,6 +22599,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20593,6 +22629,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20611,6 +22648,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20640,6 +22678,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20669,6 +22708,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20698,6 +22738,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20727,6 +22768,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20756,6 +22798,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20774,6 +22817,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20798,6 +22842,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20822,6 +22867,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20846,6 +22892,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
     )
@@ -20875,6 +22922,7 @@ struct ShortcutCommand: Hashable, Sendable {
         ],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: true,
         defaultPreference: ShortcutPreference.preferCrest
     )
@@ -20893,6 +22941,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20911,6 +22960,7 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
@@ -20929,8 +22979,140 @@ struct ShortcutCommand: Hashable, Sendable {
         defaultShortcuts: [],
         paletteRest: nil,
         offersInPalette: true,
+        isOptionAlternate: false,
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.useBoth
+    )
+    static let openNextExtension = ShortcutCommand(
+        tag: 77,
+        kind: .openNextExtension,
+        name: "openNextExtension",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Open Next Extension"),
+        searchTerms: LocalizedStringResource("extensions popup menu cycle pinned toolbar"),
+        menuTitle: nil,
+        symbol: "puzzlepiece.extension",
+        requiredCapability: EngineCapability.extensions,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "e", isSpecialKey: false, modifiers: [.command]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let clearAllTabs = ShortcutCommand(
+        tag: 78,
+        kind: .clearAllTabs,
+        name: "clearAllTabs",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Clear All Tabs"),
+        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs every current"),
+        menuTitle: nil,
+        symbol: "sparkles",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [
+            ShortcutDefault(
+                platform: DevicePlatform.desktop,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            ),
+            ShortcutDefault(
+                platform: DevicePlatform.mobile,
+                keys: KeyCombination(key: "k", isSpecialKey: false, modifiers: [.command, .option, .shift]),
+                yieldsToOverrides: true
+            )
+        ],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: true,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let collapseAllFolders = ShortcutCommand(
+        tag: 79,
+        kind: .collapseAllFolders,
+        name: "collapseAllFolders",
+        section: ShortcutSection.view,
+        title: LocalizedStringResource("Collapse All Folders"),
+        searchTerms: LocalizedStringResource("close fold folders sidebar tidy"),
+        menuTitle: nil,
+        symbol: "rectangle.compress.vertical",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let copyPageTitle = ShortcutCommand(
+        tag: 80,
+        kind: .copyPageTitle,
+        name: "copyPageTitle",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Copy Page Title"),
+        searchTerms: LocalizedStringResource("copy title name heading clipboard"),
+        menuTitle: nil,
+        symbol: "textformat",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let showPageQRCode = ShortcutCommand(
+        tag: 81,
+        kind: .showPageQRCode,
+        name: "showPageQRCode",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Show QR Code"),
+        searchTerms: LocalizedStringResource("qr code scan camera phone send link address"),
+        menuTitle: nil,
+        symbol: "qrcode",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let openPageInPrivateWindow = ShortcutCommand(
+        tag: 82,
+        kind: .openPageInPrivateWindow,
+        name: "openPageInPrivateWindow",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Open Page in Private Window"),
+        searchTerms: LocalizedStringResource("incognito private browsing open again"),
+        menuTitle: nil,
+        symbol: "eyeglasses",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
     )
 
     static let all: [ShortcutCommand] = [
@@ -20950,7 +23132,7 @@ struct ShortcutCommand: Hashable, Sendable {
         toggleSelectedTabPinned,
         duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs,
+        clearOtherTabs,
         archiveTab,
         previousTab,
         nextTab,
@@ -21010,7 +23192,13 @@ struct ShortcutCommand: Hashable, Sendable {
         mostRecentTabBackward,
         clearSiteCookies,
         clearSiteCache,
-        toggleSelectedTabSaved
+        toggleSelectedTabSaved,
+        openNextExtension,
+        clearAllTabs,
+        collapseAllFolders,
+        copyPageTitle,
+        showPageQRCode,
+        openPageInPrivateWindow
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -21039,6 +23227,7 @@ struct ShortcutCommand: Hashable, Sendable {
         let defaultShortcuts: [ShortcutDefault]
         let paletteRest: Int?
         let offersInPalette: Bool
+        let isOptionAlternate: Bool
         let isReservedFromPages: Bool
         let defaultPreference: ShortcutPreference
 
@@ -21056,6 +23245,7 @@ struct ShortcutCommand: Hashable, Sendable {
             defaultShortcuts: [ShortcutDefault],
             paletteRest: Int?,
             offersInPalette: Bool,
+            isOptionAlternate: Bool,
             isReservedFromPages: Bool,
             defaultPreference: ShortcutPreference
         ) {
@@ -21072,6 +23262,7 @@ struct ShortcutCommand: Hashable, Sendable {
             self.defaultShortcuts = defaultShortcuts
             self.paletteRest = paletteRest
             self.offersInPalette = offersInPalette
+            self.isOptionAlternate = isOptionAlternate
             self.isReservedFromPages = isReservedFromPages
             self.defaultPreference = defaultPreference
         }
@@ -21101,7 +23292,8 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.newBlankWindow,
                 ShortcutCommand.newTab,
                 ShortcutCommand.newQuickWindow,
-                ShortcutCommand.newPrivateWindow
+                ShortcutCommand.newPrivateWindow,
+                ShortcutCommand.openPageInPrivateWindow
             ],
             [ShortcutCommand.openFile],
             [ShortcutCommand.closeTabOrWindow, ShortcutCommand.closeWindow],
@@ -21113,7 +23305,11 @@ struct ShortcutMenu: Hashable, Sendable {
         name: "view",
         title: LocalizedStringResource("View"),
         groups: [
-            [ShortcutCommand.toggleSidebar, ShortcutCommand.toggleTranslationToolbar],
+            [
+                ShortcutCommand.toggleSidebar,
+                ShortcutCommand.collapseAllFolders,
+                ShortcutCommand.toggleTranslationToolbar
+            ],
             [ShortcutCommand.showHistory, ShortcutCommand.showArchive, ShortcutCommand.showDownloads]
         ]
     )
@@ -21142,7 +23338,8 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.toggleSelectedTabSaved,
                 ShortcutCommand.duplicateTab,
                 ShortcutCommand.reopenClosedTab,
-                ShortcutCommand.clearUnpinnedTabs,
+                ShortcutCommand.clearOtherTabs,
+                ShortcutCommand.clearAllTabs,
                 ShortcutCommand.archiveTab
             ],
             [
@@ -21203,11 +23400,14 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.blockElement,
                 ShortcutCommand.showBlockedElements
             ],
+            [ShortcutCommand.openNextExtension],
             [ShortcutCommand.findInPage, ShortcutCommand.findNext, ShortcutCommand.findPrevious],
             [ShortcutCommand.zoomIn, ShortcutCommand.zoomOut, ShortcutCommand.actualSize],
             [
                 ShortcutCommand.copyPageLink,
                 ShortcutCommand.copyPageLinkAsMarkdown,
+                ShortcutCommand.copyPageTitle,
+                ShortcutCommand.showPageQRCode,
                 ShortcutCommand.sharePage,
                 ShortcutCommand.exportPDF,
                 ShortcutCommand.saveWebArchive,
@@ -21834,6 +24034,774 @@ struct SidebarRowKind: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SiteControlAction`. A member's wire tag is its index in `all`.
+struct SiteControlAction: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var group: SiteControlActionGroup { facts.group }
+    var title: LocalizedStringResource { facts.title }
+    var shortTitle: LocalizedStringResource { facts.shortTitle }
+    var onTitle: LocalizedStringResource? { facts.onTitle }
+    var onShortTitle: LocalizedStringResource? { facts.onShortTitle }
+    var symbol: String { facts.symbol }
+    var onSymbol: String? { facts.onSymbol }
+    var onWhileTabIs: TabPlacement? { facts.onWhileTabIs }
+    var command: ShortcutCommand? { facts.command }
+    var requiredCapability: EngineCapability? { facts.requiredCapability }
+    var platforms: [DevicePlatform] { facts.platforms }
+    var keepsSiteControlsOpen: Bool { facts.keepsSiteControlsOpen }
+    var showsOnlyWhenAvailable: Bool { facts.showsOnlyWhenAvailable }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        group: SiteControlActionGroup,
+        title: LocalizedStringResource,
+        shortTitle: LocalizedStringResource,
+        onTitle: LocalizedStringResource?,
+        onShortTitle: LocalizedStringResource?,
+        symbol: String,
+        onSymbol: String?,
+        onWhileTabIs: TabPlacement?,
+        command: ShortcutCommand?,
+        requiredCapability: EngineCapability?,
+        platforms: [DevicePlatform],
+        keepsSiteControlsOpen: Bool,
+        showsOnlyWhenAvailable: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            group: group,
+            title: title,
+            shortTitle: shortTitle,
+            onTitle: onTitle,
+            onShortTitle: onShortTitle,
+            symbol: symbol,
+            onSymbol: onSymbol,
+            onWhileTabIs: onWhileTabIs,
+            command: command,
+            requiredCapability: requiredCapability,
+            platforms: platforms,
+            keepsSiteControlsOpen: keepsSiteControlsOpen,
+            showsOnlyWhenAvailable: showsOnlyWhenAvailable
+        )
+    }
+
+    static let copyLink = SiteControlAction(
+        tag: 0,
+        name: "copyLink",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Link"),
+        shortTitle: LocalizedStringResource("Copy Link"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "link",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageLink,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let copyLinkAsMarkdown = SiteControlAction(
+        tag: 1,
+        name: "copyLinkAsMarkdown",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Link as Markdown"),
+        shortTitle: LocalizedStringResource("Markdown"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "doc.on.clipboard",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageLinkAsMarkdown,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let copyTitle = SiteControlAction(
+        tag: 2,
+        name: "copyTitle",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Title"),
+        shortTitle: LocalizedStringResource("Copy Title"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "textformat",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageTitle,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let showQRCode = SiteControlAction(
+        tag: 3,
+        name: "showQRCode",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Show QR Code"),
+        shortTitle: LocalizedStringResource("QR Code"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "qrcode",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showPageQRCode,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let share = SiteControlAction(
+        tag: 4,
+        name: "share",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Share…"),
+        shortTitle: LocalizedStringResource("Share"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "square.and.arrow.up",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.sharePage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let capturePage = SiteControlAction(
+        tag: 5,
+        name: "capturePage",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Capture Page"),
+        shortTitle: LocalizedStringResource("Capture"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "camera",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.capturePage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let print = SiteControlAction(
+        tag: 6,
+        name: "print",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Print…"),
+        shortTitle: LocalizedStringResource("Print"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "printer",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.printPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let exportPDF = SiteControlAction(
+        tag: 7,
+        name: "exportPDF",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Export as PDF…"),
+        shortTitle: LocalizedStringResource("PDF"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "doc.richtext",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.exportPDF,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let saveWebArchive = SiteControlAction(
+        tag: 8,
+        name: "saveWebArchive",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Save Web Archive…"),
+        shortTitle: LocalizedStringResource("Web Archive"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "square.and.arrow.down",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.saveWebArchive,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let pinTab = SiteControlAction(
+        tag: 9,
+        name: "pinTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Pin Tab"),
+        shortTitle: LocalizedStringResource("Pin"),
+        onTitle: LocalizedStringResource("Unpin Tab"),
+        onShortTitle: LocalizedStringResource("Pinned"),
+        symbol: "pin",
+        onSymbol: "pin.fill",
+        onWhileTabIs: TabPlacement.pinned,
+        command: ShortcutCommand.toggleSelectedTabPinned,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let saveTab = SiteControlAction(
+        tag: 10,
+        name: "saveTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Save Tab"),
+        shortTitle: LocalizedStringResource("Save"),
+        onTitle: LocalizedStringResource("Unsave Tab"),
+        onShortTitle: LocalizedStringResource("Saved"),
+        symbol: "bookmark",
+        onSymbol: "bookmark.fill",
+        onWhileTabIs: TabPlacement.saved,
+        command: ShortcutCommand.toggleSelectedTabSaved,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let duplicateTab = SiteControlAction(
+        tag: 11,
+        name: "duplicateTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Duplicate Tab"),
+        shortTitle: LocalizedStringResource("Duplicate"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "plus.square.on.square",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.duplicateTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let splitWithNextTab = SiteControlAction(
+        tag: 12,
+        name: "splitWithNextTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Split With Next Tab"),
+        shortTitle: LocalizedStringResource("Split"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "rectangle.split.2x1",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.splitWithNextTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let openInPrivateWindow = SiteControlAction(
+        tag: 13,
+        name: "openInPrivateWindow",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Open in Private Window"),
+        shortTitle: LocalizedStringResource("Private"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eyeglasses",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.openPageInPrivateWindow,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let archiveTab = SiteControlAction(
+        tag: 14,
+        name: "archiveTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Archive Tab"),
+        shortTitle: LocalizedStringResource("Archive"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "archivebox",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.archiveTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let findInPage = SiteControlAction(
+        tag: 15,
+        name: "findInPage",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Find in Page"),
+        shortTitle: LocalizedStringResource("Find"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "text.magnifyingglass",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.findInPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let reloadPage = SiteControlAction(
+        tag: 16,
+        name: "reloadPage",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Reload Page"),
+        shortTitle: LocalizedStringResource("Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.clockwise",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.reloadPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let reloadIgnoringCache = SiteControlAction(
+        tag: 17,
+        name: "reloadIgnoringCache",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Reload (Ignore Cache)"),
+        shortTitle: LocalizedStringResource("Hard Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.reloadFromOrigin,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let openInOtherEngine = SiteControlAction(
+        tag: 18,
+        name: "openInOtherEngine",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Open Page in Other Engine"),
+        shortTitle: LocalizedStringResource("Other Engine"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.triangle.swap",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showTranslationControls = SiteControlAction(
+        tag: 19,
+        name: "showTranslationControls",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Show Translation Controls"),
+        shortTitle: LocalizedStringResource("Translate Bar"),
+        onTitle: LocalizedStringResource("Hide Translation Controls"),
+        onShortTitle: nil,
+        symbol: "translate",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.toggleTranslationToolbar,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let downloads = SiteControlAction(
+        tag: 20,
+        name: "downloads",
+        group: SiteControlActionGroup.browser,
+        title: LocalizedStringResource("Downloads"),
+        shortTitle: LocalizedStringResource("Downloads"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.down.circle",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showDownloads,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showHistory = SiteControlAction(
+        tag: 21,
+        name: "showHistory",
+        group: SiteControlActionGroup.browser,
+        title: LocalizedStringResource("Show History"),
+        shortTitle: LocalizedStringResource("History"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "clock",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showHistory,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let blockElement = SiteControlAction(
+        tag: 22,
+        name: "blockElement",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Block Element"),
+        shortTitle: LocalizedStringResource("Block"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eye.slash",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.blockElement,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showBlockedElements = SiteControlAction(
+        tag: 23,
+        name: "showBlockedElements",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Show Blocked Elements"),
+        shortTitle: LocalizedStringResource("Blocked"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eye",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showBlockedElements,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCookies = SiteControlAction(
+        tag: 24,
+        name: "clearCookies",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Clear Cookies"),
+        shortTitle: LocalizedStringResource("Cookies"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "person.crop.circle.badge.xmark",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.clearSiteCookies,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCache = SiteControlAction(
+        tag: 25,
+        name: "clearCache",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Clear Cache"),
+        shortTitle: LocalizedStringResource("Cache"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "trash",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.clearSiteCache,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let showDeveloperToolbar = SiteControlAction(
+        tag: 26,
+        name: "showDeveloperToolbar",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Show Developer Toolbar"),
+        shortTitle: LocalizedStringResource("Dev Toolbar"),
+        onTitle: LocalizedStringResource("Hide Developer Toolbar"),
+        onShortTitle: nil,
+        symbol: "macbook.and.iphone",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.toggleDeveloperToolbar,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let inspectElement = SiteControlAction(
+        tag: 27,
+        name: "inspectElement",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Inspect Element"),
+        shortTitle: LocalizedStringResource("Inspect"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "scope",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let toggleConsole = SiteControlAction(
+        tag: 28,
+        name: "toggleConsole",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Toggle Console"),
+        shortTitle: LocalizedStringResource("Console"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "terminal",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let toggleNetworkPanel = SiteControlAction(
+        tag: 29,
+        name: "toggleNetworkPanel",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Toggle Network Panel"),
+        shortTitle: LocalizedStringResource("Network"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "network",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCookiesAndReload = SiteControlAction(
+        tag: 30,
+        name: "clearCookiesAndReload",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Clear Cookies and Reload"),
+        shortTitle: LocalizedStringResource("Clear + Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.clockwise.circle",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: true
+    )
+    static let addToHomeScreen = SiteControlAction(
+        tag: 31,
+        name: "addToHomeScreen",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Add to Home Screen"),
+        shortTitle: LocalizedStringResource("Home Screen"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "plus.app",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let hideToolbar = SiteControlAction(
+        tag: 32,
+        name: "hideToolbar",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Hide Toolbar"),
+        shortTitle: LocalizedStringResource("Hide Toolbar"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "chevron.down",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+
+    static let all: [SiteControlAction] = [
+        copyLink,
+        copyLinkAsMarkdown,
+        copyTitle,
+        showQRCode,
+        share,
+        capturePage,
+        print,
+        exportPDF,
+        saveWebArchive,
+        pinTab,
+        saveTab,
+        duplicateTab,
+        splitWithNextTab,
+        openInPrivateWindow,
+        archiveTab,
+        findInPage,
+        reloadPage,
+        reloadIgnoringCache,
+        openInOtherEngine,
+        showTranslationControls,
+        downloads,
+        showHistory,
+        blockElement,
+        showBlockedElements,
+        clearCookies,
+        clearCache,
+        showDeveloperToolbar,
+        inspectElement,
+        toggleConsole,
+        toggleNetworkPanel,
+        clearCookiesAndReload,
+        addToHomeScreen,
+        hideToolbar
+    ]
+
+    static func named(_ name: String?) -> SiteControlAction? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SiteControlAction, rhs: SiteControlAction) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let group: SiteControlActionGroup
+        let title: LocalizedStringResource
+        let shortTitle: LocalizedStringResource
+        let onTitle: LocalizedStringResource?
+        let onShortTitle: LocalizedStringResource?
+        let symbol: String
+        let onSymbol: String?
+        let onWhileTabIs: TabPlacement?
+        let command: ShortcutCommand?
+        let requiredCapability: EngineCapability?
+        let platforms: [DevicePlatform]
+        let keepsSiteControlsOpen: Bool
+        let showsOnlyWhenAvailable: Bool
+
+        init(
+            name: String,
+            group: SiteControlActionGroup,
+            title: LocalizedStringResource,
+            shortTitle: LocalizedStringResource,
+            onTitle: LocalizedStringResource?,
+            onShortTitle: LocalizedStringResource?,
+            symbol: String,
+            onSymbol: String?,
+            onWhileTabIs: TabPlacement?,
+            command: ShortcutCommand?,
+            requiredCapability: EngineCapability?,
+            platforms: [DevicePlatform],
+            keepsSiteControlsOpen: Bool,
+            showsOnlyWhenAvailable: Bool
+        ) {
+            self.name = name
+            self.group = group
+            self.title = title
+            self.shortTitle = shortTitle
+            self.onTitle = onTitle
+            self.onShortTitle = onShortTitle
+            self.symbol = symbol
+            self.onSymbol = onSymbol
+            self.onWhileTabIs = onWhileTabIs
+            self.command = command
+            self.requiredCapability = requiredCapability
+            self.platforms = platforms
+            self.keepsSiteControlsOpen = keepsSiteControlsOpen
+            self.showsOnlyWhenAvailable = showsOnlyWhenAvailable
+        }
+    }
+}
+
+/// The members of the core's `SiteControlActionGroup`. A member's wire tag is its index in `all`.
+struct SiteControlActionGroup: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let copy = SiteControlActionGroup(tag: 0, name: "copy", title: LocalizedStringResource("Copy"))
+    static let shareAndExport = SiteControlActionGroup(
+        tag: 1,
+        name: "shareAndExport",
+        title: LocalizedStringResource("Share and Export")
+    )
+    static let tab = SiteControlActionGroup(tag: 2, name: "tab", title: LocalizedStringResource("Tab"))
+    static let page = SiteControlActionGroup(tag: 3, name: "page", title: LocalizedStringResource("Page"))
+    static let browser = SiteControlActionGroup(tag: 4, name: "browser", title: LocalizedStringResource("Browser"))
+    static let privacy = SiteControlActionGroup(tag: 5, name: "privacy", title: LocalizedStringResource("Privacy"))
+    static let developer = SiteControlActionGroup(
+        tag: 6,
+        name: "developer",
+        title: LocalizedStringResource("Developer")
+    )
+
+    static let all: [SiteControlActionGroup] = [copy, shareAndExport, tab, page, browser, privacy, developer]
+
+    static func named(_ name: String?) -> SiteControlActionGroup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SiteControlActionGroup, rhs: SiteControlActionGroup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SitePermission`. A member's wire tag is its index in `all`.
 struct SitePermission: Hashable, Sendable {
     let tag: Int
@@ -21841,12 +24809,14 @@ struct SitePermission: Hashable, Sendable {
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
     var requestTitle: LocalizedStringResource { facts.requestTitle }
+    var question: LocalizedStringResource { facts.question }
     var askTitle: LocalizedStringResource { facts.askTitle }
     var askChoiceTitle: LocalizedStringResource { facts.askChoiceTitle }
     var isMedia: Bool { facts.isMedia }
     var isEngineEnforced: Bool { facts.isEngineEnforced }
     var isAskedBySystem: Bool { facts.isAskedBySystem }
     var components: [SitePermission] { facts.components }
+    var platforms: [DevicePlatform] { facts.platforms }
     private let facts: Facts
 
     private init(
@@ -21855,12 +24825,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource,
         symbol: String,
         requestTitle: LocalizedStringResource,
+        question: LocalizedStringResource,
         askTitle: LocalizedStringResource,
         askChoiceTitle: LocalizedStringResource,
         isMedia: Bool,
         isEngineEnforced: Bool,
         isAskedBySystem: Bool,
-        components: [SitePermission]
+        components: [SitePermission],
+        platforms: [DevicePlatform]
     ) {
         self.tag = tag
         facts = Facts(
@@ -21868,12 +24840,14 @@ struct SitePermission: Hashable, Sendable {
             title: title,
             symbol: symbol,
             requestTitle: requestTitle,
+            question: question,
             askTitle: askTitle,
             askChoiceTitle: askChoiceTitle,
             isMedia: isMedia,
             isEngineEnforced: isEngineEnforced,
             isAskedBySystem: isAskedBySystem,
-            components: components
+            components: components,
+            platforms: platforms
         )
     }
 
@@ -21883,12 +24857,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Camera"),
         symbol: "video",
         requestTitle: LocalizedStringResource("Wants to use your camera"),
+        question: LocalizedStringResource("Use your camera?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let microphone = SitePermission(
         tag: 1,
@@ -21896,12 +24872,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Microphone"),
         symbol: "mic",
         requestTitle: LocalizedStringResource("Wants to use your microphone"),
+        question: LocalizedStringResource("Use your microphone?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let cameraAndMicrophone = SitePermission(
         tag: 2,
@@ -21909,12 +24887,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Camera & Microphone"),
         symbol: "video.and.waveform",
         requestTitle: LocalizedStringResource("Wants to use your camera and microphone"),
+        question: LocalizedStringResource("Use your camera and mic?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: [SitePermission.camera, SitePermission.microphone]
+        components: [SitePermission.camera, SitePermission.microphone],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let location = SitePermission(
         tag: 3,
@@ -21922,12 +24902,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Location"),
         symbol: "location",
         requestTitle: LocalizedStringResource("Wants to use your location"),
+        question: LocalizedStringResource("Use your location?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let notifications = SitePermission(
         tag: 4,
@@ -21935,12 +24917,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Notifications"),
         symbol: "bell",
         requestTitle: LocalizedStringResource("Wants to send notifications"),
+        question: LocalizedStringResource("Send notifications?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let popups = SitePermission(
         tag: 5,
@@ -21948,12 +24932,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Automatic Pop-ups"),
         symbol: "macwindow.on.rectangle",
         requestTitle: LocalizedStringResource("Requests permission"),
+        question: LocalizedStringResource("Open pop-ups?"),
         askTitle: LocalizedStringResource("Blocked by Default"),
         askChoiceTitle: LocalizedStringResource("Default (Block)"),
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let automaticDownloads = SitePermission(
         tag: 6,
@@ -21961,12 +24947,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Automatic Downloads"),
         symbol: "arrow.down.circle",
         requestTitle: LocalizedStringResource("Wants to download multiple files automatically"),
+        question: LocalizedStringResource("Download several files?"),
         askTitle: LocalizedStringResource("Ask after First"),
         askChoiceTitle: LocalizedStringResource("Default (Ask after First)"),
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let externalApplications = SitePermission(
         tag: 7,
@@ -21974,12 +24962,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("External Apps"),
         symbol: "arrow.up.forward.app",
         requestTitle: LocalizedStringResource("Requests permission"),
+        question: LocalizedStringResource("Open another app?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let screenSharing = SitePermission(
         tag: 8,
@@ -21987,12 +24977,14 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Screen Sharing"),
         symbol: "rectangle.inset.filled.and.person.filled",
         requestTitle: LocalizedStringResource("Wants to share your screen"),
+        question: LocalizedStringResource("Share your screen?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: true,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop]
     )
 
     static let all: [SitePermission] = [
@@ -22024,35 +25016,41 @@ struct SitePermission: Hashable, Sendable {
         let title: LocalizedStringResource
         let symbol: String
         let requestTitle: LocalizedStringResource
+        let question: LocalizedStringResource
         let askTitle: LocalizedStringResource
         let askChoiceTitle: LocalizedStringResource
         let isMedia: Bool
         let isEngineEnforced: Bool
         let isAskedBySystem: Bool
         let components: [SitePermission]
+        let platforms: [DevicePlatform]
 
         init(
             name: String,
             title: LocalizedStringResource,
             symbol: String,
             requestTitle: LocalizedStringResource,
+            question: LocalizedStringResource,
             askTitle: LocalizedStringResource,
             askChoiceTitle: LocalizedStringResource,
             isMedia: Bool,
             isEngineEnforced: Bool,
             isAskedBySystem: Bool,
-            components: [SitePermission]
+            components: [SitePermission],
+            platforms: [DevicePlatform]
         ) {
             self.name = name
             self.title = title
             self.symbol = symbol
             self.requestTitle = requestTitle
+            self.question = question
             self.askTitle = askTitle
             self.askChoiceTitle = askChoiceTitle
             self.isMedia = isMedia
             self.isEngineEnforced = isEngineEnforced
             self.isAskedBySystem = isAskedBySystem
             self.components = components
+            self.platforms = platforms
         }
     }
 }
@@ -22207,28 +25205,19 @@ struct SitePermissionDecision: Hashable, Sendable {
 struct SpaceAccent: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
-    var tint: SystemTint { facts.tint }
     var legacyColors: [BrandColor] { facts.legacyColors }
     var house: SpaceBranding { facts.house }
     var swatch: BrandColor { facts.swatch }
     private let facts: Facts
 
-    private init(
-        tag: Int,
-        name: String,
-        tint: SystemTint,
-        legacyColors: [BrandColor],
-        house: SpaceBranding,
-        swatch: BrandColor
-    ) {
+    private init(tag: Int, name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
         self.tag = tag
-        facts = Facts(name: name, tint: tint, legacyColors: legacyColors, house: house, swatch: swatch)
+        facts = Facts(name: name, legacyColors: legacyColors, house: house, swatch: swatch)
     }
 
     static let indigo = SpaceAccent(
         tag: 0,
         name: "indigo",
-        tint: .indigo,
         legacyColors: [
             BrandColor(red: 0.08, green: 0.15, blue: 0.23, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -22237,71 +25226,78 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
-                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
-                backplate: CrestBackplate.frenchShield,
+                backplate: CrestBackplate.softShield,
                 fieldDivision: CrestFieldDivision.plain,
                 ordinary: CrestOrdinary.none,
-                trim: CrestTrim.line,
-                symbol: CrestSymbol.direwolf,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.brightStar,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
-                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
-                edgeWidth: 0.35,
+                edgeWidth: 0,
                 divisionCount: 4,
                 finish: CrestFinish.flat,
                 ordinaryWidth: 1,
                 trimWeight: 0.75,
                 trimDetail: 12,
-                chargeScale: 1.2,
+                chargeScale: 1.21,
                 chargeOffset: 0,
                 chargeWeight: CrestChargeWeight.bold,
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.figure,
+                paletteGradients: nil
             ),
-            renderingVersion: 5,
+            renderingVersion: 6,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1),
+                                BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 75
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1)
     )
     static let orange = SpaceAccent(
         tag: 1,
         name: "orange",
-        tint: .orange,
         legacyColors: [
             BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1),
             BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1),
@@ -22310,18 +25306,18 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
-                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                    BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: SpaceThemeMode.gradient,
-            gradientAngle: 160,
-            showsTexture: false,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0.45,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22331,23 +25327,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.sunburst,
                 symbol: CrestSymbol.sun,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
-                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22362,19 +25349,35 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1),
+                                BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 160
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1)
     )
     static let teal = SpaceAccent(
         tag: 2,
         name: "teal",
-        tint: .teal,
         legacyColors: [
             BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -22383,18 +25386,18 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
-                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                    BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1),
+                    BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1),
+                    BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.lozenges,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.2,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22404,23 +25407,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.laurel,
                 symbol: CrestSymbol.rose,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
-                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22435,19 +25429,30 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1)
     )
     static let rose = SpaceAccent(
         tag: 3,
         name: "rose",
-        tint: .pink,
         legacyColors: [
             BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1),
             BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1),
@@ -22456,18 +25461,18 @@ struct SpaceAccent: Hashable, Sendable {
         house: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
-                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                    BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1),
+                    BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1),
+                    BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.chevron,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22477,23 +25482,14 @@ struct SpaceAccent: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.lion,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
-                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22508,12 +25504,29 @@ struct SpaceAccent: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         swatch: BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1)
     )
@@ -22534,14 +25547,12 @@ struct SpaceAccent: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
-        let tint: SystemTint
         let legacyColors: [BrandColor]
         let house: SpaceBranding
         let swatch: BrandColor
 
-        init(name: String, tint: SystemTint, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
+        init(name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
             self.name = name
-            self.tint = tint
             self.legacyColors = legacyColors
             self.house = house
             self.swatch = swatch
@@ -22678,39 +25689,550 @@ struct SpaceBannerPattern: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SpaceGradientKind`. A member's wire tag is its index in `all`.
+struct SpaceGradientKind: Hashable, Sendable {
+    enum Kinds: Sendable {
+        case linear
+        case radial
+        case angular
+    }
+
+    let tag: Int
+    var kind: Kinds { facts.kind }
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, kind: Kinds, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(kind: kind, name: name, title: title)
+    }
+
+    static let linear = SpaceGradientKind(
+        tag: 0,
+        kind: .linear,
+        name: "linear",
+        title: LocalizedStringResource("Linear")
+    )
+    static let radial = SpaceGradientKind(
+        tag: 1,
+        kind: .radial,
+        name: "radial",
+        title: LocalizedStringResource("Radial")
+    )
+    static let angular = SpaceGradientKind(
+        tag: 2,
+        kind: .angular,
+        name: "angular",
+        title: LocalizedStringResource("Angular")
+    )
+
+    static let all: [SpaceGradientKind] = [linear, radial, angular]
+
+    static func named(_ name: String?) -> SpaceGradientKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceGradientKind, rhs: SpaceGradientKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let kind: Kinds
+        let name: String
+        let title: LocalizedStringResource
+
+        init(kind: Kinds, name: String, title: LocalizedStringResource) {
+            self.kind = kind
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SpaceHouse`. A member's wire tag is its index in `all`.
 struct SpaceHouse: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
+    var style: SpaceHouseStyle { facts.style }
     var look: SpaceBranding { facts.look }
-    var appIconName: String { facts.appIconName }
+    var appIconName: String? { facts.appIconName }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        style: SpaceHouseStyle,
+        look: SpaceBranding,
+        appIconName: String?
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, look: look, appIconName: appIconName)
+        facts = Facts(name: name, title: title, style: style, look: look, appIconName: appIconName)
     }
 
-    static let winter = SpaceHouse(
+    static let crest = SpaceHouse(
         tag: 0,
-        name: "winter",
-        title: LocalizedStringResource("Winter"),
+        name: "crest",
+        title: LocalizedStringResource("Crest"),
+        style: SpaceHouseStyle.simple,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1),
-                    BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                    BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.brightStar,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1),
+                                BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 75
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let moon = SpaceHouse(
+        tag: 1,
+        name: "moon",
+        title: LocalizedStringResource("Moon"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.161, blue: 0.271, alpha: 1),
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.moon,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.184, green: 0.306, blue: 0.494, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let summit = SpaceHouse(
+        tag: 2,
+        name: "summit",
+        title: LocalizedStringResource("Summit"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softHexagon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.chevrons,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.965, green: 0.878, blue: 0.627, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let lens = SpaceHouse(
+        tag: 3,
+        name: "lens",
+        title: LocalizedStringResource("Lens"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.933, green: 0.961, blue: 0.918, alpha: 1),
+                    BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1),
+                    BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.ribbon,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.lens,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.796, green: 0.886, blue: 0.812, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let spark = SpaceHouse(
+        tag: 4,
+        name: "spark",
+        title: LocalizedStringResource("Spark"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.165, green: 0.118, blue: 0.227, alpha: 1),
+                    BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1),
+                    BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.circle,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.spark,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.349, green: 0.188, blue: 0.31, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let grove = SpaceHouse(
+        tag: 5,
+        name: "grove",
+        title: LocalizedStringResource("Grove"),
+        style: SpaceHouseStyle.simple,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.118, green: 0.169, blue: 0.133, alpha: 1),
+                    BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1),
+                    BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
+            iconStyle: SpaceIconStyle.layeredCrest,
+            symbolColor: nil,
+            crest: SpaceCrest(
+                backplate: CrestBackplate.softShield,
+                fieldDivision: CrestFieldDivision.plain,
+                ordinary: CrestOrdinary.none,
+                trim: CrestTrim.none,
+                symbol: CrestSymbol.sprout,
+                chargeLayout: CrestChargeLayout.single,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
+                startingPresetID: nil,
+                edgeColorIndex: 0,
+                palette: nil,
+                charge: nil,
+                plateScale: 1,
+                edgeWidth: 0,
+                divisionCount: 4,
+                finish: CrestFinish.flat,
+                ordinaryWidth: 1,
+                trimWeight: 0.75,
+                trimDetail: 12,
+                chargeScale: 1.21,
+                chargeOffset: 0,
+                chargeWeight: CrestChargeWeight.bold,
+                sheenAngle: 45,
+                sealTeeth: 12,
+                showsOutline: false,
+                depth: CrestDepth.figure,
+                paletteGradients: nil
+            ),
+            renderingVersion: 6,
+            folderColorIntensity: 0,
+            textColorMode: SpaceTextColorMode.automatic,
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.243, green: 0.361, blue: 0.263, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
+        ),
+        appIconName: nil
+    )
+    static let winter = SpaceHouse(
+        tag: 6,
+        name: "winter",
+        title: LocalizedStringResource("Winter"),
+        style: SpaceHouseStyle.heraldic,
+        look: SpaceBranding(
+            colors: ColorPalette(
+                colors: [
+                    BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1),
+                    BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1),
+                    BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
+                ]
+            ),
+            bannerPattern: SpaceBannerPattern.solid,
+            bannerStrength: 1,
+            readabilityFade: 0.45,
+            keepsControlsReadable: true,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22720,23 +26242,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.direwolf,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.871, green: 0.894, blue: 0.91, alpha: 1),
-                        BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.341, green: 0.384, blue: 0.427, alpha: 1),
-                        BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1),
-                        BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.35,
@@ -22751,34 +26264,39 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         ),
         appIconName: "CrestWinter"
     )
     static let lion = SpaceHouse(
-        tag: 1,
+        tag: 7,
         name: "lion",
         title: LocalizedStringResource("Lion"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1),
-                    BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                    BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+                    BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1),
+                    BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1),
+                    BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.chevron,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22788,23 +26306,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.lion,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1),
-                        BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22819,34 +26328,52 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         appIconName: "CrestLion"
     )
     static let storm = SpaceHouse(
-        tag: 2,
+        tag: 8,
         name: "storm",
         title: LocalizedStringResource("Storm"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1),
-                    BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1),
-                    BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+                    BrandColor(red: 0.12, green: 0.18, blue: 0.278, alpha: 1),
+                    BrandColor(red: 0.871, green: 0.723, blue: 0.401, alpha: 1),
+                    BrandColor(red: 0.219, green: 0.283, blue: 0.388, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.quartered,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.35,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22856,23 +26383,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleLine,
                 symbol: CrestSymbol.stag,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.835, green: 0.655, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.09, green: 0.094, blue: 0.106, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.3,
@@ -22887,34 +26405,47 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.131, green: 0.303, blue: 0.386, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestStorm"
     )
     static let dragon = SpaceHouse(
-        tag: 3,
+        tag: 9,
         name: "dragon",
         title: LocalizedStringResource("Dragon"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
-                    BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1),
-                    BrandColor(red: 0.745, green: 0.267, blue: 0.22, alpha: 1)
+                    BrandColor(red: 0.214, green: 0.071, blue: 0.051, alpha: 1),
+                    BrandColor(red: 0.985, green: 0.825, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.324, green: 0.169, blue: 0.145, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.bands,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.4,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22924,23 +26455,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.dragon,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.071, green: 0.059, blue: 0.063, alpha: 1),
-                        BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1),
-                        BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -22955,34 +26477,52 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.lifted
+                depth: CrestDepth.lifted,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.423, green: 0.043, blue: 0.016, alpha: 1),
+                                BrandColor(red: 0.651, green: 0.236, blue: 0, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestDragon"
     )
     static let meadow = SpaceHouse(
-        tag: 4,
+        tag: 10,
         name: "meadow",
         title: LocalizedStringResource("Meadow"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1),
-                    BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                    BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1)
+                    BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1),
+                    BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1),
+                    BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.lozenges,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.2,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -22992,23 +26532,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.laurel,
                 symbol: CrestSymbol.rose,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1),
-                        BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1),
-                        BrandColor(red: 0.737, green: 0.655, blue: 0.4, alpha: 1),
-                        BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23023,34 +26554,47 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestMeadow"
     )
     static let iron = SpaceHouse(
-        tag: 5,
+        tag: 11,
         name: "iron",
         title: LocalizedStringResource("Iron"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
-                    BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
-                    BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+                    BrandColor(red: 0.103, green: 0.126, blue: 0.143, alpha: 1),
+                    BrandColor(red: 0.883, green: 0.72, blue: 0.36, alpha: 1),
+                    BrandColor(red: 0.198, green: 0.223, blue: 0.242, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.stripes,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.5,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23060,23 +26604,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.beaded,
                 symbol: CrestSymbol.kraken,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1),
-                        BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1),
-                        BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.5,
@@ -23091,34 +26626,52 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.114, green: 0.207, blue: 0.218, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    ),
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0.411, green: 0.686, blue: 0.591, alpha: 1)]),
+                        kind: nil,
+                        angle: 45
+                    )
+                ]
+            )
         ),
         appIconName: "CrestIron"
     )
     static let river = SpaceHouse(
-        tag: 6,
+        tag: 12,
         name: "river",
         title: LocalizedStringResource("River"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1),
-                    BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1),
-                    BrandColor(red: 0.659, green: 0.361, blue: 0.255, alpha: 1)
+                    BrandColor(red: 0, green: 0.33, blue: 0.579, alpha: 1),
+                    BrandColor(red: 0.859, green: 0.921, blue: 0.952, alpha: 1),
+                    BrandColor(red: 0.149, green: 0.446, blue: 0.716, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.split,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23128,23 +26681,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.line,
                 symbol: CrestSymbol.fish,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1),
-                        BrandColor(red: 0.643, green: 0.157, blue: 0.188, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1),
-                        BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.2,
@@ -23159,34 +26703,47 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(colors: [BrandColor(red: 0, green: 0.51, blue: 0.61, alpha: 1)]),
+                        kind: nil,
+                        angle: 90
+                    )
+                ]
+            )
         ),
         appIconName: "CrestRiver"
     )
     static let sun = SpaceHouse(
-        tag: 7,
+        tag: 13,
         name: "sun",
         title: LocalizedStringResource("Sun"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1),
-                    BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                    BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+                    BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1),
+                    BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.diagonal,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
-            themeMode: SpaceThemeMode.gradient,
-            gradientAngle: 160,
-            showsTexture: false,
+            themeMode: SpaceThemeMode.banner,
+            gradientAngle: 0,
+            textureStrength: 0.45,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23196,23 +26753,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.sunburst,
                 symbol: CrestSymbol.sun,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1),
-                        BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1),
-                        BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1),
-                        BrandColor(red: 0.208, green: 0.086, blue: 0.043, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.25,
@@ -23227,34 +26775,52 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.soft
+                depth: CrestDepth.soft,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: PaletteGradients(
+                slots: [
+                    BrandGradient(
+                        colors: ColorPalette(
+                            colors: [
+                                BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1),
+                                BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
+                            ]
+                        ),
+                        kind: nil,
+                        angle: 160
+                    )
+                ]
+            )
         ),
         appIconName: "CrestSun"
     )
     static let vigil = SpaceHouse(
-        tag: 8,
+        tag: 14,
         name: "vigil",
         title: LocalizedStringResource("Vigil"),
+        style: SpaceHouseStyle.heraldic,
         look: SpaceBranding(
             colors: ColorPalette(
                 colors: [
-                    BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
-                    BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
-                    BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
+                    BrandColor(red: 0.091, green: 0.095, blue: 0.106, alpha: 1),
+                    BrandColor(red: 0.894, green: 0.868, blue: 0.814, alpha: 1),
+                    BrandColor(red: 0.184, green: 0.189, blue: 0.202, alpha: 1)
                 ]
             ),
-            bannerPattern: SpaceBannerPattern.checkered,
+            bannerPattern: SpaceBannerPattern.solid,
             bannerStrength: 1,
             readabilityFade: 0.45,
             keepsControlsReadable: true,
             themeMode: SpaceThemeMode.banner,
             gradientAngle: 0,
-            showsTexture: false,
+            textureStrength: 0.3,
             iconStyle: SpaceIconStyle.layeredCrest,
             symbolColor: nil,
             crest: SpaceCrest(
@@ -23264,23 +26830,14 @@ struct SpaceHouse: Hashable, Sendable {
                 trim: CrestTrim.doubleRing,
                 symbol: CrestSymbol.raven,
                 chargeLayout: CrestChargeLayout.single,
-                backplateColorIndex: 0,
-                secondaryFieldColorIndex: 1,
-                ordinaryColorIndex: 2,
-                trimColorIndex: 4,
-                symbolColorIndex: 3,
+                backplateColorIndex: 2,
+                secondaryFieldColorIndex: 0,
+                ordinaryColorIndex: 1,
+                trimColorIndex: 1,
+                symbolColorIndex: 1,
                 startingPresetID: nil,
-                edgeColorIndex: 5,
-                palette: ColorPalette(
-                    colors: [
-                        BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1),
-                        BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
-                        BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1),
-                        BrandColor(red: 0.482, green: 0.514, blue: 0.549, alpha: 1)
-                    ]
-                ),
+                edgeColorIndex: 0,
+                palette: nil,
                 charge: nil,
                 plateScale: 1,
                 edgeWidth: 0.45,
@@ -23295,17 +26852,37 @@ struct SpaceHouse: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.none
+                depth: CrestDepth.none,
+                paletteGradients: nil
             ),
             renderingVersion: 5,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.automatic,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         ),
         appIconName: "CrestVigil"
     )
 
-    static let all: [SpaceHouse] = [winter, lion, storm, dragon, meadow, iron, river, sun, vigil]
+    static let all: [SpaceHouse] = [
+        crest,
+        moon,
+        summit,
+        lens,
+        spark,
+        grove,
+        winter,
+        lion,
+        storm,
+        dragon,
+        meadow,
+        iron,
+        river,
+        sun,
+        vigil
+    ]
 
     static func named(_ name: String?) -> SpaceHouse? {
         all.first { $0.name == name }
@@ -23322,14 +26899,62 @@ struct SpaceHouse: Hashable, Sendable {
     private final class Facts: Sendable {
         let name: String
         let title: LocalizedStringResource
+        let style: SpaceHouseStyle
         let look: SpaceBranding
-        let appIconName: String
+        let appIconName: String?
 
-        init(name: String, title: LocalizedStringResource, look: SpaceBranding, appIconName: String) {
+        init(
+            name: String,
+            title: LocalizedStringResource,
+            style: SpaceHouseStyle,
+            look: SpaceBranding,
+            appIconName: String?
+        ) {
             self.name = name
             self.title = title
+            self.style = style
             self.look = look
             self.appIconName = appIconName
+        }
+    }
+}
+
+/// The members of the core's `SpaceHouseStyle`. A member's wire tag is its index in `all`.
+struct SpaceHouseStyle: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let simple = SpaceHouseStyle(tag: 0, name: "simple", title: LocalizedStringResource("Simple"))
+    static let heraldic = SpaceHouseStyle(tag: 1, name: "heraldic", title: LocalizedStringResource("Heraldic"))
+
+    static let all: [SpaceHouseStyle] = [simple, heraldic]
+
+    static func named(_ name: String?) -> SpaceHouseStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SpaceHouseStyle, rhs: SpaceHouseStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
         }
     }
 }
@@ -23417,7 +27042,7 @@ struct SpaceScheme: Hashable, Sendable {
             keepsControlsReadable: false,
             themeMode: SpaceThemeMode.gradient,
             gradientAngle: 0,
-            showsTexture: true,
+            textureStrength: 1,
             iconStyle: SpaceIconStyle.simpleSymbol,
             symbolColor: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1),
             crest: SpaceCrest(
@@ -23449,12 +27074,16 @@ struct SpaceScheme: Hashable, Sendable {
                 sheenAngle: 45,
                 sealTeeth: 12,
                 showsOutline: false,
-                depth: CrestDepth.none
+                depth: CrestDepth.none,
+                paletteGradients: nil
             ),
             renderingVersion: 2,
             folderColorIntensity: 0,
             textColorMode: SpaceTextColorMode.system,
-            hasCustomAppearance: false
+            hasCustomAppearance: false,
+            gradientKind: nil,
+            symbolGradient: nil,
+            colorGradients: nil
         )
     )
 
@@ -23661,6 +27290,108 @@ struct StartupBehavior: Hashable, Sendable {
             self.title = title
             self.activatesRestoredTab = activatesRestoredTab
             self.opensNewTab = opensNewTab
+        }
+    }
+}
+
+/// The members of the core's `StatusTone`. A member's wire tag is its index in `all`.
+struct StatusTone: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let success = StatusTone(tag: 0, name: "success")
+    static let warning = StatusTone(tag: 1, name: "warning")
+    static let danger = StatusTone(tag: 2, name: "danger")
+    static let info = StatusTone(tag: 3, name: "info")
+
+    static let all: [StatusTone] = [success, warning, danger, info]
+
+    static func named(_ name: String?) -> StatusTone? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StatusTone, rhs: StatusTone) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `StorageFailure`. A member's wire tag is its index in `all`.
+struct StorageFailure: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, message: message)
+    }
+
+    static let diskFull = StorageFailure(
+        tag: 0,
+        name: "disk_full",
+        message: LocalizedStringResource("Crest couldn’t save your session because the disk is full.")
+    )
+    static let readOnly = StorageFailure(
+        tag: 1,
+        name: "read_only",
+        message: LocalizedStringResource("Crest couldn’t save your session because its folder can’t be written to.")
+    )
+    static let busy = StorageFailure(
+        tag: 2,
+        name: "busy",
+        message: LocalizedStringResource("Crest couldn’t save your session because another app is using its file.")
+    )
+    static let damaged = StorageFailure(
+        tag: 3,
+        name: "damaged",
+        message: LocalizedStringResource("Crest couldn’t save your session because its file is damaged.")
+    )
+    static let unavailable = StorageFailure(
+        tag: 4,
+        name: "unavailable",
+        message: LocalizedStringResource("Crest couldn’t save your session.")
+    )
+
+    static let all: [StorageFailure] = [diskFull, readOnly, busy, damaged, unavailable]
+
+    static func named(_ name: String?) -> StorageFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StorageFailure, rhs: StorageFailure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
         }
     }
 }
@@ -24115,6 +27846,7 @@ struct TabIconMode: Hashable, Sendable {
 }
 
 /// The members of the core's `TabPlacement`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `closePolicy`.
 struct TabPlacement: Hashable, Sendable {
     static let pinnedCapacity = 12
 
@@ -24396,67 +28128,67 @@ struct Tincture: Hashable, Sendable {
         tag: 10,
         name: "winterSlate",
         title: LocalizedStringResource("Slate"),
-        color: BrandColor(red: 0.118, green: 0.157, blue: 0.2, alpha: 1)
+        color: BrandColor(red: 0.198, green: 0.257, blue: 0.309, alpha: 1)
     )
     static let winterSteel = Tincture(
         tag: 11,
         name: "winterSteel",
         title: LocalizedStringResource("Steel"),
-        color: BrandColor(red: 0.243, green: 0.306, blue: 0.369, alpha: 1)
+        color: BrandColor(red: 0.302, green: 0.364, blue: 0.419, alpha: 1)
     )
     static let winterIce = Tincture(
         tag: 12,
         name: "winterIce",
         title: LocalizedStringResource("Ice"),
-        color: BrandColor(red: 0.525, green: 0.678, blue: 0.769, alpha: 1)
+        color: BrandColor(red: 0.725, green: 0.872, blue: 0.934, alpha: 1)
     )
     static let lionOxblood = Tincture(
         tag: 13,
         name: "lionOxblood",
         title: LocalizedStringResource("Oxblood"),
-        color: BrandColor(red: 0.235, green: 0.055, blue: 0.102, alpha: 1)
+        color: BrandColor(red: 0.306, green: 0.053, blue: 0.179, alpha: 1)
     )
     static let lionCrimson = Tincture(
         tag: 14,
         name: "lionCrimson",
         title: LocalizedStringResource("Crimson"),
-        color: BrandColor(red: 0.447, green: 0.125, blue: 0.188, alpha: 1)
+        color: BrandColor(red: 0.56, green: 0.213, blue: 0.243, alpha: 1)
     )
     static let lionGold = Tincture(
         tag: 15,
         name: "lionGold",
         title: LocalizedStringResource("Antique Gold"),
-        color: BrandColor(red: 0.788, green: 0.635, blue: 0.329, alpha: 1)
+        color: BrandColor(red: 0.88, green: 0.603, blue: 0.273, alpha: 1)
     )
     static let stormMidnight = Tincture(
         tag: 16,
         name: "stormMidnight",
         title: LocalizedStringResource("Midnight"),
-        color: BrandColor(red: 0.082, green: 0.094, blue: 0.141, alpha: 1)
+        color: BrandColor(red: 0.12, green: 0.18, blue: 0.278, alpha: 1)
     )
     static let stormGunmetal = Tincture(
         tag: 17,
         name: "stormGunmetal",
         title: LocalizedStringResource("Gunmetal"),
-        color: BrandColor(red: 0.192, green: 0.22, blue: 0.282, alpha: 1)
+        color: BrandColor(red: 0.131, green: 0.303, blue: 0.386, alpha: 1)
     )
     static let stormBrass = Tincture(
         tag: 18,
         name: "stormBrass",
         title: LocalizedStringResource("Brass"),
-        color: BrandColor(red: 0.69, green: 0.561, blue: 0.29, alpha: 1)
+        color: BrandColor(red: 0.871, green: 0.723, blue: 0.401, alpha: 1)
     )
     static let dragonChar = Tincture(
         tag: 19,
         name: "dragonChar",
         title: LocalizedStringResource("Char"),
-        color: BrandColor(red: 0.102, green: 0.063, blue: 0.051, alpha: 1)
+        color: BrandColor(red: 0.214, green: 0.071, blue: 0.051, alpha: 1)
     )
     static let dragonBlood = Tincture(
         tag: 20,
         name: "dragonBlood",
         title: LocalizedStringResource("Blood"),
-        color: BrandColor(red: 0.478, green: 0.118, blue: 0.071, alpha: 1)
+        color: BrandColor(red: 0.423, green: 0.043, blue: 0.016, alpha: 1)
     )
     static let dragonScarlet = Tincture(
         tag: 21,
@@ -24468,13 +28200,13 @@ struct Tincture: Hashable, Sendable {
         tag: 22,
         name: "meadowForest",
         title: LocalizedStringResource("Forest"),
-        color: BrandColor(red: 0.082, green: 0.137, blue: 0.094, alpha: 1)
+        color: BrandColor(red: 0.118, green: 0.356, blue: 0.202, alpha: 1)
     )
     static let meadowMoss = Tincture(
         tag: 23,
         name: "meadowMoss",
         title: LocalizedStringResource("Moss"),
-        color: BrandColor(red: 0.204, green: 0.341, blue: 0.22, alpha: 1)
+        color: BrandColor(red: 0.271, green: 0.468, blue: 0.251, alpha: 1)
     )
     static let meadowWheat = Tincture(
         tag: 24,
@@ -24486,31 +28218,31 @@ struct Tincture: Hashable, Sendable {
         tag: 25,
         name: "ironBlack",
         title: LocalizedStringResource("Iron"),
-        color: BrandColor(red: 0.055, green: 0.102, blue: 0.11, alpha: 1)
+        color: BrandColor(red: 0.103, green: 0.126, blue: 0.143, alpha: 1)
     )
     static let ironPewter = Tincture(
         tag: 26,
         name: "ironPewter",
         title: LocalizedStringResource("Pewter"),
-        color: BrandColor(red: 0.173, green: 0.227, blue: 0.235, alpha: 1)
+        color: BrandColor(red: 0.198, green: 0.223, blue: 0.242, alpha: 1)
     )
     static let ironPatina = Tincture(
         tag: 27,
         name: "ironPatina",
         title: LocalizedStringResource("Patina"),
-        color: BrandColor(red: 0.612, green: 0.592, blue: 0.506, alpha: 1)
+        color: BrandColor(red: 0.411, green: 0.686, blue: 0.591, alpha: 1)
     )
     static let riverNavy = Tincture(
         tag: 28,
         name: "riverNavy",
         title: LocalizedStringResource("Navy"),
-        color: BrandColor(red: 0.059, green: 0.118, blue: 0.18, alpha: 1)
+        color: BrandColor(red: 0, green: 0.33, blue: 0.579, alpha: 1)
     )
     static let riverLapis = Tincture(
         tag: 29,
         name: "riverLapis",
         title: LocalizedStringResource("Lapis"),
-        color: BrandColor(red: 0.133, green: 0.282, blue: 0.424, alpha: 1)
+        color: BrandColor(red: 0, green: 0.51, blue: 0.61, alpha: 1)
     )
     static let riverRust = Tincture(
         tag: 30,
@@ -24528,25 +28260,25 @@ struct Tincture: Hashable, Sendable {
         tag: 32,
         name: "sunTerracotta",
         title: LocalizedStringResource("Terracotta"),
-        color: BrandColor(red: 0.545, green: 0.239, blue: 0.106, alpha: 1)
+        color: BrandColor(red: 0.789, green: 0.349, blue: 0.231, alpha: 1)
     )
     static let sunDune = Tincture(
         tag: 33,
         name: "sunDune",
         title: LocalizedStringResource("Dune"),
-        color: BrandColor(red: 0.816, green: 0.62, blue: 0.396, alpha: 1)
+        color: BrandColor(red: 0.792, green: 0.533, blue: 0.245, alpha: 1)
     )
     static let vigilOnyx = Tincture(
         tag: 34,
         name: "vigilOnyx",
         title: LocalizedStringResource("Onyx"),
-        color: BrandColor(red: 0.063, green: 0.067, blue: 0.071, alpha: 1)
+        color: BrandColor(red: 0.091, green: 0.095, blue: 0.106, alpha: 1)
     )
     static let vigilCharcoal = Tincture(
         tag: 35,
         name: "vigilCharcoal",
         title: LocalizedStringResource("Charcoal"),
-        color: BrandColor(red: 0.153, green: 0.165, blue: 0.18, alpha: 1)
+        color: BrandColor(red: 0.184, green: 0.189, blue: 0.202, alpha: 1)
     )
     static let vigilAsh = Tincture(
         tag: 36,
@@ -24570,13 +28302,13 @@ struct Tincture: Hashable, Sendable {
         tag: 39,
         name: "lionGules",
         title: LocalizedStringResource("Gules"),
-        color: BrandColor(red: 0.596, green: 0.114, blue: 0.157, alpha: 1)
+        color: BrandColor(red: 0.433, green: 0.092, blue: 0.141, alpha: 1)
     )
     static let lionOr = Tincture(
         tag: 40,
         name: "lionOr",
         title: LocalizedStringResource("Or"),
-        color: BrandColor(red: 0.851, green: 0.682, blue: 0.318, alpha: 1)
+        color: BrandColor(red: 0.922, green: 0.776, blue: 0.411, alpha: 1)
     )
     static let stormOr = Tincture(
         tag: 41,
@@ -24600,31 +28332,31 @@ struct Tincture: Hashable, Sendable {
         tag: 44,
         name: "dragonFire",
         title: LocalizedStringResource("Fire"),
-        color: BrandColor(red: 0.749, green: 0.18, blue: 0.137, alpha: 1)
+        color: BrandColor(red: 0.651, green: 0.236, blue: 0, alpha: 1)
     )
     static let meadowVert = Tincture(
         tag: 45,
         name: "meadowVert",
         title: LocalizedStringResource("Vert"),
-        color: BrandColor(red: 0.188, green: 0.42, blue: 0.231, alpha: 1)
+        color: BrandColor(red: 0.238, green: 0.469, blue: 0.308, alpha: 1)
     )
     static let meadowRose = Tincture(
         tag: 46,
         name: "meadowRose",
         title: LocalizedStringResource("Rose Gold"),
-        color: BrandColor(red: 0.871, green: 0.729, blue: 0.318, alpha: 1)
+        color: BrandColor(red: 0.965, green: 0.78, blue: 0.603, alpha: 1)
     )
     static let ironOr = Tincture(
         tag: 47,
         name: "ironOr",
         title: LocalizedStringResource("Kraken Gold"),
-        color: BrandColor(red: 0.796, green: 0.651, blue: 0.302, alpha: 1)
+        color: BrandColor(red: 0.883, green: 0.72, blue: 0.36, alpha: 1)
     )
     static let riverAzure = Tincture(
         tag: 48,
         name: "riverAzure",
         title: LocalizedStringResource("Azure"),
-        color: BrandColor(red: 0.176, green: 0.369, blue: 0.616, alpha: 1)
+        color: BrandColor(red: 0.149, green: 0.446, blue: 0.716, alpha: 1)
     )
     static let riverGules = Tincture(
         tag: 49,
@@ -24636,31 +28368,31 @@ struct Tincture: Hashable, Sendable {
         tag: 50,
         name: "riverArgent",
         title: LocalizedStringResource("Silver"),
-        color: BrandColor(red: 0.851, green: 0.871, blue: 0.894, alpha: 1)
+        color: BrandColor(red: 0.859, green: 0.921, blue: 0.952, alpha: 1)
     )
     static let sunTenne = Tincture(
         tag: 51,
         name: "sunTenne",
         title: LocalizedStringResource("Tenné"),
-        color: BrandColor(red: 0.851, green: 0.467, blue: 0.176, alpha: 1)
+        color: BrandColor(red: 0.751, green: 0.392, blue: 0.124, alpha: 1)
     )
     static let sunGules = Tincture(
         tag: 52,
         name: "sunGules",
         title: LocalizedStringResource("Sunset Red"),
-        color: BrandColor(red: 0.722, green: 0.165, blue: 0.118, alpha: 1)
+        color: BrandColor(red: 0.655, green: 0.227, blue: 0.106, alpha: 1)
     )
     static let sunOr = Tincture(
         tag: 53,
         name: "sunOr",
         title: LocalizedStringResource("Saffron"),
-        color: BrandColor(red: 0.894, green: 0.718, blue: 0.333, alpha: 1)
+        color: BrandColor(red: 0.975, green: 0.83, blue: 0.42, alpha: 1)
     )
     static let vigilBone = Tincture(
         tag: 54,
         name: "vigilBone",
         title: LocalizedStringResource("Bone"),
-        color: BrandColor(red: 0.812, green: 0.82, blue: 0.831, alpha: 1)
+        color: BrandColor(red: 0.894, green: 0.868, blue: 0.814, alpha: 1)
     )
     static let neutralSmoke = Tincture(
         tag: 55,
@@ -24673,6 +28405,126 @@ struct Tincture: Hashable, Sendable {
         name: "neutralGray",
         title: LocalizedStringResource("Gray"),
         color: BrandColor(red: 0.588, green: 0.588, blue: 0.588, alpha: 1)
+    )
+    static let dragonFlame = Tincture(
+        tag: 57,
+        name: "dragonFlame",
+        title: LocalizedStringResource("Flame"),
+        color: BrandColor(red: 0.985, green: 0.825, blue: 0.42, alpha: 1)
+    )
+    static let stormSlate = Tincture(
+        tag: 58,
+        name: "stormSlate",
+        title: LocalizedStringResource("Slate Blue"),
+        color: BrandColor(red: 0.219, green: 0.283, blue: 0.388, alpha: 1)
+    )
+    static let dragonCinder = Tincture(
+        tag: 59,
+        name: "dragonCinder",
+        title: LocalizedStringResource("Cinder"),
+        color: BrandColor(red: 0.324, green: 0.169, blue: 0.145, alpha: 1)
+    )
+    static let ironTide = Tincture(
+        tag: 60,
+        name: "ironTide",
+        title: LocalizedStringResource("Tide"),
+        color: BrandColor(red: 0.114, green: 0.207, blue: 0.218, alpha: 1)
+    )
+    static let crestInk = Tincture(
+        tag: 61,
+        name: "crestInk",
+        title: LocalizedStringResource("Crest Ink"),
+        color: BrandColor(red: 0.09, green: 0.133, blue: 0.22, alpha: 1)
+    )
+    static let crestDusk = Tincture(
+        tag: 62,
+        name: "crestDusk",
+        title: LocalizedStringResource("Dusk"),
+        color: BrandColor(red: 0.18, green: 0.294, blue: 0.408, alpha: 1)
+    )
+    static let crestSky = Tincture(
+        tag: 63,
+        name: "crestSky",
+        title: LocalizedStringResource("Crest Sky"),
+        color: BrandColor(red: 0.353, green: 0.608, blue: 0.784, alpha: 1)
+    )
+    static let crestButter = Tincture(
+        tag: 64,
+        name: "crestButter",
+        title: LocalizedStringResource("Butter"),
+        color: BrandColor(red: 0.949, green: 0.757, blue: 0.306, alpha: 1)
+    )
+    static let crestCoral = Tincture(
+        tag: 65,
+        name: "crestCoral",
+        title: LocalizedStringResource("Coral"),
+        color: BrandColor(red: 0.914, green: 0.376, blue: 0.294, alpha: 1)
+    )
+    static let crestCream = Tincture(
+        tag: 66,
+        name: "crestCream",
+        title: LocalizedStringResource("Cream"),
+        color: BrandColor(red: 0.984, green: 0.961, blue: 0.902, alpha: 1)
+    )
+    static let crestSage = Tincture(
+        tag: 67,
+        name: "crestSage",
+        title: LocalizedStringResource("Soft Sage"),
+        color: BrandColor(red: 0.553, green: 0.749, blue: 0.604, alpha: 1)
+    )
+    static let moonNight = Tincture(
+        tag: 68,
+        name: "moonNight",
+        title: LocalizedStringResource("Night"),
+        color: BrandColor(red: 0.118, green: 0.161, blue: 0.271, alpha: 1)
+    )
+    static let moonTide = Tincture(
+        tag: 69,
+        name: "moonTide",
+        title: LocalizedStringResource("Moonlit Blue"),
+        color: BrandColor(red: 0.184, green: 0.306, blue: 0.494, alpha: 1)
+    )
+    static let summitButter = Tincture(
+        tag: 70,
+        name: "summitButter",
+        title: LocalizedStringResource("Pale Butter"),
+        color: BrandColor(red: 0.965, green: 0.878, blue: 0.627, alpha: 1)
+    )
+    static let lensMist = Tincture(
+        tag: 71,
+        name: "lensMist",
+        title: LocalizedStringResource("Mist"),
+        color: BrandColor(red: 0.933, green: 0.961, blue: 0.918, alpha: 1)
+    )
+    static let lensFern = Tincture(
+        tag: 72,
+        name: "lensFern",
+        title: LocalizedStringResource("Fern"),
+        color: BrandColor(red: 0.796, green: 0.886, blue: 0.812, alpha: 1)
+    )
+    static let sparkTwilight = Tincture(
+        tag: 73,
+        name: "sparkTwilight",
+        title: LocalizedStringResource("Twilight"),
+        color: BrandColor(red: 0.165, green: 0.118, blue: 0.227, alpha: 1)
+    )
+    static let sparkMulberry = Tincture(
+        tag: 74,
+        name: "sparkMulberry",
+        title: LocalizedStringResource("Mulberry"),
+        color: BrandColor(red: 0.349, green: 0.188, blue: 0.31, alpha: 1)
+    )
+    static let groveDeep = Tincture(
+        tag: 75,
+        name: "groveDeep",
+        title: LocalizedStringResource("Deep Forest"),
+        color: BrandColor(red: 0.118, green: 0.169, blue: 0.133, alpha: 1)
+    )
+    static let groveMoss = Tincture(
+        tag: 76,
+        name: "groveMoss",
+        title: LocalizedStringResource("Grove Moss"),
+        color: BrandColor(red: 0.243, green: 0.361, blue: 0.263, alpha: 1)
     )
 
     static let all: [Tincture] = [
@@ -24732,7 +28584,27 @@ struct Tincture: Hashable, Sendable {
         sunOr,
         vigilBone,
         neutralSmoke,
-        neutralGray
+        neutralGray,
+        dragonFlame,
+        stormSlate,
+        dragonCinder,
+        ironTide,
+        crestInk,
+        crestDusk,
+        crestSky,
+        crestButter,
+        crestCoral,
+        crestCream,
+        crestSage,
+        moonNight,
+        moonTide,
+        summitButter,
+        lensMist,
+        lensFern,
+        sparkTwilight,
+        sparkMulberry,
+        groveDeep,
+        groveMoss
     ]
 
     static func named(_ name: String?) -> Tincture? {
@@ -24801,21 +28673,141 @@ struct TransientPresentation: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `UrlScheme`. A member's wire tag is its index in `all`.
+struct UrlScheme: Hashable, Sendable {
+    static let maximumSchemeLength = 256
+
+    let tag: Int
+    var name: String { facts.name }
+    var disposition: ExternalSchemeDisposition { facts.disposition }
+    var appInitiatedDisposition: ExternalSchemeDisposition { facts.appInitiatedDisposition }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        disposition: ExternalSchemeDisposition,
+        appInitiatedDisposition: ExternalSchemeDisposition
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, disposition: disposition, appInitiatedDisposition: appInitiatedDisposition)
+    }
+
+    static let http = UrlScheme(
+        tag: 0,
+        name: "http",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let https = UrlScheme(
+        tag: 1,
+        name: "https",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let about = UrlScheme(
+        tag: 2,
+        name: "about",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let blob = UrlScheme(
+        tag: 3,
+        name: "blob",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let chromeExtension = UrlScheme(
+        tag: 4,
+        name: "chrome-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let crestExtension = UrlScheme(
+        tag: 5,
+        name: "crest-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let data = UrlScheme(
+        tag: 6,
+        name: "data",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let webKitExtension = UrlScheme(
+        tag: 7,
+        name: "webkit-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let javaScript = UrlScheme(
+        tag: 8,
+        name: "javascript",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.blocked
+    )
+    static let file = UrlScheme(
+        tag: 9,
+        name: "file",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+
+    static let all: [UrlScheme] = [
+        http,
+        https,
+        about,
+        blob,
+        chromeExtension,
+        crestExtension,
+        data,
+        webKitExtension,
+        javaScript,
+        file
+    ]
+
+    static func named(_ name: String?) -> UrlScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: UrlScheme, rhs: UrlScheme) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let disposition: ExternalSchemeDisposition
+        let appInitiatedDisposition: ExternalSchemeDisposition
+
+        init(name: String, disposition: ExternalSchemeDisposition, appInitiatedDisposition: ExternalSchemeDisposition) {
+            self.name = name
+            self.disposition = disposition
+            self.appInitiatedDisposition = appInitiatedDisposition
+        }
+    }
+}
+
 /// The members of the core's `WebScheme`. A member's wire tag is its index in `all`.
 struct WebScheme: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var defaultPort: Int { facts.defaultPort }
     var isSecure: Bool { facts.isSecure }
+    var prefix: String { facts.prefix }
     private let facts: Facts
 
-    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool) {
+    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
         self.tag = tag
-        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure)
+        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure, prefix: prefix)
     }
 
-    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false)
-    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true)
+    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false, prefix: "http://")
+    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true, prefix: "https://")
 
     static let all: [WebScheme] = [http, https]
 
@@ -24835,11 +28827,13 @@ struct WebScheme: Hashable, Sendable {
         let name: String
         let defaultPort: Int
         let isSecure: Bool
+        let prefix: String
 
-        init(name: String, defaultPort: Int, isSecure: Bool) {
+        init(name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
             self.name = name
             self.defaultPort = defaultPort
             self.isSecure = isSecure
+            self.prefix = prefix
         }
     }
 }
@@ -24895,6 +28889,7 @@ struct WorkspaceKind: Hashable, Sendable {
     var ownsSpaces: Bool { facts.ownsSpaces }
     var keepsAppPreferences: Bool { facts.keepsAppPreferences }
     var isPractice: Bool { facts.isPractice }
+    var locksSpaces: Bool { facts.locksSpaces }
     private let facts: Facts
 
     private init(
@@ -24905,7 +28900,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: Bool,
         ownsSpaces: Bool,
         keepsAppPreferences: Bool,
-        isPractice: Bool
+        isPractice: Bool,
+        locksSpaces: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -24915,7 +28911,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: isPrivate,
             ownsSpaces: ownsSpaces,
             keepsAppPreferences: keepsAppPreferences,
-            isPractice: isPractice
+            isPractice: isPractice,
+            locksSpaces: locksSpaces
         )
     }
 
@@ -24927,7 +28924,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: true,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let `private` = WorkspaceKind(
         tag: 1,
@@ -24937,7 +28935,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: true,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: false
     )
     static let borrowed = WorkspaceKind(
         tag: 2,
@@ -24947,7 +28946,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: false,
         keepsAppPreferences: false,
-        isPractice: false
+        isPractice: false,
+        locksSpaces: true
     )
     static let practice = WorkspaceKind(
         tag: 3,
@@ -24957,7 +28957,8 @@ struct WorkspaceKind: Hashable, Sendable {
         isPrivate: false,
         ownsSpaces: true,
         keepsAppPreferences: false,
-        isPractice: true
+        isPractice: true,
+        locksSpaces: true
     )
 
     static let all: [WorkspaceKind] = [persistent, `private`, borrowed, practice]
@@ -24982,6 +28983,7 @@ struct WorkspaceKind: Hashable, Sendable {
         let ownsSpaces: Bool
         let keepsAppPreferences: Bool
         let isPractice: Bool
+        let locksSpaces: Bool
 
         init(
             name: String,
@@ -24990,7 +28992,8 @@ struct WorkspaceKind: Hashable, Sendable {
             isPrivate: Bool,
             ownsSpaces: Bool,
             keepsAppPreferences: Bool,
-            isPractice: Bool
+            isPractice: Bool,
+            locksSpaces: Bool
         ) {
             self.name = name
             self.opensDirectly = opensDirectly
@@ -24999,6 +29002,7 @@ struct WorkspaceKind: Hashable, Sendable {
             self.ownsSpaces = ownsSpaces
             self.keepsAppPreferences = keepsAppPreferences
             self.isPractice = isPractice
+            self.locksSpaces = locksSpaces
         }
     }
 }
@@ -25044,6 +29048,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.orderAnchorTabID)
         return orderAnchorTabIDStorage
     }
+    var isGroup: Bool {
+        access(keyPath: \.isGroup)
+        return isGroupStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -25061,6 +29069,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var isCollapsedStorage: Bool
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
+    @ObservationIgnored private var isGroupStorage: Bool
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -25075,6 +29084,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
+            isGroup: isGroup,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -25090,6 +29100,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
         isCollapsedStorage = value.isCollapsed
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
+        isGroupStorage = value.isGroup
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -25127,6 +29138,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if orderAnchorTabIDStorage != value.orderAnchorTabID {
             orderAnchorTabIDStorage = value.orderAnchorTabID
             withMutation(keyPath: \.orderAnchorTabID) {}
+        }
+        if isGroupStorage != value.isGroup {
+            isGroupStorage = value.isGroup
+            withMutation(keyPath: \.isGroup) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol
@@ -25496,6 +29511,18 @@ final class TabStateModel: ObservedModel, Identifiable {
         access(keyPath: \.keepsPageLoaded)
         return keepsPageLoadedStorage
     }
+    var savedTitle: String? {
+        access(keyPath: \.savedTitle)
+        return savedTitleStorage
+    }
+    var savedFaviconURL: String? {
+        access(keyPath: \.savedFaviconURL)
+        return savedFaviconURLStorage
+    }
+    var savedIconAccent: TabIconAccent? {
+        access(keyPath: \.savedIconAccent)
+        return savedIconAccentStorage
+    }
     var iconMode: TabIconMode {
         access(keyPath: \.iconMode)
         return iconModeStorage
@@ -25537,6 +29564,9 @@ final class TabStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var customTitleStorage: String?
     @ObservationIgnored private var titleModifiedAtStorage: Date?
     @ObservationIgnored private var keepsPageLoadedStorage: Bool
+    @ObservationIgnored private var savedTitleStorage: String?
+    @ObservationIgnored private var savedFaviconURLStorage: String?
+    @ObservationIgnored private var savedIconAccentStorage: TabIconAccent?
     @ObservationIgnored private var iconModeStorage: TabIconMode
     @ObservationIgnored private var displayTitleStorage: String
     @ObservationIgnored private var isAwayFromSavedAddressStorage: Bool
@@ -25563,6 +29593,9 @@ final class TabStateModel: ObservedModel, Identifiable {
             customTitle: customTitle,
             titleModifiedAt: titleModifiedAt,
             keepsPageLoaded: keepsPageLoaded,
+            savedTitle: savedTitle,
+            savedFaviconURL: savedFaviconURL,
+            savedIconAccent: savedIconAccent,
             iconMode: iconMode,
             displayTitle: displayTitle,
             isAwayFromSavedAddress: isAwayFromSavedAddress,
@@ -25590,6 +29623,9 @@ final class TabStateModel: ObservedModel, Identifiable {
         customTitleStorage = value.customTitle
         titleModifiedAtStorage = value.titleModifiedAt
         keepsPageLoadedStorage = value.keepsPageLoaded
+        savedTitleStorage = value.savedTitle
+        savedFaviconURLStorage = value.savedFaviconURL
+        savedIconAccentStorage = value.savedIconAccent
         iconModeStorage = value.iconMode
         displayTitleStorage = value.displayTitle
         isAwayFromSavedAddressStorage = value.isAwayFromSavedAddress
@@ -25663,6 +29699,18 @@ final class TabStateModel: ObservedModel, Identifiable {
         if keepsPageLoadedStorage != value.keepsPageLoaded {
             keepsPageLoadedStorage = value.keepsPageLoaded
             withMutation(keyPath: \.keepsPageLoaded) {}
+        }
+        if savedTitleStorage != value.savedTitle {
+            savedTitleStorage = value.savedTitle
+            withMutation(keyPath: \.savedTitle) {}
+        }
+        if savedFaviconURLStorage != value.savedFaviconURL {
+            savedFaviconURLStorage = value.savedFaviconURL
+            withMutation(keyPath: \.savedFaviconURL) {}
+        }
+        if savedIconAccentStorage != value.savedIconAccent {
+            savedIconAccentStorage = value.savedIconAccent
+            withMutation(keyPath: \.savedIconAccent) {}
         }
         if iconModeStorage != value.iconMode {
             iconModeStorage = value.iconMode

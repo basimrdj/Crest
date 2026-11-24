@@ -1,9 +1,13 @@
 import SwiftUI
 
+/// Where a link the pointer rests on leads, at the bottom corner of the page
+/// on Crest's flyout surface.
 struct BrowserLinkHoverPreview: View {
+    /// The flyout's corner, a step under the control radius to suit its
+    /// single line of small text.
+    private static let cornerRadius: CGFloat = 10
+
     let hover: BrowserLinkHoverController
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         GeometryReader { geometry in
@@ -17,7 +21,7 @@ struct BrowserLinkHoverPreview: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .fixedSize(horizontal: false, vertical: true)
-                    .modifier(PreviewMaterial(opaque: reduceTransparency || contrast == .increased))
+                    .crestFloatingFlyoutStyle(in: .rect(cornerRadius: Self.cornerRadius))
                     .frame(maxWidth: min(560, max(0, geometry.size.width - 24)), alignment: .leading)
                     .padding(12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -28,22 +32,5 @@ struct BrowserLinkHoverPreview: View {
             }
         }
         .allowsHitTesting(false)
-    }
-}
-
-private struct PreviewMaterial: ViewModifier {
-    let opaque: Bool
-
-    func body(content: Content) -> some View {
-        if opaque {
-            content
-                .background(.background, in: .rect(cornerRadius: 10))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(.primary.opacity(0.5), lineWidth: 1)
-                }
-        } else {
-            content.glassEffect(.regular, in: .rect(cornerRadius: 10))
-        }
     }
 }

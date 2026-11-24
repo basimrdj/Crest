@@ -37,13 +37,13 @@ struct BrowserAgentPointerOverlay: View {
             Image(systemName: "cursorarrow")
                 .font(.system(size: BrowserWebPageSurfaceMetrics.agentPointerSize, weight: .semibold))
                 .foregroundStyle(colour)
-                .shadow(radius: 1)
+                .shadow(radius: BrowserWebPageSurfaceMetrics.agentPointerShadowRadius)
             Text(verbatim: session.name)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
                 .padding(.horizontal, BrowserWebPageSurfaceMetrics.agentPointerTagHorizontalPadding)
                 .padding(.vertical, BrowserWebPageSurfaceMetrics.agentPointerTagVerticalPadding)
-                .glassEffect(.regular, in: .capsule)
+                .crestFlyoutStyle(in: .capsule)
                 .overlay { Capsule().strokeBorder(colour, lineWidth: 1) }
                 .offset(BrowserWebPageSurfaceMetrics.agentPointerTagOffset)
         }

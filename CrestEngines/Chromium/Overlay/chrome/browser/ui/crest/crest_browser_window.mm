@@ -30,7 +30,6 @@ static_assert(!std::is_abstract_v<CrestBrowserWindow>);
 #include "chrome/browser/ui/unload_controller.h"
 #include "chrome/browser/ui/views/bubble_anchor_util_views.h"
 #include "components/input/native_web_keyboard_event.h"
-#include "components/sharing_message/sharing_dialog_data.h"
 #include "components/web_modal/modal_dialog_host.h"
 #include "content/public/browser/keyboard_event_processing_result.h"
 #include "ui/base/mojom/window_show_state.mojom.h"
@@ -685,6 +684,12 @@ void CrestExclusiveAccessContext::HideFullscreenDisclosure(
 }
 
 CrestBrowserWindow::~CrestBrowserWindow() {
+  // As Chromium's own windows do, the Browser's window features are torn down
+  // before the window goes, in the order their dependencies need. Left to
+  // ~Browser, they are destroyed in member order, and a feature can outlive
+  // one it observes, as the contextual tasks close button outlives the
+  // immersive mode controller.
+  browser_->GetFeatures().TearDownPreBrowserWindowDestruction();
   crest::OnBrowserWindowDestroyed(browser_);
 }
 
@@ -1008,10 +1013,6 @@ CrestBrowserWindow::GetWebContentsModalDialogHostFor(
 void CrestBrowserWindow::ShowAvatarBubbleFromAvatarButton(bool is_source_accelerator) {
   [crest::MacUI() showUnavailableFeature:CrestUnavailableFeatureProfiles];
 }
-
-void CrestBrowserWindow::MaybeShowProfileSwitchIPH() {}
-
-void CrestBrowserWindow::MaybeShowSupervisedUserProfileSignInIPH() {}
 
 void CrestBrowserWindow::ShowHatsDialog( const std::string& site_id, const std::optional<std::string>& hats_histogram_name, const std::optional<uint64_t> hats_survey_ukm_id, base::OnceClosure success_callback, base::OnceClosure failure_callback, const SurveyBitsData& product_specific_bits_data, const SurveyStringData& product_specific_string_data) {}
 

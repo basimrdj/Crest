@@ -17,19 +17,32 @@ import SwiftUI
 /// can be reselected, relocked, or have the folder deleted out from under an
 /// open colour popover, and a request that can no longer be honoured is
 /// dropped instead of landing on whatever took its place.
+///
+/// A folder far down a folder that has just opened draws its header at once
+/// and what it holds a moment later, once the opening has run, so the rows
+/// that show come first. VoiceOver and Switch Control get everything at once,
+/// as does a folder drawn again after a block stood in for it.
 struct BrowserFolderGroup: View {
+    // MARK: - Variables
+
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let folder: FolderStateModel
     /// How many folders hold this one.
     let depth: Int
     let context: BrowserSidebarListContext
-    /// The tab a collapsed folder around this one keeps on screen, which this
-    /// folder shows in place of its contents.
-    var inheritedKeptTabID: UUID? = nil
+    /// The tabs a collapsed folder around this one keeps on screen, which this
+    /// folder shows the way to in place of its contents.
+    var inheritedKeptTabIDs: Set<UUID>? = nil
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
+    @Environment(\.sidebarFolderIsDrawnAgain) private var isDrawnAgain
+    /// Whether the folder still holds back what it holds, which it does only
+    /// from when it is first drawn until its turn comes.
+    @State private var holdsContents: Bool
     @State private var draftTitle = ""
     @State private var iconRequest: BrowserFolderRuntimeAssignment?
     @State private var colorRequest: BrowserFolderRuntimeAssignment?
@@ -50,17 +63,27 @@ struct BrowserFolderGroup: View {
     #endif
     @FocusState private var isTitleFocused: Bool
 
+    /// Whether what the folder holds waits for its turn now.
+    private var isHoldingContents: Bool {
+        holdsContents && !isDrawnAgain && !isVoiceOverEnabled && !isSwitchControlEnabled
+    }
+
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
             sidebarInteraction: sidebarInteraction, folder: folder, depth: depth, context: context,
-            spacePresentation: spacePresentation, inheritedKeptTabID: inheritedKeptTabID)
+            spacePresentation: spacePresentation, inheritedKeptTabIDs: inheritedKeptTabIDs,
+            isOpenInClosedFolder: collapsedTabVisibility.isOpenInClosedFolder)
     }
 
+    /// Whether the folder shows as open. Inside a closed folder that draws it
+    /// as the way to its kept tabs, opening it also shows everything it holds
+    /// there, and the folder stays open once the folder around it opens.
     private var isExpanded: Binding<Bool> {
         Binding {
-            !folder.isCollapsed
+            configuration.isShownOpen
         } set: { isExpanded in
             guard configuration.isCurrentAndUnlocked else { return }
+            if inheritedKeptTabIDs != nil { collapsedTabVisibility.openInClosedFolder(isExpanded) }
             context.browser.setFolderCollapsed(
                 folder.id, matching: configuration.assignment, isCollapsed: !isExpanded)
         }
@@ -90,22 +113,43 @@ struct BrowserFolderGroup: View {
             beginCreatingChild: beginCreatingChild,
             beginRenaming: beginRenaming,
             toggleExpansion: toggleExpansion,
+            closeAllTabs: closeAllTabs,
             beginTitleEditingIfNeeded: beginTitleEditingIfNeeded,
             commitTitle: commitTitle,
             cancelTitleEditing: cancelTitleEditing,
-            deleteFolder: deleteFolder,
-            unloadKeptCollapsedTab: unloadKeptCollapsedTab
+            deleteFolder: deleteFolder
         )
     }
+
+    // MARK: - Initializers
+
+    /// A folder that `defersContents` holds back what it holds when it is
+    /// first drawn, as one far down a list that has just opened does.
+    init(
+        folder: FolderStateModel, depth: Int, context: BrowserSidebarListContext,
+        inheritedKeptTabIDs: Set<UUID>? = nil, defersContents: Bool = false
+    ) {
+        self.folder = folder
+        self.depth = depth
+        self.context = context
+        self.inheritedKeptTabIDs = inheritedKeptTabIDs
+        _holdsContents = State(initialValue: defersContents)
+    }
+
+    // MARK: - Actions - Presentation
 
     var body: some View {
         let configuration = self.configuration
         let interaction = self.interaction
-        let showsContents = configuration.showsContents
+        let showsAllContents = configuration.showsAllContents
+        let keptTabIDs = configuration.keptTabIDs(for: collapsedTabVisibility)
         VStack(spacing: 0) {
             BrowserFolderGroupSurface(configuration: configuration, interaction: interaction)
-            if showsContents {
-                folderContents(configuration: configuration)
+            if showsAllContents ? !isHoldingContents : !keptTabIDs.isEmpty {
+                // One list for both: closing keeps the rows of the tabs it
+                // keeps, which move up as the rest go, rather than drawing
+                // them again apart from the folder's own.
+                folderContents(configuration: configuration, keptTabIDs: showsAllContents ? nil : keptTabIDs)
                     .transition(
                         .modifier(
                             active: BrowserFolderContentsReveal(progress: 0),
@@ -116,6 +160,7 @@ struct BrowserFolderGroup: View {
         .modifier(
             BrowserFolderSectionSurface(
                 color: folder.displayColor,
+                kind: folder.kind,
                 intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
                 textColorMode: configuration.displayBranding?.shownTextColorMode ?? .automatic,
                 depth: depth,
@@ -130,7 +175,7 @@ struct BrowserFolderGroup: View {
         .browserSidebarReorderZone(
             .folder(folder.id),
             state: sidebarInteraction.sidebarReorderState,
-            isActive: !showsContents
+            isActive: !showsAllContents
         )
         .modifier(
             BrowserFolderReorderReservation(configuration: configuration)
@@ -145,7 +190,14 @@ struct BrowserFolderGroup: View {
                 cancel: clearUnavailableDeferredActions
             )
         )
-        .keepsSidebarFolderDrawn(hasPendingActions)
+        .keepsSidebarFolderDrawn(hasPendingActions || isHoldingContents)
+        .task { await releaseContents() }
+        // Opened inside a closed folder only lasts while that folder stays
+        // closed around it, including when the folder draws itself again
+        // after leaving the screen.
+        .onChange(of: inheritedKeptTabIDs == nil, initial: true) { _, drawsItself in
+            if drawsItself { collapsedTabVisibility.closedFolderAroundOpened() }
+        }
         .padding(.vertical, BrowserSidebarMetrics.containerSpacing)
     }
 
@@ -158,8 +210,11 @@ struct BrowserFolderGroup: View {
 
     /// Nested folders are children of the section they move with, so a parent's
     /// measurement, hover surface and lift include the entire expanded subtree.
-    private func folderContents(configuration: BrowserFolderGroupConfiguration) -> some View {
-        BrowserSidebarListRows(list: configuration.inside, context: context) { items in
+    /// A closed folder lists only the rows on the way to `keptTabIDs`.
+    private func folderContents(configuration: BrowserFolderGroupConfiguration, keptTabIDs: Set<UUID>?) -> some View {
+        BrowserSidebarListRows(
+            list: configuration.inside, context: context, keptTabIDs: keptTabIDs, defersDistantFolders: true
+        ) { items in
             if items.isEmpty { BrowserFolderEmptyRunBand(configuration: configuration) }
         }
         .equatable()
@@ -170,7 +225,32 @@ struct BrowserFolderGroup: View {
         // Each row says its own depth; this is for what the run draws between
         // them, such as the slot a lift leaves.
         .environment(\.sidebarLayerDepth, depth + 1)
+        // Rows come and go in place as the folder closes around the tabs it
+        // keeps and opens again, rather than sliding up through its title.
+        .environment(\.sidebarFolderRowTransition, .opacity)
+        // The folders inside have blocks of their own, which say for each
+        // one whether it is drawn again.
+        .environment(\.sidebarFolderIsDrawnAgain, false)
     }
+
+    /// Draws what the folder holds once its turn comes, after the opening it
+    /// waited out. It comes in place, as the rows of a folder that was
+    /// already open do. A closed folder, which draws only the tabs it keeps,
+    /// lets go without a turn, so it never holds up an open one.
+    private func releaseContents() async {
+        guard holdsContents else { return }
+        do {
+            try await Task.sleep(for: .seconds(CrestMotion.disclosureTransition))
+            if configuration.showsAllContents { try await BrowserFolderContentsTurns.shared.take() }
+        } catch {
+            return
+        }
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { holdsContents = false }
+    }
+
+    // MARK: - Actions - Organization
 
     private func beginCreatingChild() {
         guard configuration.isCurrentAndUnlocked else { return }
@@ -182,7 +262,7 @@ struct BrowserFolderGroup: View {
         else {
             return
         }
-        if inheritedKeptTabID != nil { expandFoldersAround() }
+        if inheritedKeptTabIDs != nil { expandFoldersAround() }
         isExpanded.wrappedValue = true
         sidebarInteraction.editingFolderRequest = BrowserFolderRuntimeAssignment(
             folderID: childID,
@@ -192,7 +272,7 @@ struct BrowserFolderGroup: View {
     }
 
     /// Opens every collapsed folder that holds this one. A folder drawn on a
-    /// collapsed folder's way to its kept tab shows only that way, so a child
+    /// collapsed folder's way to its kept tabs shows only that way, so a child
     /// made here would stay hidden, and its title could never start editing,
     /// until the folders around it open.
     private func expandFoldersAround() {
@@ -204,12 +284,6 @@ struct BrowserFolderGroup: View {
             }
             parentID = parent.parentID
         }
-    }
-
-    private func unloadKeptCollapsedTab(_ tabID: UUID) {
-        guard configuration.isCurrentAndUnlocked else { return }
-        collapsedTabVisibility.tabDidUnload(tabID)
-        context.unload(tabID)
     }
 
     private func beginRenaming() {
@@ -227,13 +301,31 @@ struct BrowserFolderGroup: View {
         withAnimation(
             CrestMotion.disclosure.unlessReducingMotion(reduceMotion)
         ) {
-            let nextExpansion = folder.isCollapsed
+            let nextExpansion = !configuration.isShownOpen
             collapsedTabVisibility.expansionDidChange(
                 isExpanded: nextExpansion,
                 selectedTabID: configuration.shownFolderTabID,
-                folderTabIDs: configuration.folderTabIDs
+                folderTabIDs: configuration.folderTabIDs,
+                residentFolderTabIDs: configuration.residentFolderTabIDs
             )
             isExpanded.wrappedValue = nextExpansion
+        }
+    }
+
+    /// Closes what the folder holds to close, then closes the folder: a
+    /// saved folder's loaded tabs unload as their rows' unload control does,
+    /// and stay saved, and a group's or an open folder's tabs close together,
+    /// as a selection of them does.
+    private func closeAllTabs() {
+        guard configuration.isCurrentAndUnlocked, configuration.hasTabsToClose else { return }
+        if configuration.isShownOpen { toggleExpansion() }
+        if folder.location.isDurable {
+            context.unload(configuration.loadedFolderTabIDs)
+        } else if let request = BrowserSidebarSelection.capture(
+            configuration.folderTabIDs.map { .tab($0) }, in: context.browser)
+        {
+            _ = BrowserTabBatchActions(browser: context.browser, spaceAccess: context.spaceAccess)
+                .perform(context.browser.closing(request), for: request)
         }
     }
 
@@ -277,7 +369,7 @@ struct BrowserFolderGroup: View {
         guard let request = deletionRequest else { return }
         deletionRequest = nil
         guard isDeferredAssignmentAvailable(request) else { return }
-        context.browser.deleteFolder(request.folderID, matching: request.spaceAssignment)
+        context.browser.deleteFolderAndContents(request.folderID, matching: request.spaceAssignment)
     }
 
     private var folderColorBinding: Binding<BrandColor> {
@@ -388,7 +480,47 @@ extension BrowserFolderGroup: @MainActor Equatable {
     /// as SwiftUI compares a view's inputs: a list that redraws leaves them be.
     static func == (lhs: BrowserFolderGroup, rhs: BrowserFolderGroup) -> Bool {
         lhs.folder === rhs.folder && lhs.depth == rhs.depth && lhs.context == rhs.context
-            && lhs.inheritedKeptTabID == rhs.inheritedKeptTabID
+            && lhs.inheritedKeptTabIDs == rhs.inheritedKeptTabIDs
+    }
+}
+
+/// Hands the folders that held back what they hold their turns one after
+/// another, each a beat after the one before it, so however busy the window
+/// is, no two draw what they hold in the same frame.
+@MainActor
+private final class BrowserFolderContentsTurns {
+    // MARK: - Static Variables
+
+    static let shared = BrowserFolderContentsTurns()
+
+    /// How long after one folder takes its turn the next may take its own:
+    /// a little over a frame, so the first is drawn before the next starts.
+    private static let interval: Duration = .milliseconds(20)
+
+    // MARK: - Variables
+
+    /// The turn asked for last, which the next waits on.
+    private var last: Task<Void, Never>?
+
+    // MARK: - Actions - Turns
+
+    /// Waits for every turn asked for before this one, then a beat. Throws
+    /// when the asking task was cancelled meanwhile, as when its folder went.
+    /// A cancelled turn skips its beat, so the turns after it go on without
+    /// waiting for it.
+    func take() async throws {
+        let previous = last
+        let turn = Task { @MainActor in
+            await previous?.value
+            try? await Task.sleep(for: Self.interval)
+        }
+        last = turn
+        await withTaskCancellationHandler {
+            await turn.value
+        } onCancel: {
+            turn.cancel()
+        }
+        try Task.checkCancellation()
     }
 }
 

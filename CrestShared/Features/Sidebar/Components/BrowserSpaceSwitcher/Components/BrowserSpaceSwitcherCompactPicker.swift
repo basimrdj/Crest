@@ -9,12 +9,19 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     let selectSpace: (UUID) -> Void
     let allocation: BrowserSpaceSwitcherCompactAllocation
     var moveSpace: ((UUID, UUID) -> Void)? = nil
+    /// The picker's style, before its corners take the tabs' radius.
     var style: CrestSpaceIconPickerStyle = .compact
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.spacePagerPresentation) private var spacePagerPresentation
+    private let appearance = BrowserDeviceAppearanceStore.shared
     @State private var overflow = BrowserSpacePickerOverflow()
     @State private var viewport = CGRect.zero
+
+    /// The picker's style with corners as round as the tabs' and pins'.
+    private var shapedStyle: CrestSpaceIconPickerStyle {
+        style.rounded(CGFloat(appearance.sidebarCornerRadius))
+    }
 
     var body: some View {
         ScrollViewReader { reader in
@@ -47,7 +54,14 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     }
 
     private var track: some View {
-        ScrollView(.horizontal) {
+        let style = shapedStyle
+        let showsDots = appearance.spaceIcons.showsDots
+        let dots =
+            showsDots
+            ? BrowserSpaceDot.Field(
+                profiles: Dictionary(spaces.map { ($0.id, $0.profileID) }, uniquingKeysWith: { first, _ in first }),
+                selectedSpaceID: selectedSpaceID) : nil
+        return ScrollView(.horizontal) {
             CrestSpaceIconPicker(
                 spaces: spaces,
                 selectedSpaceID: selectedSpaceID,
@@ -57,15 +71,16 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 moveSpace: moveSpace,
                 reorderViewport: viewport,
                 selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil,
-                segmentSize: CGSize(width: segmentWidth, height: style.segmentHeight)
+                segmentSize: CGSize(width: segmentWidth, height: style.segmentHeight),
+                drawsSurfaces: !showsDots
             ) { space in
                 if let reorderState {
                     BrowserSpacePickerSegment(
                         space: space, reorderState: reorderState, metrics: metrics,
-                        visibleRegion: viewport.isEmpty ? nil : viewport
+                        visibleRegion: viewport.isEmpty ? nil : viewport, dots: dots
                     )
                 } else {
-                    BrowserSpacePickerIcon(space: space, metrics: metrics)
+                    BrowserSpacePickerIcon(space: space, metrics: metrics, dots: dots)
                 }
             }
             .frame(minWidth: allocation.scrollViewportWidth, alignment: .center)

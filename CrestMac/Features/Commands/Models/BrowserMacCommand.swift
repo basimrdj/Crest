@@ -47,7 +47,8 @@ struct BrowserMacCommand {
     static let toggleSelectedTabSaved = BrowserMacCommand(.toggleSelectedTabSaved) { $0.toggleSelectedTabSaved() }
     static let duplicateTab = BrowserMacCommand(.duplicateTab) { $0.duplicateSelectedTab() }
     static let reopenClosedTab = BrowserMacCommand(.reopenClosedTab) { $0.reopenClosedTab() }
-    static let clearUnpinnedTabs = BrowserMacCommand(.clearUnpinnedTabs) { $0.clearCurrentTabs() }
+    static let clearOtherTabs = BrowserMacCommand(.clearOtherTabs) { $0.clearCurrentTabs(keepingShownTab: true) }
+    static let clearAllTabs = BrowserMacCommand(.clearAllTabs) { $0.clearCurrentTabs(keepingShownTab: false) }
     static let archiveTab = BrowserMacCommand(.archiveTab) { $0.archiveSelectedTab() }
     static let previousTab = BrowserMacCommand(.previousTab) { $0.selectPreviousTab() }
     static let nextTab = BrowserMacCommand(.nextTab) { $0.selectNextTab() }
@@ -110,6 +111,16 @@ struct BrowserMacCommand {
     static let copyPageLinkAsMarkdown = BrowserMacCommand(
         .copyPageLinkAsMarkdown, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLinkAsMarkdown() })
+    static let copyPageTitle = BrowserMacCommand(
+        .copyPageTitle, actsOnPage: true, isAvailable: { $0.commandPage?.live.title.isEmpty == false },
+        run: { $0.copyPageTitle() })
+    static let showPageQRCode = BrowserMacCommand(
+        .showPageQRCode, actsOnPage: true, isAvailable: { $0.commandPage?.linkToCopy != nil },
+        run: { $0.showPageQRCode() })
+    static let openPageInPrivateWindow = BrowserMacCommand(
+        .openPageInPrivateWindow, actsOnPage: true,
+        isAvailable: { $0.hasCommandPage && !$0.browser.isPrivateBrowsing && $0.windows != nil },
+        run: { $0.openPageInPrivateWindow() })
     static let sharePage = BrowserMacCommand(
         .sharePage, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.commandPage?.sharePage() })
@@ -133,6 +144,8 @@ struct BrowserMacCommand {
         .clearSiteCache, actsOnPage: true, isAvailable: { $0.commandPageShowsSite },
         run: { $0.clearCommandPageSiteData(.cache) })
     static let toggleSidebar = BrowserMacCommand(.toggleSidebar) { $0.toggleSidebar() }
+    static let collapseAllFolders = BrowserMacCommand(
+        .collapseAllFolders, isAvailable: { $0.canCollapseAllFolders }, run: { $0.collapseAllFolders() })
     static let showHistory = BrowserMacCommand(.showHistory) { $0.chrome.toggleUtility(.history) }
     static let showArchive = BrowserMacCommand(.showArchive) { $0.chrome.toggleUtility(.archive) }
     static let showDownloads = BrowserMacCommand(
@@ -156,6 +169,9 @@ struct BrowserMacCommand {
             guard let page = actions.pages.activePage else { return }
             page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
         })
+    static let openNextExtension = BrowserMacCommand(
+        .openNextExtension, actsOnPage: true, isAvailable: { $0.canOpenNextExtension },
+        withoutWindow: .opensNextExtensionOverKeyPopup, run: { $0.openNextExtension() })
     /// ⌘1–⌘9 and ⌃1–⌃9: the stop or Space the core says the number leads to now.
     static let selectNumbered = BrowserMacCommand(
         .selectNumbered, isAvailable: { actions, command in actions.numberedSelections[command] != nil },
@@ -171,7 +187,7 @@ struct BrowserMacCommand {
         back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned, toggleSelectedTabSaved,
         duplicateTab,
         reopenClosedTab,
-        clearUnpinnedTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
+        clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab, mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
         focusPreviousSplitCard, removeTabFromSplit, separateSplitTabs, moveSplitCardLeft, moveSplitCardRight,
         previousSpace, nextSpace,
@@ -179,11 +195,11 @@ struct BrowserMacCommand {
         findInPage, findNext, findPrevious, zoomIn, zoomOut,
         actualSize,
         copyPageLink,
-        copyPageLinkAsMarkdown,
+        copyPageLinkAsMarkdown, copyPageTitle, showPageQRCode, openPageInPrivateWindow,
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
-        toggleSidebar, showHistory, showArchive, showDownloads,
+        toggleSidebar, collapseAllFolders, showHistory, showArchive, showDownloads,
         showWebInspector,
-        toggleTranslationToolbar, toggleDeveloperToolbar, selectNumbered,
+        toggleTranslationToolbar, toggleDeveloperToolbar, openNextExtension, selectNumbered,
     ]
 
     // MARK: - Variables
@@ -294,6 +310,11 @@ struct BrowserMacWindowlessCommand {
     /// Opens an empty Quick Window beside the key one, in its Space.
     static let opensQuickWindowBesideKeyQuickWindow = BrowserMacWindowlessCommand(
         isAvailable: { $0.isQuickWindowKey }, run: { $0.openQuickWindowBesideKeyQuickWindow() })
+    /// Opens the next extension's popup over the window the key popup hangs
+    /// from: the popup hands Crest the keys its document leaves.
+    static let opensNextExtensionOverKeyPopup = BrowserMacWindowlessCommand(
+        isAvailable: { $0.keyChildParentPageActions?.canOpenNextExtension == true },
+        run: { $0.keyChildParentPageActions?.openNextExtension() })
     /// Opens the key Quick Window's palette from its address field, as Open
     /// Location does over a page, when the Quick Window has none yet.
     static let opensLocationInKeyQuickWindow = BrowserMacWindowlessCommand(

@@ -14,6 +14,10 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// the trailing accessory.
     let contentSpacing: CGFloat
 
+    /// The gap between the controls side by side in the trailing accessory,
+    /// such as Copy URL and Site Controls.
+    let accessorySpacing: CGFloat
+
     /// The inset between the field's surface and its content.
     let horizontalPadding: CGFloat
 
@@ -64,9 +68,16 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
     /// hit target as a row's trailing control.
     static let securityControlSize = BrowserTabTrailingControlMetrics.pointer.controlSize.height
 
+    /// The narrowest field that always draws Copy URL beside Site Controls,
+    /// which leaves the address about the width of a short domain. A narrower
+    /// field gives that room back to the address, and draws Copy URL in it
+    /// only while the pointer is over the field.
+    static let copyURLButtonMinimumWidth: CGFloat = 200
+
     /// A pointer shell: one exact 36pt band with the glyph column reserved.
     static let pointer = BrowserSidebarAddressFieldMetrics(
         contentSpacing: 7,
+        accessorySpacing: 2,
         horizontalPadding: 9,
         height: BrowserChromeLayout.addressHeight,
         growsWithContent: false,
@@ -77,19 +88,15 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
         clearControlFont: nil
     )
 
-    /// A touch shell: a full 44pt floor, a wider gutter, and controls sized for
-    /// a finger.
-    ///
-    /// The floor is a literal rather than `CrestLayout.sidebarRowHeight`, for
-    /// the same reason the touch trailing control is: this profile is compared
-    /// against from a suite hosted on macOS, where that token resolves to the
-    /// pointer shell's height, and the touch field still has to be 44.
+    /// A touch shell: a floor a finger can land on, a wider gutter, and
+    /// controls sized for a finger.
     static let touch = BrowserSidebarAddressFieldMetrics(
         contentSpacing: 8,
+        accessorySpacing: 4,
         horizontalPadding: 12,
-        height: 44,
+        height: CrestLayout.touchHitTarget,
         growsWithContent: true,
-        editingRingColor: Color.accentColor.opacity(0.7),
+        editingRingColor: CrestBrandTheme.accent.opacity(0.7),
         editingRingWidth: 1,
         leadingGlyphFont: .system(size: 13, weight: .medium),
         leadingGlyphSlot: nil,
