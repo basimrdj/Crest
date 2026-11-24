@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "autofill-space-owned-durable-storage",
+      "category": "improved",
+      "message": "Saved autofill identities now live in their own file per Space, write failures surface in Settings, undo their in-memory change, and never report a successful import that did not reach the disk."
+    },
+    {
+      "id": "arc-import-reliability",
+      "category": "improved",
+      "message": "Importing addresses from Arc now reports a database it could not fully read instead of silently importing part of it, and healthy Arc profiles can still be imported when another profile is unreadable."
+    }
+  ]
+}

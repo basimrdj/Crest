@@ -9,7 +9,7 @@ public struct AutofillIdentity: Identifiable, Hashable, Codable, Sendable {
 
     public var id: UUID
     public var spaceID: UUID
-    public var label: String // e.g., "Personal", "Work", "Home"
+    public var label: String  // e.g., "Personal", "Work", "Home"
     public var isDefault: Bool
 
     // Structured Name

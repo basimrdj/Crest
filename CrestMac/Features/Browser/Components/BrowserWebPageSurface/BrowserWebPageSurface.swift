@@ -115,7 +115,9 @@ struct BrowserWebPageSurface: View {
                 capabilities: capabilities
             )
 
-            if let autofillSession = page.autofillSession, autofillSession.isSuggestionPresented, let field = autofillSession.activeField {
+            if let autofillSession = page.autofillSession, autofillSession.isSuggestionPresented,
+                let field = autofillSession.activeField
+            {
                 BrowserAutofillSuggestionOverlay(
                     fieldRect: field.rect ?? CGRect(x: 20, y: 20, width: 200, height: 32),
                     identities: autofillSession.matchingIdentities,

@@ -356,7 +356,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             saveCredential: saveHTTPAuthenticationCredential
         )
         self.httpAuthenticationSession = httpAuthenticationSession
-        autofillSession = nil // Lazily initialized once actual page/Space privacy policy is applied
+        autofillSession = nil  // Lazily initialized once actual page/Space privacy policy is applied
         credentialSession = BrowserCredentialSession(
             spaceID: spaceID,
             core: downloadCenter.core,
@@ -428,13 +428,16 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 guard let self else { return }
                 guard let session = self.ensureAutofillSession() else { return }
                 if let dict = message.body as? [String: Any],
-                   let formID = dict["formID"] as? String,
-                   let frameToken = dict["frameToken"] as? String,
-                   let focusToken = dict["focusToken"] as? String {
+                    let formID = dict["formID"] as? String,
+                    let frameToken = dict["frameToken"] as? String,
+                    let focusToken = dict["focusToken"] as? String
+                {
                     let originString = "\(message.frame.securityProtocol)://\(message.frame.host):\(message.frame.port)"
                     if let event = dict["event"] as? String {
                         if event == "blur" {
-                            if self.autofillFocusRouter.shouldDismissOnBlur(formID: formID, frameToken: frameToken, focusToken: focusToken) {
+                            if self.autofillFocusRouter.shouldDismissOnBlur(
+                                formID: formID, frameToken: frameToken, focusToken: focusToken)
+                            {
                                 self.activeChromiumTargetFrame = nil
                                 session.dismiss()
                             }
@@ -668,18 +671,21 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isPrivateBrowsing = isPrivate
         engineAdapter.setPrivateBrowsing(isPrivate)
         #if os(macOS)
-        invalidateAutofillFocusTarget()
+            invalidateAutofillFocusTarget()
         #else
-        autofillSession?.dismiss()
+            autofillSession?.dismiss()
         #endif
-        autofillSession = BrowserAutofillSession(spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+        autofillSession = BrowserAutofillSession(
+            spaceID: spaceID, store: isPrivate ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
     }
 
     /// Accesses or initializes the autofill session ensuring privacy mode is strictly adhered to.
     func ensureAutofillSession() -> BrowserAutofillSession? {
         guard isPrivacyPolicyConfigured else { return nil }
         if let session = autofillSession { return session }
-        let session = BrowserAutofillSession(spaceID: spaceID, store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
+        let session = BrowserAutofillSession(
+            spaceID: spaceID,
+            store: isPrivateBrowsing ? BrowserAutofillStore(isPrivate: true) : BrowserAutofillStore.shared)
         autofillSession = session
         return session
     }
@@ -957,14 +963,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Evaluates autofill identity fill across engines (WebKit or Chromium content scripting).
     func fillAutofillIdentityOnCurrentEngine(_ identity: AutofillIdentity) async throws {
         #if os(macOS)
-        if webKitAdapter != nil {
-            try await fillAutofillIdentity(identity)
-            return
-        }
+            if webKitAdapter != nil {
+                try await fillAutofillIdentity(identity)
+                return
+            }
         #endif
         guard let scripting = pageEngine.contentScripting,
-              let session = autofillSession,
-              let activeFocus = autofillFocusRouter.activeFocus
+            let session = autofillSession,
+            let activeFocus = autofillFocusRouter.activeFocus
         else {
             return
         }
@@ -1274,9 +1280,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         navigationGeneration &+= 1
         activeChromiumTargetFrame = nil
         #if os(macOS)
-        invalidateAutofillFocusTarget()
+            invalidateAutofillFocusTarget()
         #else
-        autofillSession?.dismiss()
+            autofillSession?.dismiss()
         #endif
         // The site it goes to may have content blocking turned off, or on.
         if let url, let webKit = webKitAdapter {

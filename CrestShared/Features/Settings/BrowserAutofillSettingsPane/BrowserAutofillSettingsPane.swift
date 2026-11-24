@@ -47,10 +47,10 @@ struct BrowserAutofillSettingsPane: View {
             BrowserAutofillIdentityDetailView(
                 identity: identity,
                 onSave: { updated in
-                    autofillStore.save(updated)
+                    do { try autofillStore.save(updated) } catch {}
                 },
                 onDelete: { id in
-                    autofillStore.delete(id)
+                    do { try autofillStore.delete(id) } catch {}
                 }
             )
         }
@@ -99,7 +99,7 @@ struct BrowserAutofillSettingsPane: View {
                         HStack(spacing: CrestSpacing.medium) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.title3)
-                                .foregroundStyle(space.accent.tint.color)
+                                .foregroundStyle(space.settings.look.primaryColor.color)
 
                             VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
                                 HStack(spacing: CrestSpacing.small) {
@@ -110,7 +110,7 @@ struct BrowserAutofillSettingsPane: View {
                                             .font(CrestTypography.compactMetadata)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
-                                            .background(CrestColor.fillSubtle)
+                                            .background(CrestColor.selection)
                                             .clipShape(Capsule())
                                     }
                                 }
@@ -142,12 +142,12 @@ struct BrowserAutofillSettingsPane: View {
                             Button("Set as Default", systemImage: "star") {
                                 var copy = identity
                                 copy.isDefault = true
-                                autofillStore.save(copy)
+                                do { try autofillStore.save(copy) } catch {}
                             }
                         }
                         Divider()
                         Button("Delete Identity", systemImage: "trash", role: .destructive) {
-                            autofillStore.delete(identity.id)
+                            do { try autofillStore.delete(identity.id) } catch {}
                         }
                     }
                 }
@@ -155,8 +155,15 @@ struct BrowserAutofillSettingsPane: View {
         } header: {
             Text("Addresses & Identities")
         } footer: {
-            Text("Crest suggests saved identities when filling contact and shipping forms.")
-                .crestFormFootnote()
+            VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
+                if let failure = autofillStore.writeFailureMessage ?? autofillStore.loadFailureMessage {
+                    Label(failure, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                        .crestFormFootnote()
+                }
+                Text("Crest suggests saved identities when filling contact and shipping forms.")
+                    .crestFormFootnote()
+            }
         }
     }
 

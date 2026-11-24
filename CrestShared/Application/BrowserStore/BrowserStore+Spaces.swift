@@ -54,7 +54,10 @@ extension BrowserStore {
         try await dataDeleter.deleteData(for: deletion)
         try await credentialVault.deleteAll(in: id)
         await MainActor.run {
-            BrowserAutofillStore.shared.deleteIdentities(for: id)
+            do {
+                try BrowserAutofillStore.shared.deleteIdentities(for: id)
+            } catch {
+            }
         }
 
         try family.commit(
@@ -594,9 +597,10 @@ extension BrowserStore {
             throw BrowserAutofillStore.AutofillImportAuthorizationError.privateBrowsingActive
         }
 
-        return BrowserAutofillStore.DestinationAuthorizationToken(spaceID: spaceID) { [weak self, weak accessController] in
+        return BrowserAutofillStore.DestinationAuthorizationToken(spaceID: spaceID) {
+            [weak self, weak accessController] in
             guard let self, let accessController,
-                  let currentSpace = self.spaceModel(spaceID)
+                let currentSpace = self.spaceModel(spaceID)
             else {
                 return false
             }

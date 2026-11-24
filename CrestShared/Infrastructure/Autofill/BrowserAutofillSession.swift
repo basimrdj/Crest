@@ -168,11 +168,13 @@ public final class BrowserAutofillSession {
         ]
 
         let script = "return globalThis.__crestAutofillBridge?.fill(formID, values, section) === true;"
-        _ = try await evaluate(script, [
-            "formID": field.formID,
-            "values": payload,
-            "section": field.section ?? "",
-        ])
+        _ = try await evaluate(
+            script,
+            [
+                "formID": field.formID,
+                "values": payload,
+                "section": field.section ?? "",
+            ])
         activeField = nil
     }
 

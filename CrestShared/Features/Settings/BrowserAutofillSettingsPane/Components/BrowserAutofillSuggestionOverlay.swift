@@ -56,7 +56,7 @@ public struct BrowserAutofillSuggestionOverlay: View {
                                         Text("Default")
                                             .font(CrestTypography.compactMetadata)
                                             .padding(.horizontal, 4)
-                                            .background(CrestColor.fillSubtle)
+                                            .background(CrestColor.selection)
                                             .clipShape(Capsule())
                                     }
                                 }
@@ -79,7 +79,8 @@ public struct BrowserAutofillSuggestionOverlay: View {
                             }
                             .onEnded { value in
                                 // If dragged away from the button surface, cancel selection hold
-                                let isOutside = value.translation.width > 100 || value.translation.width < -100
+                                let isOutside =
+                                    value.translation.width > 100 || value.translation.width < -100
                                     || value.translation.height > 60 || value.translation.height < -60
                                 if isOutside {
                                     onDismiss()
@@ -88,7 +89,7 @@ public struct BrowserAutofillSuggestionOverlay: View {
                     )
                     .background(
                         (hoveredID == identity.id || selectedIndex == index)
-                            ? CrestColor.fillSubtle
+                            ? CrestColor.selection
                             : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -105,12 +106,12 @@ public struct BrowserAutofillSuggestionOverlay: View {
             .frame(minWidth: 240, maxWidth: 320)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(CrestColor.chromeMaterial)
+                    .fill(CrestColor.chromeSurface)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(CrestColor.separator, lineWidth: 0.5)
+                    .stroke(CrestBrandTheme.line, lineWidth: 0.5)
             )
             .onGeometryChange(for: CGSize.self) { proxy in
                 proxy.size

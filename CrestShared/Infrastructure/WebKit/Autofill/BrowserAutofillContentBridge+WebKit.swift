@@ -4,9 +4,9 @@ import WebKit
 // MARK: - Actions - WebKit
 
 extension BrowserAutofillContentBridge {
-    public static let contentWorld = WKContentWorld.world(name: "com.pauldavis.crest.autofill")
+    static let contentWorld = WKContentWorld.world(name: "com.pauldavis.crest.autofill")
 
-    public static func install(
+    static func install(
         in userContentController: WKUserContentController,
         receive: @escaping @MainActor (WKScriptMessage) -> Void
     ) -> BrowserScriptMessageProxy {

@@ -148,8 +148,8 @@ extension BrowserPage: WebKitPageHosting {
 
 // MARK: - Autofill
 
-private var activeAutofillTargetFrameKey: UInt8 = 0
-private var autofillFocusRouterKey: UInt8 = 0
+nonisolated(unsafe) private var activeAutofillTargetFrameKey: UInt8 = 0
+nonisolated(unsafe) private var autofillFocusRouterKey: UInt8 = 0
 
 extension BrowserPage {
     var activeAutofillTargetFrame: WKFrameInfo? {
@@ -203,7 +203,8 @@ extension BrowserPage {
         guard let session = ensureAutofillSession() else { return }
 
         guard let dict = scriptMessage.body as? [String: Any],
-            let event = dict["event"] as? String else { return }
+            let event = dict["event"] as? String
+        else { return }
 
         let origin = scriptMessage.frameInfo.securityOrigin
         guard !origin.host.isEmpty else { return }
@@ -227,13 +228,15 @@ extension BrowserPage {
 
         guard event == "focus", let formID else { return }
 
-        guard let activeFocus = autofillFocusRouter.acceptFocus(
-            formID: formID,
-            frameToken: frameToken,
-            focusToken: focusToken,
-            securityOrigin: originString,
-            navigationGeneration: navigationGeneration
-        ) else {
+        guard
+            let activeFocus = autofillFocusRouter.acceptFocus(
+                formID: formID,
+                frameToken: frameToken,
+                focusToken: focusToken,
+                securityOrigin: originString,
+                navigationGeneration: navigationGeneration
+            )
+        else {
             return
         }
 

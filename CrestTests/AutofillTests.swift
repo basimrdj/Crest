@@ -2,8 +2,8 @@ import Foundation
 import SQLite3
 import Testing
 
-@testable import CrestShared
 @testable import CrestMac
+@testable import CrestShared
 
 @Suite("Autofill and Arc Migration Tests")
 struct AutofillTests {
@@ -32,8 +32,9 @@ struct AutofillTests {
 
     @Test("BrowserAutofillStore enforces strict Space isolation")
     @MainActor
-    func testSpaceIsolation() {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+    func testSpaceIsolation() throws {
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceA = UUID()
         let spaceB = UUID()
 
@@ -50,8 +51,8 @@ struct AutofillTests {
             email: "bob@personal.com"
         )
 
-        store.save(idA)
-        store.save(idB)
+        try store.save(idA)
+        try store.save(idB)
 
         let spaceAIdentities = store.identities(in: spaceA)
         let spaceBIdentities = store.identities(in: spaceB)
@@ -63,16 +64,17 @@ struct AutofillTests {
         #expect(spaceBIdentities.first?.fullName == "Bob Private")
 
         // Clean up
-        store.deleteIdentities(for: spaceA)
-        store.deleteIdentities(for: spaceB)
+        try store.deleteIdentities(for: spaceA)
+        try store.deleteIdentities(for: spaceB)
         #expect(store.identities(in: spaceA).isEmpty)
         #expect(store.identities(in: spaceB).isEmpty)
     }
 
     @Test("BrowserAutofillStore handles deduplication during import")
     @MainActor
-    func testImportDeduplication() {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+    func testImportDeduplication() throws {
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let destinationSpace = UUID()
 
         let existing = AutofillIdentity(
@@ -82,10 +84,10 @@ struct AutofillTests {
             email: "carol@marvel.com",
             streetAddress: "100 Main St"
         )
-        store.save(existing)
+        try store.save(existing)
 
         let duplicate = AutofillIdentity(
-            spaceID: UUID(), // different origin space
+            spaceID: UUID(),  // different origin space
             label: "Arc Import",
             fullName: "Carol Danvers",
             email: "carol@marvel.com",
@@ -109,13 +111,14 @@ struct AutofillTests {
         #expect(allInSpace.count == 2)
 
         // Clean up
-        store.deleteIdentities(for: destinationSpace)
+        try store.deleteIdentities(for: destinationSpace)
     }
 
     @Test("BrowserAutofillSession manages focus and fill lifecycle without submitting")
     @MainActor
     func testSessionFillLifecycle() async throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -124,7 +127,7 @@ struct AutofillTests {
             fullName: "Grace Hopper",
             email: "grace@navy.mil"
         )
-        store.save(identity)
+        try store.save(identity)
 
         let session = BrowserAutofillSession(spaceID: spaceID, store: store)
 
@@ -136,7 +139,7 @@ struct AutofillTests {
                 "event": "focus",
                 "formID": "test-form-1",
                 "fieldType": "email",
-                "fieldRect": ["x": 100.0, "y": 200.0, "width": 150.0, "height": 30.0]
+                "fieldRect": ["x": 100.0, "y": 200.0, "width": 150.0, "height": 30.0],
             ],
             frameSecurityOrigin: "https://navy.mil:443",
             isMainFrame: true,
@@ -172,7 +175,7 @@ struct AutofillTests {
         }
 
         #expect(session.activeField == nil)
-        store.deleteIdentities(for: spaceID)
+        try store.deleteIdentities(for: spaceID)
     }
 
     @Test("BrowserAutofillSuggestionOverlay handles empty identities safely")
@@ -193,7 +196,7 @@ struct AutofillTests {
 
     @Test("BrowserAutofillStore enforces zero disk footprint in private browsing")
     @MainActor
-    func testPrivateStoreZeroDiskFootprint() {
+    func testPrivateStoreZeroDiskFootprint() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let privateStore = BrowserAutofillStore(isPrivate: true, customDirectory: tempDir)
         let spaceID = UUID()
@@ -205,7 +208,7 @@ struct AutofillTests {
             email: "private@user.com"
         )
 
-        privateStore.save(identity)
+        try privateStore.save(identity)
         #expect(privateStore.identities(in: spaceID).count == 1)
 
         // Verify no files written to disk
@@ -215,7 +218,7 @@ struct AutofillTests {
 
     @Test("Concurrent edits across shared store consumers survive reload without loss")
     @MainActor
-    func testConcurrentSharedStoreEdits() {
+    func testConcurrentSharedStoreEdits() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let storeA = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
         let space1 = UUID()
@@ -224,8 +227,8 @@ struct AutofillTests {
         let id1 = AutofillIdentity(spaceID: space1, label: "Page1", fullName: "User One")
         let id2 = AutofillIdentity(spaceID: space2, label: "Page2", fullName: "User Two")
 
-        storeA.save(id1)
-        storeA.save(id2)
+        try storeA.save(id1)
+        try storeA.save(id2)
 
         let storeB = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
         #expect(storeB.identities(in: space1).count == 1)
@@ -235,7 +238,8 @@ struct AutofillTests {
     @Test("BrowserAutofillSession rejects focus or fill across navigation generations or mismatched origins")
     @MainActor
     func testSessionOriginAndGenerationBinding() async throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -244,7 +248,7 @@ struct AutofillTests {
             fullName: "Ada Lovelace",
             email: "ada@example.com"
         )
-        store.save(identity)
+        try store.save(identity)
 
         let session = BrowserAutofillSession(spaceID: spaceID, store: store)
 
@@ -253,7 +257,7 @@ struct AutofillTests {
             [
                 "event": "focus",
                 "formID": "form-1",
-                "fieldType": "email"
+                "fieldType": "email",
             ],
             frameSecurityOrigin: "https://example.com:443",
             isMainFrame: true,
@@ -283,7 +287,7 @@ struct AutofillTests {
             [
                 "event": "focus",
                 "formID": "form-1",
-                "fieldType": "email"
+                "fieldType": "email",
             ],
             frameSecurityOrigin: "https://example.com:443",
             isMainFrame: true,
@@ -308,8 +312,9 @@ struct AutofillTests {
 
     @Test("Synthetic focus delivered before privacy configuration is safely ignored")
     @MainActor
-    func testPrePrivacyPolicyMessageRejection() {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+    func testPrePrivacyPolicyMessageRejection() throws {
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -318,7 +323,7 @@ struct AutofillTests {
             fullName: "Secret Agent",
             email: "agent@crest.test"
         )
-        store.save(identity)
+        try store.save(identity)
 
         // Simulate a fresh session where privacy is unresolved
         var sessionCreated = false
@@ -344,7 +349,8 @@ struct AutofillTests {
     @Test("BrowserAutofillSession fails closed on missing, opaque or mismatched origins and wrong spaces")
     @MainActor
     func testSessionStrictFailClosed() async throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
         let otherSpaceID = UUID()
 
@@ -360,8 +366,8 @@ struct AutofillTests {
             fullName: "Attacker User",
             email: "attacker@other.com"
         )
-        store.save(identity)
-        store.save(otherSpaceIdentity)
+        try store.save(identity)
+        try store.save(otherSpaceIdentity)
 
         let session = BrowserAutofillSession(spaceID: spaceID, store: store)
 
@@ -435,7 +441,8 @@ struct AutofillTests {
     @Test("BrowserAutofillSession and bridge reject cross-frame blur and mismatched frame handles")
     @MainActor
     func testFrameHandleAndScopedBlur() async throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -444,7 +451,7 @@ struct AutofillTests {
             fullName: "Frame Tester",
             email: "frame@test.org"
         )
-        store.save(identity)
+        try store.save(identity)
 
         let session = BrowserAutofillSession(spaceID: spaceID, store: store)
 
@@ -493,9 +500,18 @@ struct AutofillTests {
         let router = BrowserAutofillFocusRouter()
 
         // 1. Reject tokenless or empty focus
-        #expect(router.acceptFocus(formID: "form-1", frameToken: nil, focusToken: "focus-1", securityOrigin: "https://example.com:443", navigationGeneration: 1) == nil)
-        #expect(router.acceptFocus(formID: "form-1", frameToken: "frame-1", focusToken: "", securityOrigin: "https://example.com:443", navigationGeneration: 1) == nil)
-        #expect(router.acceptFocus(formID: "form-1", frameToken: "frame-1", focusToken: "focus-1", securityOrigin: "null", navigationGeneration: 1) == nil)
+        #expect(
+            router.acceptFocus(
+                formID: "form-1", frameToken: nil, focusToken: "focus-1", securityOrigin: "https://example.com:443",
+                navigationGeneration: 1) == nil)
+        #expect(
+            router.acceptFocus(
+                formID: "form-1", frameToken: "frame-1", focusToken: "", securityOrigin: "https://example.com:443",
+                navigationGeneration: 1) == nil)
+        #expect(
+            router.acceptFocus(
+                formID: "form-1", frameToken: "frame-1", focusToken: "focus-1", securityOrigin: "null",
+                navigationGeneration: 1) == nil)
         #expect(router.activeFocus == nil)
 
         // 2. Accept valid focus
@@ -608,7 +624,7 @@ struct AutofillTests {
 
     @Test("Space deletion purges all assigned identities and persists cleanly")
     @MainActor
-    func testSpacePurgeLifecycle() {
+    func testSpacePurgeLifecycle() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
         let spaceToDelete = UUID()
@@ -617,13 +633,13 @@ struct AutofillTests {
         let id1 = AutofillIdentity(spaceID: spaceToDelete, label: "To Delete", fullName: "Doomed User")
         let id2 = AutofillIdentity(spaceID: spaceToKeep, label: "To Keep", fullName: "Surviving User")
 
-        store.save(id1)
-        store.save(id2)
+        try store.save(id1)
+        try store.save(id2)
         #expect(store.identities(in: spaceToDelete).count == 1)
         #expect(store.identities(in: spaceToKeep).count == 1)
 
         // Delete space
-        store.deleteIdentities(for: spaceToDelete)
+        try store.deleteIdentities(for: spaceToDelete)
         #expect(store.identities(in: spaceToDelete).isEmpty)
         #expect(store.identities(in: spaceToKeep).count == 1)
 
@@ -647,11 +663,15 @@ struct AutofillTests {
             return
         }
         sqlite3_exec(db1, "CREATE TABLE local_addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
-        sqlite3_exec(db1, "CREATE TABLE local_addresses_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
+        sqlite3_exec(
+            db1, "CREATE TABLE local_addresses_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
         sqlite3_exec(db1, "INSERT INTO local_addresses VALUES ('guid-local');", nil, nil, nil)
-        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 7, 'Local Tester');", nil, nil, nil)
-        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 9, 'local@test.com');", nil, nil, nil)
-        sqlite3_exec(db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 30, '456 Branch Ave');", nil, nil, nil)
+        sqlite3_exec(
+            db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 7, 'Local Tester');", nil, nil, nil)
+        sqlite3_exec(
+            db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 9, 'local@test.com');", nil, nil, nil)
+        sqlite3_exec(
+            db1, "INSERT INTO local_addresses_type_tokens VALUES ('guid-local', 30, '456 Branch Ave');", nil, nil, nil)
         sqlite3_close(db1)
 
         let localRecords = try BrowserAutofillImportReader.readProfiles(from: localDB)
@@ -672,9 +692,12 @@ struct AutofillTests {
         sqlite3_exec(db2, "CREATE TABLE contact_info (guid TEXT PRIMARY KEY);", nil, nil, nil)
         sqlite3_exec(db2, "CREATE TABLE contact_info_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
         sqlite3_exec(db2, "INSERT INTO contact_info VALUES ('guid-contact');", nil, nil, nil)
-        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 7, 'Contact Person');", nil, nil, nil)
-        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 9, 'contact@test.com');", nil, nil, nil)
-        sqlite3_exec(db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 30, '789 Remote St');", nil, nil, nil)
+        sqlite3_exec(
+            db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 7, 'Contact Person');", nil, nil, nil)
+        sqlite3_exec(
+            db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 9, 'contact@test.com');", nil, nil, nil)
+        sqlite3_exec(
+            db2, "INSERT INTO contact_info_type_tokens VALUES ('guid-contact', 30, '789 Remote St');", nil, nil, nil)
         sqlite3_close(db2)
 
         let contactRecords = try BrowserAutofillImportReader.readProfiles(from: contactDB)
@@ -704,7 +727,8 @@ struct AutofillTests {
     @Test("Arc destination import fails closed if Space becomes locked or private between preview and commit")
     @MainActor
     func testDestinationSpaceCommitTimeRevalidation() throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -762,7 +786,8 @@ struct AutofillTests {
         sqlite3_exec(writerDB, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
         sqlite3_exec(writerDB, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
         sqlite3_exec(writerDB, "INSERT INTO addresses VALUES ('guid-wal');", nil, nil, nil)
-        sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 7, 'WAL Concurrent Tester');", nil, nil, nil)
+        sqlite3_exec(
+            writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 7, 'WAL Concurrent Tester');", nil, nil, nil)
         sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 9, 'wal@test.org');", nil, nil, nil)
         sqlite3_exec(writerDB, "INSERT INTO address_type_tokens VALUES ('guid-wal', 30, '100 WAL Way');", nil, nil, nil)
 
@@ -848,7 +873,8 @@ struct AutofillTests {
     @Test("BrowserAutofillSession passes section token to evaluate to enforce shipping and billing isolation")
     @MainActor
     func testSessionSectionIsolation() async throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let identity = AutofillIdentity(
@@ -857,7 +883,7 @@ struct AutofillTests {
             fullName: "Shipping Receiver",
             streetAddress: "500 Logistics Way"
         )
-        store.save(identity)
+        try store.save(identity)
 
         let session = BrowserAutofillSession(spaceID: spaceID, store: store)
 
@@ -867,7 +893,7 @@ struct AutofillTests {
                 "event": "focus",
                 "formID": "checkout-form",
                 "fieldType": "streetAddress",
-                "section": "shipping"
+                "section": "shipping",
             ],
             frameSecurityOrigin: "https://shop.example.com:443",
             isMainFrame: true,
@@ -889,7 +915,9 @@ struct AutofillTests {
             return true
         }
 
-        #expect(evaluatedParams["section"] as? String == "shipping", "Must forward focused field section token to JavaScript evaluate")
+        #expect(
+            evaluatedParams["section"] as? String == "shipping",
+            "Must forward focused field section token to JavaScript evaluate")
     }
 
     @Test("Compound section-mode keys isolate mixed shipping, billing, and unsectioned fields")
@@ -921,7 +949,7 @@ struct AutofillTests {
             ("input-1", "section-order shipping street-address"),
             ("input-2", "section-order billing street-address"),
             ("input-3", "street-address"),
-            ("input-4", "section-order shipping postal-code")
+            ("input-4", "section-order shipping postal-code"),
         ]
 
         let filledIDs = fields.compactMap { id, ac -> String? in
@@ -929,7 +957,9 @@ struct AutofillTests {
             return inputSection == shippingTarget ? id : nil
         }
 
-        #expect(filledIDs == ["input-1", "input-4"], "Must strictly isolate to matching compound section group, excluding billing and unsectioned fields")
+        #expect(
+            filledIDs == ["input-1", "input-4"],
+            "Must strictly isolate to matching compound section group, excluding billing and unsectioned fields")
     }
 
     @Test("Arc reader extracts addressLine2 and preserves line1 without truncation")
@@ -946,8 +976,10 @@ struct AutofillTests {
         sqlite3_exec(db, "CREATE TABLE addresses (guid TEXT PRIMARY KEY);", nil, nil, nil)
         sqlite3_exec(db, "CREATE TABLE address_type_tokens (guid TEXT, type INTEGER, value TEXT);", nil, nil, nil)
         sqlite3_exec(db, "INSERT INTO addresses VALUES ('guid-line2');", nil, nil, nil)
-        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 7, 'Apartment Resident');", nil, nil, nil)
-        sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 30, '742 Evergreen Terrace');", nil, nil, nil)
+        sqlite3_exec(
+            db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 7, 'Apartment Resident');", nil, nil, nil)
+        sqlite3_exec(
+            db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 30, '742 Evergreen Terrace');", nil, nil, nil)
         sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 31, 'Apt 4B');", nil, nil, nil)
         sqlite3_exec(db, "INSERT INTO address_type_tokens VALUES ('guid-line2', 33, 'Springfield');", nil, nil, nil)
         sqlite3_close(db)
@@ -992,7 +1024,8 @@ struct AutofillTests {
 
         var aggregated: [ArcAutofillProfileRecord] = []
         for profile in discovered {
-            let records = try BrowserAutofillImportReader.readProfiles(from: profile.databaseURL, profileName: profile.profileName)
+            let records = try BrowserAutofillImportReader.readProfiles(
+                from: profile.databaseURL, profileName: profile.profileName)
             aggregated.append(contentsOf: records)
         }
 
@@ -1004,12 +1037,14 @@ struct AutofillTests {
     @Test("BrowserAutofillStore deduplicates redundant records within the same incoming import batch")
     @MainActor
     func testIntraBatchDeduplication() throws {
-        let store = BrowserAutofillStore(customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let store = BrowserAutofillStore(
+            customDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         let spaceID = UUID()
 
         let id1 = AutofillIdentity(spaceID: spaceID, label: "First", fullName: "Same Name", email: "same@example.com")
         let id2 = AutofillIdentity(spaceID: spaceID, label: "Second", fullName: "Same Name", email: "same@example.com")
-        let id3 = AutofillIdentity(spaceID: spaceID, label: "Unique", fullName: "Unique User", email: "unique@example.com")
+        let id3 = AutofillIdentity(
+            spaceID: spaceID, label: "Unique", fullName: "Unique User", email: "unique@example.com")
 
         let token = BrowserAutofillStore.DestinationAuthorizationToken(spaceID: spaceID) { true }
         let result = try store.importIdentities([id1, id2, id3], into: spaceID, authorization: token)
@@ -1017,5 +1052,104 @@ struct AutofillTests {
         #expect(result.importedCount == 2)
         #expect(result.duplicateCount == 1, "Must deduplicate identical items inside the incoming batch")
         #expect(store.identities(in: spaceID).count == 2)
+    }
+
+    @Test("Persistence keeps each Space's identities in its own file")
+    @MainActor
+    func testPerSpaceFileLayout() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        let spaceA = UUID()
+        let spaceB = UUID()
+
+        let idA = AutofillIdentity(spaceID: spaceA, label: "Home A", fullName: "Ann Address")
+        let idB = AutofillIdentity(spaceID: spaceB, label: "Home B", fullName: "Ben Address")
+        try store.save(idA)
+        try store.save(idB)
+
+        let fileA = tempDir.appendingPathComponent("Spaces/\(spaceA.uuidString)/identities.json")
+        let fileB = tempDir.appendingPathComponent("Spaces/\(spaceB.uuidString)/identities.json")
+        #expect(FileManager.default.fileExists(atPath: fileA.path))
+        #expect(FileManager.default.fileExists(atPath: fileB.path))
+
+        let dataA = try Data(contentsOf: fileA)
+        let decodedA = try JSONDecoder().decode([AutofillIdentity].self, from: dataA)
+        #expect(decodedA.count == 1)
+        #expect(decodedA.first?.spaceID == spaceA)
+        #expect(decodedA.first?.fullName == "Ann Address")
+
+        #expect(!FileManager.default.fileExists(atPath: tempDir.appendingPathComponent("identities.json").path))
+
+        let reloaded = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(reloaded.identities(in: spaceA).count == 1)
+        #expect(reloaded.identities(in: spaceB).count == 1)
+    }
+
+    @Test("Failed durable writes throw and roll back the in-memory change")
+    @MainActor
+    func testPersistFailureRollsBack() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let blockedSpacesPath = tempDir.appendingPathComponent("Spaces")
+        try Data("not a directory".utf8).write(to: blockedSpacesPath)
+
+        let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        let spaceID = UUID()
+        let identity = AutofillIdentity(spaceID: spaceID, label: "Blocked", fullName: "Write Failure")
+
+        #expect(throws: BrowserAutofillPersistenceError.self) {
+            try store.save(identity)
+        }
+        #expect(store.identities(in: spaceID).isEmpty, "In-memory state must roll back when the write fails")
+        #expect(store.writeFailureMessage != nil)
+
+        let reloaded = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(reloaded.identities(in: spaceID).isEmpty, "No phantom records may survive a failed write")
+    }
+
+    @Test("Legacy single-file identities migrate into per-Space files and do not resurrect")
+    @MainActor
+    func testLegacyFileMigration() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let spaceID = UUID()
+        let survivorSpaceID = UUID()
+
+        let legacyIdentity = AutofillIdentity(spaceID: spaceID, label: "Legacy", fullName: "Old Layout")
+        let survivorIdentity = AutofillIdentity(spaceID: survivorSpaceID, label: "Kept", fullName: "Still Here")
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Spaces/\(survivorSpaceID.uuidString)"),
+            withIntermediateDirectories: true)
+        try JSONEncoder().encode([legacyIdentity]).write(
+            to: tempDir.appendingPathComponent("Spaces/\(spaceID.uuidString)/identities.json"))
+        let legacyURL = tempDir.appendingPathComponent("identities.json")
+        try JSONEncoder().encode([legacyIdentity, survivorIdentity]).write(to: legacyURL)
+
+        let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(store.identities(in: spaceID).count == 1)
+        #expect(store.identities(in: survivorSpaceID).count == 1)
+        #expect(
+            !FileManager.default.fileExists(atPath: legacyURL.path),
+            "The legacy file must be migrated away, never reloaded after deletion")
+
+        try store.deleteIdentities(for: spaceID)
+        let reloaded = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(reloaded.identities(in: spaceID).isEmpty, "Deleted records must not return through the legacy file")
+        #expect(reloaded.identities(in: survivorSpaceID).count == 1)
+    }
+
+    @Test("An unreadable per-Space file is visible as a load failure, never a silent wipe")
+    @MainActor
+    func testCorruptSpaceFileReportsLoadFailure() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Spaces/00000000-0000-0000-0000-000000000000"),
+            withIntermediateDirectories: true
+        )
+        try Data("{ not json }".utf8).write(
+            to: tempDir.appendingPathComponent("Spaces/00000000-0000-0000-0000-000000000000/identities.json")
+        )
+        let store = BrowserAutofillStore(isPrivate: false, customDirectory: tempDir)
+        #expect(store.identities.isEmpty)
+        #expect(store.loadFailureMessage != nil, "An unreadable Space file must be visible, not silently ignored")
     }
 }

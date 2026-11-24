@@ -105,7 +105,9 @@ public final class BrowserAutofillImportReader {
         return sqlite3_step(statement) == SQLITE_ROW
     }
 
-    public static func readProfiles(from databaseURL: URL, profileName: String = "Default") throws -> [ArcAutofillProfileRecord] {
+    public static func readProfiles(from databaseURL: URL, profileName: String = "Default") throws
+        -> [ArcAutofillProfileRecord]
+    {
         guard FileManager.default.fileExists(atPath: databaseURL.path) else {
             throw BrowserAutofillImportError.fileNotFound
         }
@@ -136,15 +138,20 @@ public final class BrowserAutofillImportReader {
 
         // Check which schema tables actually exist in sqlite_master
         if tableExists("addresses", in: database) && tableExists("address_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "addresses", tokenTable: "address_type_tokens", from: database, profileName: profileName)
+            return try readAddressTokenTable(
+                mainTable: "addresses", tokenTable: "address_type_tokens", from: database, profileName: profileName)
         }
 
         if tableExists("local_addresses", in: database) && tableExists("local_addresses_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database, profileName: profileName)
+            return try readAddressTokenTable(
+                mainTable: "local_addresses", tokenTable: "local_addresses_type_tokens", from: database,
+                profileName: profileName)
         }
 
         if tableExists("contact_info", in: database) && tableExists("contact_info_type_tokens", in: database) {
-            return try readAddressTokenTable(mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database, profileName: profileName)
+            return try readAddressTokenTable(
+                mainTable: "contact_info", tokenTable: "contact_info_type_tokens", from: database,
+                profileName: profileName)
         }
 
         if tableExists("autofill_profiles", in: database) {
@@ -172,7 +179,12 @@ public final class BrowserAutofillImportReader {
         defer { sqlite3_finalize(statement) }
 
         var dict: [String: [Int32: String]] = [:]
-        while sqlite3_step(statement) == SQLITE_ROW {
+        while true {
+            let stepResult = sqlite3_step(statement)
+            if stepResult == SQLITE_DONE { break }
+            guard stepResult == SQLITE_ROW else {
+                throw BrowserAutofillImportError.unreadableDatabase
+            }
             guard let guid = string(statement, column: 0) else { continue }
             let type = sqlite3_column_int(statement, 1)
             let value = string(statement, column: 2) ?? ""
@@ -191,7 +203,9 @@ public final class BrowserAutofillImportReader {
                 fullName = [first, last].filter { !$0.isEmpty }.joined(separator: " ")
             }
 
-            let line1 = fields[ChromiumFieldType.addressHomeLine1.rawValue] ?? fields[ChromiumFieldType.addressHomeStreetAddress.rawValue] ?? ""
+            let line1 =
+                fields[ChromiumFieldType.addressHomeLine1.rawValue] ?? fields[
+                    ChromiumFieldType.addressHomeStreetAddress.rawValue] ?? ""
             let line2 = fields[ChromiumFieldType.addressHomeLine2.rawValue] ?? ""
 
             return ArcAutofillProfileRecord(
@@ -211,7 +225,9 @@ public final class BrowserAutofillImportReader {
         }
     }
 
-    private static func readStandardProfiles(from database: OpaquePointer, profileName: String) throws -> [ArcAutofillProfileRecord] {
+    private static func readStandardProfiles(from database: OpaquePointer, profileName: String) throws
+        -> [ArcAutofillProfileRecord]
+    {
         let sql = """
             SELECT p.guid,
                    COALESCE(n.full_name, ''),
@@ -233,12 +249,17 @@ public final class BrowserAutofillImportReader {
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
             let statement
         else {
-            return []
+            throw BrowserAutofillImportError.unreadableDatabase
         }
         defer { sqlite3_finalize(statement) }
 
         var records: [ArcAutofillProfileRecord] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        while true {
+            let stepResult = sqlite3_step(statement)
+            if stepResult == SQLITE_DONE { break }
+            guard stepResult == SQLITE_ROW else {
+                throw BrowserAutofillImportError.unreadableDatabase
+            }
             guard let guid = string(statement, column: 0) else { continue }
             let fullName = string(statement, column: 1) ?? ""
             let companyName = string(statement, column: 2) ?? ""
@@ -269,8 +290,11 @@ public final class BrowserAutofillImportReader {
         return records
     }
 
-    private static func readLegacyProfiles(from database: OpaquePointer, profileName: String) throws -> [ArcAutofillProfileRecord] {
-        let legacySql = "SELECT guid, company_name, street_address, city, state, zipcode, country_code FROM autofill_profiles"
+    private static func readLegacyProfiles(from database: OpaquePointer, profileName: String) throws
+        -> [ArcAutofillProfileRecord]
+    {
+        let legacySql =
+            "SELECT guid, company_name, street_address, city, state, zipcode, country_code FROM autofill_profiles"
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, legacySql, -1, &statement, nil) == SQLITE_OK,
             let statement
@@ -280,7 +304,12 @@ public final class BrowserAutofillImportReader {
         defer { sqlite3_finalize(statement) }
 
         var records: [ArcAutofillProfileRecord] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        while true {
+            let stepResult = sqlite3_step(statement)
+            if stepResult == SQLITE_DONE { break }
+            guard stepResult == SQLITE_ROW else {
+                throw BrowserAutofillImportError.unreadableDatabase
+            }
             guard let guid = string(statement, column: 0) else { continue }
             let companyName = string(statement, column: 1) ?? ""
             let streetAddress = string(statement, column: 2) ?? ""
@@ -315,12 +344,15 @@ public final class BrowserAutofillImportReader {
 
 extension BrowserAutofillImportReader {
     /// Discovers all available Web Data database profiles within an Arc/Chromium User Data directory.
-    public static func discoverProfileDatabases(in userDataDirectory: URL) -> [(profileName: String, databaseURL: URL)] {
-        guard let enumerator = FileManager.default.enumerator(
-            at: userDataDirectory,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles]
-        ) else { return [] }
+    public static func discoverProfileDatabases(in userDataDirectory: URL) -> [(profileName: String, databaseURL: URL)]
+    {
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: userDataDirectory,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles]
+            )
+        else { return [] }
 
         var results: [(String, URL)] = []
         for case let url as URL in enumerator {

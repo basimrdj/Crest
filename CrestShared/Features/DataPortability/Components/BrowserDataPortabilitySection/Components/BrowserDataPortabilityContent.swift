@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct BrowserDataPortabilityContent: View {
-#if os(macOS)
-    @State private var discoveredArcRecords: [ArcAutofillProfileRecord] = []
-    @State private var isShowingArcImport = false
-    @State private var arcDiscoveryErrorMessage: String?
-#endif
+    #if os(macOS)
+        @State private var discoveredArcRecords: [ArcAutofillProfileRecord] = []
+        @State private var isShowingArcImport = false
+        @State private var arcDiscoveryErrorMessage: String?
+    #endif
     @State private var autofillStore = BrowserAutofillStore.shared
     let model: BrowserDataPortabilityModel
     let showsMacOSImportRequirement: Bool
@@ -16,42 +16,56 @@ struct BrowserDataPortabilityContent: View {
                 BrowserDataPortabilityMacRequirement()
             }
             BrowserDataPortabilityExportControls(model: model)
-#if os(macOS)
-            Button("Import Arc Addresses…") {
-                discoveredArcRecords = []
-                guard let userDir = BrowserArcAutofillDiscovery.defaultUserDataDirectory() else {
-                    arcDiscoveryErrorMessage = "No Arc installation or profile was discovered on this Mac."
-                    isShowingArcImport = true
-                    return
-                }
+            #if os(macOS)
+                Button("Import Arc Addresses…") {
+                    discoveredArcRecords = []
+                    guard let userDir = BrowserArcAutofillDiscovery.defaultUserDataDirectory() else {
+                        arcDiscoveryErrorMessage = "No Arc installation or profile was discovered on this Mac."
+                        isShowingArcImport = true
+                        return
+                    }
 
-                let profiles = BrowserAutofillImportReader.discoverProfileDatabases(in: userDir)
-                if profiles.isEmpty {
-                    if let defaultURL = BrowserArcAutofillDiscovery.defaultUserDataURL() {
-                        do {
-                            discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: defaultURL)
-                            arcDiscoveryErrorMessage = nil
-                        } catch {
-                            discoveredArcRecords = []
-                            arcDiscoveryErrorMessage = "Failed to read Arc database: \(error.localizedDescription)"
+                    let profiles = BrowserAutofillImportReader.discoverProfileDatabases(in: userDir)
+                    if profiles.isEmpty {
+                        if let defaultURL = BrowserArcAutofillDiscovery.defaultUserDataURL() {
+                            do {
+                                discoveredArcRecords = try BrowserAutofillImportReader.readProfiles(from: defaultURL)
+                                arcDiscoveryErrorMessage = nil
+                            } catch {
+                                discoveredArcRecords = []
+                                arcDiscoveryErrorMessage = "Failed to read Arc database: \(error.localizedDescription)"
+                            }
+                        } else {
+                            arcDiscoveryErrorMessage = "No Arc profiles found."
                         }
                     } else {
-                        arcDiscoveryErrorMessage = "No Arc profiles found."
-                    }
-                } else {
-                    var allRecords: [ArcAutofillProfileRecord] = []
-                    for profile in profiles {
-                        if let records = try? BrowserAutofillImportReader.readProfiles(from: profile.databaseURL, profileName: profile.profileName) {
-                            allRecords.append(contentsOf: records)
+                        var allRecords: [ArcAutofillProfileRecord] = []
+                        var unreadableProfiles: [String] = []
+                        for profile in profiles {
+                            do {
+                                allRecords.append(
+                                    contentsOf: try BrowserAutofillImportReader.readProfiles(
+                                        from: profile.databaseURL,
+                                        profileName: profile.profileName
+                                    ))
+                            } catch {
+                                unreadableProfiles.append(profile.profileName)
+                            }
+                        }
+                        discoveredArcRecords = allRecords
+                        if !unreadableProfiles.isEmpty {
+                            arcDiscoveryErrorMessage =
+                                "Some Arc profiles could not be read: \(unreadableProfiles.joined(separator: ", ")). The remaining profiles are listed below."
+                        } else if allRecords.isEmpty {
+                            arcDiscoveryErrorMessage = "No autofill records found in discovered profiles."
+                        } else {
+                            arcDiscoveryErrorMessage = nil
                         }
                     }
-                    discoveredArcRecords = allRecords
-                    arcDiscoveryErrorMessage = allRecords.isEmpty ? "No autofill records found in discovered profiles." : nil
+                    isShowingArcImport = true
                 }
-                isShowingArcImport = true
-            }
-            .accessibilityIdentifier("import-arc-autofill")
-#endif
+                .accessibilityIdentifier("import-arc-autofill")
+            #endif
             BrowserDataPortabilityProgressStatus(model: model)
         } header: {
             Text("Import and export")
@@ -59,25 +73,25 @@ struct BrowserDataPortabilityContent: View {
             BrowserDataPortabilityFootnotes()
         }
         #if os(macOS)
-        .sheet(isPresented: $isShowingArcImport) {
-            BrowserArcAutofillImportSheet(
-                browser: model.browser,
-                spaceAccess: model.spaceAccess,
-                records: discoveredArcRecords,
-                discoveryErrorMessage: arcDiscoveryErrorMessage,
-                onImport: { spaceID, identities in
-                    let token = try model.browser.authorizeAutofillImport(
-                        into: spaceID,
-                        accessController: model.spaceAccess
-                    )
-                    try autofillStore.importIdentities(
-                        identities,
-                        into: spaceID,
-                        authorization: token
-                    )
-                }
-            )
-        }
-#endif
+            .sheet(isPresented: $isShowingArcImport) {
+                BrowserArcAutofillImportSheet(
+                    browser: model.browser,
+                    spaceAccess: model.spaceAccess,
+                    records: discoveredArcRecords,
+                    discoveryErrorMessage: arcDiscoveryErrorMessage,
+                    onImport: { spaceID, identities in
+                        let token = try model.browser.authorizeAutofillImport(
+                            into: spaceID,
+                            accessController: model.spaceAccess
+                        )
+                        try autofillStore.importIdentities(
+                            identities,
+                            into: spaceID,
+                            authorization: token
+                        )
+                    }
+                )
+            }
+        #endif
     }
 }
